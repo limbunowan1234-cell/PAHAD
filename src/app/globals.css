@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * PAHAD brand system — every colour is derived from the official emblem.
+ * Contrast notes (WCAG):
+ *   white on teal (#164D58)        9.4:1  any text
+ *   white on teal-700 (#34686B)    6.3:1  any text
+ *   teal on cream (#FBD1B8)        6.7:1  any text
+ *   ink on coral (#F99167)         9+:1   any text  (never white on coral)
+ *   white on coral-700 (#B8501F)   4.6:1  any text
+ */
+@theme {
+  --color-teal-950: #0b2e35;
+  --color-teal-900: #0f3a43;
+  --color-teal: #164d58;
+  --color-teal-700: #34686b;
+  --color-sage: #5b8e89;
+  --color-sage-100: #e3eeec;
+  --color-coral: #f99167;
+  --color-coral-700: #b8501f;
+  --color-peach: #f2a47b;
+  --color-cream: #fbd1b8;
+  --color-sand: #fdf5ee;
+  --color-ink: #13262b;
+  --color-muted: #4f6266;
+  --color-line: #e4dcd4;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+
+  --radius-card: 1.25rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background: #ffffff;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: var(--color-cream);
+    color: var(--color-teal-900);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-coral);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-coral-700);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.75rem 1.4rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition:
+      background-color 0.2s,
+      color 0.2s,
+      border-color 0.2s,
+      transform 0.2s;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn-primary {
+    background: var(--color-teal);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-teal-900);
+  }
+  .btn-accent {
+    background: var(--color-coral);
+    color: var(--color-ink);
+  }
+  .btn-accent:hover {
+    background: var(--color-peach);
+  }
+  .btn-outline {
+    border: 1.5px solid currentColor;
+  }
+  .btn-outline:hover {
+    background: rgb(255 255 255 / 0.12);
+  }
+  .prose-pahad {
+    line-height: 1.75;
+    color: var(--color-ink);
+  }
+  .prose-pahad p {
+    margin-bottom: 1.1em;
+  }
+  .prose-pahad h2 {
+    font-size: 1.5rem;
+    margin: 1.6em 0 0.6em;
+    color: var(--color-teal);
+  }
+  .prose-pahad ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin-bottom: 1.1em;
+  }
+  .field {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-line);
+    background: #fff;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.95rem;
+    color: var(--color-ink);
+  }
+  .field:focus {
+    outline: 2px solid var(--color-sage);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+  .label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: var(--color-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

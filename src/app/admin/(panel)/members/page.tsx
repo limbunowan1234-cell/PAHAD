@@ -1,0 +1,150 @@
+import Link from "next/link";
+import { Download, Search } from "lucide-react";
+import { createMember, deleteMember, setMemberStatus, updateMember } from "../../actions";
+import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
+import { Badge, Empty, Field, PageHeader } from "@/components/admin/ui";
+import { requireUser } from "@/lib/auth/session";
+import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
+import type { Member, MemberStatus } from "@/lib/types";
+import { cn, formatDate } from "@/lib/utils";
+
+export const metadata = { title: "Members" };
+
+const TONE = { active: "green", applicant: "amber", inactive: "grey", rejected: "red" } as const;
+const LABEL: Record<MemberStatus, string> = { active: "Active", applicant: "Applicant", inactive: "Inactive", rejected: "Not approved" };
+const CATEGORIES = ["General", "Student / Youth", "Professional", "Former DSSCOLONY member", "Institution representative"];
+
+function MemberFields({ m }: { m?: Member }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Full name *"><input name="name" required defaultValue={m?.name} className="field" /></Field>
+      <Field label="Email"><input name="email" type="email" defaultValue={m?.email} className="field" /></Field>
+      <Field label="Phone"><input name="phone" defaultValue={m?.phone} className="field" /></Field>
+      <Field label="Town / area"><input name="area" defaultValue={m?.area} className="field" /></Field>
+      <Field label="Occupation"><input name="occupation" defaultValue={m?.occupation} className="field" /></Field>
+      <Field label="Category">
+        <select name="category" defaultValue={m?.category ?? "General"} className="field">
+          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+        </select>
+      </Field>
+      <Field label="Address" className="sm:col-span-2"><input name="address" defaultValue={m?.address} className="field" /></Field>
+      <Field label="Interests" className="sm:col-span-2"><input name="interests" defaultValue={m?.interests} className="field" placeholder="e.g. Research, Youth, Media" /></Field>
+      <Field label="Notes (internal)" className="sm:col-span-2"><textarea name="notes" rows={2} defaultValue={m?.notes} className="field" /></Field>
+    </div>
+  );
+}
+
+export default async function MembersPage({ searchParams }: PageProps<"/admin/members">) {
+  const user = await requireUser();
+  const sp = await searchParams;
+  const status = (typeof sp.status === "string" ? sp.status : "") as MemberStatus | "";
+  const q = (typeof sp.q === "string" ? sp.q : "").toLowerCase().trim();
+  const all = await db.all("members");
+  const rows = all.filter(
+    (m) => (!status || m.status === status) && (!q || [m.name, m.email, m.phone, m.area, m.member_no].join(" ").toLowerCase().includes(q)),
+  );
+  const count = (s: MemberStatus) => all.filter((m) => m.status === s).length;
+
+  return (
+    <>
+      <PageHeader
+        title="Members"
+        description="The PAHAD membership register, including applications from the website."
+        actions={
+          can(user.role, "members.export") && (
+            <a href="/admin/members/export" className="btn btn-outline !py-2.5 text-teal">
+              <Download className="h-4 w-4" aria-hidden /> Export CSV
+            </a>
+          )
+        }
+      />
+
+      {can(user.role, "members.create") && (
+        <div id="add" className="mb-8 scroll-mt-24">
+          <Disclosure summary="Add a member" defaultOpen={all.length === 0}>
+            <AdminForm action={createMember} submitLabel="Add member" resetOnSuccess>
+              <MemberFields />
+            </AdminForm>
+          </Disclosure>
+        </div>
+      )}
+
+      <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {([["", `All (${all.length})`], ["applicant", `Applicants (${count("applicant")})`], ["active", `Active (${count("active")})`], ["inactive", `Inactive (${count("inactive")})`], ["rejected", `Not approved (${count("rejected")})`]] as const).map(([s, label]) => (
+            <Link
+              key={s}
+              href={{ pathname: "/admin/members", query: { ...(s && { status: s }), ...(q && { q }) } }}
+              className={cn("rounded-full px-3 py-1.5 text-sm font-medium", status === s ? "bg-teal text-white" : "bg-white text-teal ring-1 ring-line hover:bg-cream")}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+        <form className="relative">
+          {status && <input type="hidden" name="status" value={status} />}
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
+          <input name="q" defaultValue={q} placeholder="Search name, email, area, number" aria-label="Search members" className="field !pl-9 lg:w-80" />
+        </form>
+      </div>
+
+      {rows.length === 0 ? (
+        <Empty>{all.length === 0 ? "No members yet. Add the first member above, or share the website’s membership form." : "No members match this filter."}</Empty>
+      ) : (
+        <ul className="space-y-3">
+          {rows.map((m) => (
+            <li key={m.id} className="rounded-2xl border border-line bg-white p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-ink">{m.name}</p>
+                    <Badge tone={TONE[m.status]}>{LABEL[m.status]}</Badge>
+                    {m.member_no && <span className="text-xs font-mono text-muted">{m.member_no}</span>}
+                  </div>
+                  <p className="mt-1 text-sm text-muted">
+                    {[m.email, m.phone, m.area, m.category].filter(Boolean).join(" · ")}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    {m.source === "website" ? "Applied on the website" : `Added by ${m.added_by}`} · {formatDate(m.created_at)}
+                  </p>
+                  {m.interests && <p className="mt-2 text-sm text-ink">Interests: {m.interests}</p>}
+                  {m.notes && <p className="mt-1 text-sm italic text-muted">“{m.notes}”</p>}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {can(user.role, "members.approve") && m.status === "applicant" && (
+                    <>
+                      <ActionButton variant="primary" action={setMemberStatus.bind(null, m.id, "active")}>Approve</ActionButton>
+                      <ActionButton action={setMemberStatus.bind(null, m.id, "rejected")}>Decline</ActionButton>
+                    </>
+                  )}
+                  {can(user.role, "members.approve") && m.status === "active" && (
+                    <ActionButton action={setMemberStatus.bind(null, m.id, "inactive")}>Mark inactive</ActionButton>
+                  )}
+                  {can(user.role, "members.approve") && (m.status === "inactive" || m.status === "rejected") && (
+                    <ActionButton action={setMemberStatus.bind(null, m.id, "active")}>Reactivate</ActionButton>
+                  )}
+                  {can(user.role, "members.delete") && (
+                    <ActionButton variant="danger" confirm={`Permanently delete ${m.name}? This cannot be undone.`} action={deleteMember.bind(null, m.id)}>
+                      Delete
+                    </ActionButton>
+                  )}
+                </div>
+              </div>
+              {can(user.role, "members.edit") && (
+                <div className="mt-4">
+                  <Disclosure summary="Edit details">
+                    <AdminForm action={updateMember}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <MemberFields m={m} />
+                    </AdminForm>
+                  </Disclosure>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}

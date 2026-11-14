@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PAHAD website
 
-## Getting Started
+The official website and admin panel of **PAHAD: Participatory Action for Holistic Advancement & Development**, an independent, non-partisan, non-profit community development institution working across the Darjeeling and Kalimpong hills, the Terai, the Dooars and the wider Himalayan region.
 
-First, run the development server:
+**Stack:** Next.js 16 (React 19, App Router, Cache Components) · Tailwind CSS 4 · Postgres on Neon (via Vercel) · Cloudflare R2 for uploads · hosted on Vercel · code on GitHub.
+
+Media partner: [Gorkha TV](https://gorkhatv.site) · News partner: [Khabar Darjeeling](https://khabardarjeeling.in)
+
+---
+
+## What's inside
+
+**Public website**: Home, About, Vision & Mission, Values & Principles, Our Story (DSSCOLONY → PAHAD), Governance (organogram), Transparency & Documents, Areas of Work, Programmes, Knowledge & Research, News, Events, Gallery, Partners, Get Involved, Membership application, Contact, Privacy and Terms. Every page works on phones.
+
+**Admin panel** (`/admin`), with three access levels:
+
+| | Level 1 · Super Admin | Level 2 · Admin | Level 3 · Editor |
+|---|:-:|:-:|:-:|
+| Upload content (news, events, programmes, resources, documents) | ✓ | ✓ | ✓ (sent for review) |
+| Publish / approve content | ✓ | ✓ | |
+| Delete content | ✓ | ✓ | |
+| Upload gallery photos | ✓ | ✓ | ✓ |
+| Add members | ✓ | ✓ | ✓ |
+| Edit, approve and export members | ✓ | ✓ | |
+| **Delete members** | ✓ | | |
+| Assign tasks to the team | ✓ | ✓ | |
+| Work on own tasks | ✓ | ✓ | ✓ |
+| Read and handle website messages | ✓ | ✓ | |
+| Manage partners | ✓ | ✓ | |
+| View activity log | ✓ | ✓ | |
+| **Create admins and change access levels** | ✓ | | |
+
+The rules live in one file, [`src/lib/permissions.ts`](src/lib/permissions.ts). Every server action checks them; the interface only hides what a person can't use. Every change is recorded in the Activity Log. There must always be at least one active Super Admin.
+
+Website forms (membership, contact, ideas and volunteering) save straight into the admin panel: applicants appear under **Members → Applicants**, and messages appear under **Messages**.
+
+---
+
+## Run it on your computer
+
+Requires Node.js 20.9 or newer.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. With no `DATABASE_URL` set, the site uses a local file database (`.data/pahad-db.json`, never committed) with three **local-only demo accounts**, one per level:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Email | Level |
+|---|---|
+| `superadmin@pahad.local` | Super Admin |
+| `admin@pahad.local` | Admin |
+| `editor@pahad.local` | Editor |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The shared demo password is `DEV_PASSWORD` in [`src/lib/db/seed.ts`](src/lib/db/seed.ts). These accounts are never created on Vercel or when a real database is connected. To start over locally, delete the `.data` folder.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Put it online (GitHub → Vercel → Neon → Cloudflare)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **GitHub**: push this repository (already set up as `limbunowan1234-cell/PAHAD`).
+2. **Vercel**: *Add New → Project → Import* the GitHub repo. The framework is detected automatically. Every push to `main` then deploys automatically.
+3. **Database (Neon)**: in the Vercel project, open *Storage → Create → Neon (Postgres)* and connect it. Vercel adds `DATABASE_URL` for you. Tables are created automatically on first use.
+4. **Environment variables**: in *Settings → Environment Variables*, add `AUTH_SECRET`, `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` and `SUPERADMIN_NAME` (see [`.env.example`](.env.example)). Redeploy, sign in at `/admin`, and change the password under **My Account**. Then create accounts for the rest of the team under **Admin Team**.
+5. **Uploads (Cloudflare R2)**: in Cloudflare open *R2 → Create bucket* (e.g. `pahad-media`), turn on public access (an `r2.dev` URL or a custom domain such as `media.yourdomain.org`), then *Manage R2 API Tokens → Create token* with *Object Read & Write* on that bucket. Add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` and `R2_PUBLIC_URL` to Vercel and redeploy.
+6. **Custom domain (Cloudflare DNS)**: in Vercel go to *Settings → Domains → Add* and enter your domain. In Cloudflare DNS, add the record Vercel shows (a `CNAME` to `cname.vercel-dns.com`), set to **DNS only** (grey cloud) so Vercel can issue the certificate. Then set `NEXT_PUBLIC_SITE_URL` to the new address.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> Without a database, a Vercel deployment can't keep data: its temporary storage resets. Connect Neon before using the admin panel online.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project map
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app/(site)/          public pages
+src/app/admin/           sign-in, admin panel pages and server actions (actions.ts)
+src/app/actions/         public form handlers (membership, contact)
+src/components/site/     header, footer, cards, forms, gallery
+src/components/admin/    admin navigation, forms, content editor
+src/lib/content.ts       institutional text (values, work areas, governance…)
+src/lib/site.ts          name, contact, social links, navigation
+src/lib/permissions.ts   the three access levels
+src/lib/db/              Postgres / local file database, schema, seed data
+src/lib/auth/            password hashing and signed session cookies
+src/lib/storage.ts       Cloudflare R2 / local uploads
+```
+
+Brand colours come from the official emblem (Mountain Teal `#164D58`, Sunset Coral `#F99167`, Mountain Cream `#FBD1B8`, Sage `#5B8E89`) and are defined in [`src/app/globals.css`](src/app/globals.css), with contrast checked against WCAG AA.
