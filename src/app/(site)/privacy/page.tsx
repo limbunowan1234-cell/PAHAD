@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         <h2>Who can see it</h2>
         <p>
           Only authorised PAHAD administrators, according to their role. Access is limited to the information each role needs. Data is stored with our
-          hosting and database providers (Vercel and Neon) and uploaded files with Cloudflare.
+          hosting and database providers (Vercel and Neon) and uploaded files with Vercel Blob or Cloudflare R2.
         </p>
         <h2>Your choices</h2>
         <p>

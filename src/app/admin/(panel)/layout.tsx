@@ -4,7 +4,7 @@ import { AdminNav, type NavKey } from "@/components/admin/client";
 import { requireUser } from "@/lib/auth/session";
 import { db, usingPostgres } from "@/lib/db";
 import { can, roleLabel, type Permission } from "@/lib/permissions";
-import { usingR2 } from "@/lib/storage";
+import { usingCloudStorage } from "@/lib/storage";
 
 const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "dashboard", label: "Dashboard", href: "/admin", perm: "dashboard.view" },
@@ -39,10 +39,10 @@ async function Shell({ children }: { children: React.ReactNode }) {
     <div className="lg:flex">
       <AdminNav items={items} user={{ name: user.name, roleLabel: roleLabel(user.role) }} logoutAction={logout} />
       <div className="min-w-0 flex-1">
-        {(!usingPostgres || !usingR2) && (
+        {(!usingPostgres || !usingCloudStorage) && (
           <div className="border-b border-cream bg-cream/60 px-4 py-2 text-center text-xs text-teal-900 sm:px-8">
             {!usingPostgres && "Local mode: data is saved in a file on this computer. "}
-            {!usingR2 && "Uploads are stored locally until Cloudflare R2 is connected."}
+            {!usingCloudStorage && "Uploads are stored locally until cloud file storage (Vercel Blob or Cloudflare R2) is connected."}
           </div>
         )}
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8 lg:py-10">{children}</main>

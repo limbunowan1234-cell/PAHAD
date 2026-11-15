@@ -2,15 +2,22 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { put } from "@vercel/blob";
 import { AwsClient } from "aws4fetch";
 
 /**
- * File uploads go to Cloudflare R2 when the R2_* variables are set,
- * otherwise to /public/uploads for local development.
+ * Where uploads go, in order of preference:
+ *  1. Cloudflare R2, when the R2_* variables are set.
+ *  2. Vercel Blob, when a Blob store is connected to the project
+ *     (Vercel adds BLOB_READ_WRITE_TOKEN and/or BLOB_STORE_ID automatically).
+ *  3. /public/uploads, for local development only.
  */
 export const usingR2 = Boolean(
   process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_BUCKET && process.env.R2_PUBLIC_URL,
 );
+export const usingBlob = !usingR2 && Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+/** True when uploads are stored somewhere permanent (not the local disk). */
+export const usingCloudStorage = usingR2 || usingBlob;
 
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // stays under Vercel's 4.5 MB request limit
 const ALLOWED: Record<string, string> = {
@@ -45,7 +52,16 @@ export async function storeUpload(file: File, folder: "images" | "documents"): P
     return `${process.env.R2_PUBLIC_URL!.replace(/\/$/, "")}/${key}`;
   }
 
-  if (process.env.VERCEL) throw new Error("File storage is not configured yet. Add the Cloudflare R2 settings in Vercel.");
+  if (usingBlob) {
+    const blob = await put(`pahad/${key}`, bytes, {
+      access: "public",
+      contentType: file.type,
+      cacheControlMaxAge: 60 * 60 * 24 * 365,
+    });
+    return blob.url;
+  }
+
+  if (process.env.VERCEL) throw new Error("File storage is not configured yet. Connect a Vercel Blob store (or Cloudflare R2) to the project.");
   const target = path.join(process.cwd(), "public", "uploads", key);
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, bytes);
