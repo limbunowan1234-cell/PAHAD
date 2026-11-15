@@ -83,8 +83,8 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     const existing = id ? await db.get("posts", id) : null;
     if (id && !existing) throw new Error("This item no longer exists.");
     if (existing && !can(user.role, "content.edit_any")) {
-      if (existing.author_id !== user.id) throw new Error("Editors can only edit their own items.");
-      if (existing.status === "published") throw new Error("This item is published. Ask an Admin to change it.");
+      if (existing.author_id !== user.id) throw new Error("General-level admins can only edit their own items.");
+      if (existing.status === "published") throw new Error("This item is published. Ask an Executive Admin or Super Admin to change it.");
     }
 
     let status = (str(fd, "status", 20) || "draft") as PostStatus;
@@ -117,7 +117,7 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
       await log(user, "created", "content", row.id, `${title} (${status})`);
     }
     updateTag("posts");
-    return status === "pending" ? "Saved and sent for review. An Admin will publish it." : status === "published" ? "Published." : "Draft saved.";
+    return status === "pending" ? "Saved and sent for review. An Executive Admin or Super Admin will publish it." : status === "published" ? "Published." : "Draft saved.";
   });
   if (result?.ok) redirect(`/admin/content?saved=${encodeURIComponent(result.message)}`);
   return result;

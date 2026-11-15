@@ -47,7 +47,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
       />
       {saved && <Notice>{saved}</Notice>}
       {user.role === "editor" && (
-        <Notice tone="warn">As an Editor, what you upload is sent to an Admin for review before it appears on the website.</Notice>
+        <Notice tone="warn">At General level, what you upload is sent to an Executive Admin or Super Admin for review before it appears on the website.</Notice>
       )}
 
       <div className="mb-3 flex flex-wrap gap-2">

@@ -20,7 +20,7 @@ export default async function EditContentPage({ params }: PageProps<"/admin/cont
       {allowed ? (
         <PostEditor post={post} canPublish={can(user.role, "content.publish")} />
       ) : (
-        <Notice tone="warn">You can only edit your own items before they are published. Ask an Admin for changes to this one.</Notice>
+        <Notice tone="warn">You can only edit your own items before they are published. Ask an Executive Admin or Super Admin for changes to this one.</Notice>
       )}
     </>
   );

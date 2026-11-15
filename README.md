@@ -12,9 +12,9 @@ Media partner: [Gorkha TV](https://gorkhatv.site) · News partner: [Khabar Darje
 
 **Public website**: Home, About, Vision & Mission, Values & Principles, Our Story (DSSCOLONY → PAHAD), Governance (organogram), Transparency & Documents, Areas of Work, Programmes, Knowledge & Research, News, Events, Gallery, Partners, Get Involved, Membership application, Contact, Privacy and Terms. Every page works on phones.
 
-**Admin panel** (`/admin`), with three access levels:
+**Admin panel** (`/admin`), with three access levels that follow PAHAD’s governance structure:
 
-| | Level 1 · Super Admin | Level 2 · Admin | Level 3 · Editor |
+| | Level 1 · Super Admin<br>Governing Body (e.g. Chairman) | Level 2 · Executive Admin<br>Executive Body (e.g. Chief Executive Director) | Level 3 · General<br>General Assembly members |
 |---|:-:|:-:|:-:|
 | Upload content (news, events, programmes, resources, documents) | ✓ | ✓ | ✓ (sent for review) |
 | Publish / approve content | ✓ | ✓ | |
@@ -49,9 +49,9 @@ Open http://localhost:3000. With no `DATABASE_URL` set, the site uses a local fi
 
 | Email | Level |
 |---|---|
-| `superadmin@pahad.local` | Super Admin |
-| `admin@pahad.local` | Admin |
-| `editor@pahad.local` | Editor |
+| `superadmin@pahad.local` | Super Admin (Governing Body) |
+| `admin@pahad.local` | Executive Admin (Executive Body) |
+| `editor@pahad.local` | General (General Assembly) |
 
 The shared demo password is `DEV_PASSWORD` in [`src/lib/db/seed.ts`](src/lib/db/seed.ts). These accounts are never created on Vercel or when a real database is connected. To start over locally, delete the `.data` folder.
 

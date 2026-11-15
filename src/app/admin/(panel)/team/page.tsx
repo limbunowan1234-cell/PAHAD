@@ -28,7 +28,7 @@ function RoleSelect({ value }: { value?: string }) {
   return (
     <select name="role" defaultValue={value ?? "editor"} className="field">
       {ROLES.map((r) => (
-        <option key={r.id} value={r.id}>Level {r.level}: {r.label}</option>
+        <option key={r.id} value={r.id}>Level {r.level}: {r.label} ({r.body})</option>
       ))}
     </select>
   );
@@ -49,7 +49,12 @@ export default async function TeamPage() {
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-muted">
               <th className="pb-3">Permission</th>
-              {ROLES.map((r) => <th key={r.id} className="pb-3 text-center">L{r.level} {r.label}</th>)}
+              {ROLES.map((r) => (
+                <th key={r.id} className="pb-3 text-center">
+                  L{r.level} {r.label}
+                  <span className="block font-normal normal-case tracking-normal">{r.body}</span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -65,7 +70,7 @@ export default async function TeamPage() {
             ))}
           </tbody>
         </table>
-        <p className="mt-3 text-xs text-muted">Editors’ uploads go to “Awaiting review” until a Super Admin or Admin publishes them.</p>
+        <p className="mt-3 text-xs text-muted">Uploads from the General level go to “Awaiting review” until a Super Admin or Executive Admin publishes them.</p>
       </Card>
 
       {manage ? (
@@ -76,7 +81,7 @@ export default async function TeamPage() {
                 <Field label="Full name *"><input name="name" required className="field" /></Field>
                 <Field label="Email *"><input name="email" type="email" required className="field" /></Field>
                 <Field label="Access level *"><RoleSelect /></Field>
-                <Field label="Designation"><input name="designation" className="field" placeholder="e.g. MD, Media & Communications" /></Field>
+                <Field label="Designation"><input name="designation" className="field" placeholder="e.g. Chairman, Chief Executive Director, Member" /></Field>
                 <Field label="Temporary password *" hint="At least 10 characters with letters and numbers. Share it privately." className="sm:col-span-2">
                   <input name="password" type="text" required minLength={10} autoComplete="new-password" className="field" />
                 </Field>

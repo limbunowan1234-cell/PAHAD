@@ -5,15 +5,29 @@ import type { Role } from "./types";
  * Every server action checks this table; the admin UI uses it only to hide
  * controls a person cannot use.
  *
- *  Level 1  Super Admin  controls everything.
- *  Level 2  Admin        assigns work, uploads, manages almost everything,
- *                        but cannot delete members or manage admin accounts.
- *  Level 3  Editor       uploads content (sent for review) and adds members.
+ * Levels follow PAHAD's governance structure. The internal ids stay
+ * "super_admin" / "admin" / "editor" so existing accounts keep working.
+ *
+ *  Level 1  Super Admin      Governing Body (e.g. Chairman): controls everything.
+ *  Level 2  Executive Admin  Executive Body (e.g. Chief Executive Director): assigns
+ *                            work, uploads, manages almost everything, but cannot
+ *                            delete members or manage admin accounts.
+ *  Level 3  General          General Assembly members: upload content (sent for
+ *                            review) and add members.
  */
-export const ROLES: { id: Role; label: string; level: number; summary: string }[] = [
-  { id: "super_admin", label: "Super Admin", level: 1, summary: "Full control of the website, members, admins and settings." },
-  { id: "admin", label: "Admin", level: 2, summary: "Assigns work, publishes and manages everything except deleting members and admin accounts." },
-  { id: "editor", label: "Editor", level: 3, summary: "Uploads content for review and adds new members." },
+export const ROLES: { id: Role; label: string; level: number; body: string; example: string; summary: string }[] = [
+  {
+    id: "super_admin", label: "Super Admin", level: 1, body: "Governing Body", example: "Chairman",
+    summary: "Full control of the website, members, admin accounts and settings.",
+  },
+  {
+    id: "admin", label: "Executive Admin", level: 2, body: "Executive Body", example: "Chief Executive Director",
+    summary: "Assigns work, publishes and manages everything except deleting members and admin accounts.",
+  },
+  {
+    id: "editor", label: "General", level: 3, body: "General Assembly", example: "Member",
+    summary: "Uploads content for review and adds new members.",
+  },
 ];
 
 const S: Role = "super_admin";

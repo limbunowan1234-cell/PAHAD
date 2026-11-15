@@ -97,9 +97,9 @@ export function seedPosts(): Post[] {
  * local file database (never in production) and are documented in README.md.
  */
 export const DEV_ACCOUNTS: { email: string; name: string; role: User["role"]; designation: string }[] = [
-  { email: "superadmin@pahad.local", name: "Demo Super Admin", role: "super_admin", designation: "Website Head" },
-  { email: "admin@pahad.local", name: "Demo Admin", role: "admin", designation: "Media & Communications" },
-  { email: "editor@pahad.local", name: "Demo Editor", role: "editor", designation: "Volunteer Editor" },
+  { email: "superadmin@pahad.local", name: "Demo Super Admin", role: "super_admin", designation: "Chairman" },
+  { email: "admin@pahad.local", name: "Demo Executive Admin", role: "admin", designation: "Chief Executive Director" },
+  { email: "editor@pahad.local", name: "Demo General Member", role: "editor", designation: "General Assembly member" },
 ];
 export const DEV_PASSWORD = "pahad-dev-2026";
 
