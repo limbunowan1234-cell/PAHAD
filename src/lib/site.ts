@@ -5,7 +5,7 @@ export const site = {
   promise: "Stronger communities, advancing together.",
   description:
     "PAHAD is an independent, non-partisan, non-profit community development institution working with people across the Darjeeling and Kalimpong hills, the Terai, the Dooars and the wider Himalayan region.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://pahadofficial.vercel.app",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://pahad-official.vercel.app",
   email: "Pahad.org@gmail.com",
   founded: "24 June 2018",
   region: ["Darjeeling Hills", "Kalimpong Hills", "Terai", "Dooars", "Sikkim & the wider Himalaya"],
