@@ -143,7 +143,6 @@ export default async function TeamPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-ink">{u.name}{u.id === user.id && " (you)"}</p>
                     <Badge tone={role.level === 1 ? "teal" : role.level === 2 ? "green" : "amber"}>{role.code} {role.label}</Badge>
-                    {u.owner && <Badge tone="teal">Permanent owner</Badge>}
                     {!u.active && <Badge tone="red">Deactivated</Badge>}
                     {fin !== "none" && <Badge>Finance: {fin}</Badge>}
                   </div>
