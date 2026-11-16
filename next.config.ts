@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
       ...(r2Host ? [{ protocol: "https" as const, hostname: r2Host }] : []),
     ],
   },
+  async redirects() {
+    // Send every other address to the main domain, keeping the path.
+    const aliases = ["www.pahad.org", "pahad-official.vercel.app", "pahad-delta.vercel.app"];
+    return aliases.map((host) => ({
+      source: "/:path*",
+      has: [{ type: "host" as const, value: host }],
+      destination: "https://pahad.org/:path*",
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {
