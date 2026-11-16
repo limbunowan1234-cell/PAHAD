@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
+import { InstallAppButton } from "@/components/site/InstallApp";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -28,7 +29,8 @@ export default function LoginPage() {
           <h1 className="mt-10 text-3xl font-medium text-teal">Welcome back</h1>
           <p className="mt-1 text-muted">Sign in with the account a Super Admin created for you.</p>
           <LoginForm />
-          <Link href="/" className="mt-8 block text-sm text-muted hover:text-teal">← Back to the website</Link>
+          <InstallAppButton label="Install admin app" className="mt-6 w-full rounded-full border border-line py-2.5 text-sm font-semibold text-teal hover:bg-sand" />
+          <Link href="/" className="mt-6 block text-sm text-muted hover:text-teal">← Back to the website</Link>
         </div>
       </div>
     </div>

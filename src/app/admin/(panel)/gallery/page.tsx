@@ -18,8 +18,8 @@ export default async function AdminGalleryPage() {
   return (
     <>
       <PageHeader title="Gallery" description="Photos shown on the public Gallery page. Only upload photos you have permission to share." />
-      <Card title="Upload photos" className="mb-8">
-        <AdminForm action={uploadMedia} submitLabel="Upload" resetOnSuccess>
+      <Card title="Add photos" className="mb-8">
+        <AdminForm action={uploadMedia} submitLabel="Add photos" resetOnSuccess>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Album" hint="Pick an existing album or type a new one.">
               <input name="album" list="albums" className="field" placeholder="e.g. Community meeting, Nov 2026" />
@@ -28,8 +28,11 @@ export default async function AdminGalleryPage() {
             <Field label="Caption" hint="Applied to every photo in this upload.">
               <input name="caption" className="field" />
             </Field>
-            <Field label="Photos" className="sm:col-span-2" hint="JPG, PNG or WebP, up to 4 MB each. Select several at once.">
-              <input type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple required className="block w-full text-sm" />
+            <Field label="Upload photos" className="sm:col-span-2" hint="JPG, PNG or WebP, up to 4 MB each. Select several at once.">
+              <input type="file" name="files" accept="image/jpeg,image/png,image/webp" multiple className="block w-full text-sm" />
+            </Field>
+            <Field label="…or paste Google Drive photo links" className="sm:col-span-2" hint="One link per line. Each photo must be shared as “Anyone with the link”.">
+              <textarea name="links" rows={3} className="field" placeholder="https://drive.google.com/file/d/…/view" />
             </Field>
           </div>
         </AdminForm>

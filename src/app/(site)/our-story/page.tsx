@@ -6,35 +6,38 @@ import { PageHero, SectionHeading } from "@/components/site/ui";
 
 export const metadata: Metadata = {
   title: "Our Story",
-  description: "From DSSCOLONY in 2018 to PAHAD: the name has changed, the spirit has not.",
+  description:
+    "PAHAD is an independent organisation that builds on the work of DSSCOLONY. The two share a history that began on 24 June 2018, but they are separate organisations.",
 };
 
 export default function OurStoryPage() {
   return (
     <>
       <PageHero
-        eyebrow="24 June 2018 · the beginning of DSSCOLONY"
-        title="We started this together."
-        intro="What began as a group of students with limited resources and plenty of challenges is now growing into PAHAD, a holistic development institution."
+        eyebrow="A shared history · since 24 June 2018"
+        title="Built on the work that came before."
+        intro="PAHAD is a separate, independent organisation. It builds on the work and experience of DSSCOLONY, a student-led group founded on 24 June 2018. The two share a history; they are different organisations."
         image="/images/first-meet-gdns.jpg"
       >
-        <Link href="/membership" className="btn btn-accent">Reconnect & join PAHAD</Link>
+        <Link href="/membership" className="btn btn-accent">Join PAHAD</Link>
       </PageHero>
 
       <section className="container-page grid gap-12 py-20 lg:grid-cols-2 lg:py-24">
-        <SectionHeading eyebrow="Do you remember those days?" title="We gave what we had." />
+        <SectionHeading eyebrow="Where the work began" title="DSSCOLONY: students who gave what they had." />
         <div className="space-y-5 text-lg leading-relaxed text-muted">
           <p>
-            The conversations, the meetings, the ideas that sometimes seemed too ambitious, the events we organised, the videos we created and the
-            people we met.
+            DSSCOLONY began on 24 June 2018 as a group of students with limited resources, no dedicated funding and plenty of challenges. Through
+            meetings, creative events, videos and community care, they found ways to make things happen and to support people in need.
           </p>
-          <p>We were students. We had no dedicated funding. Yet we found ways to make things happen, and to support people in need.</p>
+          <p>
+            That work, and the experience and relationships it created, is part of the history PAHAD draws on today.
+          </p>
         </div>
       </section>
 
       <section className="bg-sand py-20 lg:py-24">
         <div className="container-page">
-          <SectionHeading eyebrow="Moments we shared" title="Memories that brought us here." />
+          <SectionHeading eyebrow="Moments from the shared history" title="The work that inspired PAHAD." />
           <ol className="relative mt-14 space-y-12 before:absolute before:left-[15px] before:top-2 before:h-full before:w-0.5 before:bg-line md:before:left-1/2">
             {storyMoments.map((m, i) => (
               <li key={m.title} className="relative grid gap-6 pl-12 md:grid-cols-2 md:gap-12 md:pl-0">
@@ -56,30 +59,27 @@ export default function OurStoryPage() {
 
       <section className="container-page grid gap-12 py-20 lg:grid-cols-2 lg:py-24">
         <div>
-          <SectionHeading eyebrow="From DSSCOLONY to PAHAD" title="The name has changed. The spirit has not." />
+          <SectionHeading eyebrow="PAHAD and DSSCOLONY" title="One shared history. Two separate organisations." />
           <p className="mt-5 leading-relaxed text-muted">
-            DSSCOLONY was a spirit of togetherness: a willingness to begin, experiment, collaborate and believe that ordinary people could create
-            something meaningful for their community.
+            DSSCOLONY showed what a willingness to begin, experiment and collaborate could achieve. PAHAD is a new and independent organisation,
+            with its own constitution, governance and membership, built on the lessons of that work.
           </p>
           <p className="mt-4 leading-relaxed text-muted">
-            Enthusiasm brings people together, but a lasting institution needs a stronger foundation, responsible leadership and a purpose that
-            continues beyond any one person. PAHAD now looks towards education, research, skill development, livelihoods, culture, community
-            institutions and enterprise.
+            A lasting institution needs a strong foundation, responsible leadership and a purpose that continues beyond any one person. PAHAD looks
+            towards education, research, skill development, livelihoods, culture, community institutions and enterprise.
           </p>
         </div>
         <div className="flex flex-col justify-center rounded-[2rem] bg-teal p-8 text-white sm:p-12">
           <p className="font-display text-2xl leading-snug">
-            “PAHAD is not asking you to forget DSSCOLONY. It is inviting you to be part of what DSSCOLONY helped inspire.”
+            Everyone who shares PAHAD’s purpose is welcome, including people who were part of DSSCOLONY.
           </p>
           <p className="mt-6 text-white/85">
-            Whether you were a founding member, volunteer, creative contributor or someone who believed in the idea, the door is open. We are not
-            trying to recreate 2018. We are inviting you to help build what comes next.
+            Whether you bring experience, skills, ideas or simply a willingness to take part, there is a place for you in PAHAD’s work.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/membership" className="btn btn-accent">Become a PAHAD member</Link>
             <Link href="/gallery" className="btn btn-outline text-white">See the archive</Link>
           </div>
-          <p className="mt-8 text-sm text-cream">With gratitude for everything we built together, the PAHAD Founding Team</p>
         </div>
       </section>
     </>

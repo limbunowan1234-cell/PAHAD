@@ -28,9 +28,10 @@ export const nav: NavGroup[] = [
     href: "/about",
     items: [
       { label: "About PAHAD", href: "/about", description: "Who we are and why we exist" },
+      { label: "Our Team", href: "/team", description: "The people of PAHAD" },
       { label: "Vision & Mission", href: "/vision-mission", description: "The future we work towards" },
       { label: "Values & Principles", href: "/values", description: "How we decide and act" },
-      { label: "Our Story", href: "/our-story", description: "From DSSCOLONY (2018) to PAHAD" },
+      { label: "Our Story", href: "/our-story", description: "Our shared history with DSSCOLONY" },
       { label: "Governance", href: "/governance", description: "Structure and accountability" },
       { label: "Transparency", href: "/transparency", description: "Documents and reporting" },
     ],
@@ -49,7 +50,7 @@ export const nav: NavGroup[] = [
     href: "/news",
     items: [
       { label: "News & Stories", href: "/news", description: "Announcements and updates" },
-      { label: "Events", href: "/events", description: "Meet, learn and take part" },
+      { label: "Live Events", href: "/events", description: "What’s on now and coming up" },
       { label: "Gallery", href: "/gallery", description: "Moments from our journey" },
     ],
   },

@@ -89,19 +89,25 @@ export function PostEditor({ post, canPublish }: { post?: Post; canPublish: bool
           )}
           <input type="hidden" name="cover" value={cover} />
           <input type="file" name="cover_file" accept="image/jpeg,image/png,image/webp" className="block w-full text-sm" />
+          <input name="cover_link" type="url" placeholder="…or paste a Google Drive photo link" className="field text-sm" />
           {cover && <button type="button" onClick={() => setCover("")} className="text-xs font-semibold text-red-700">Remove cover</button>}
-          <p className="text-xs text-muted">JPG, PNG or WebP up to 4 MB. Wide (16:9) photos look best.</p>
+          <p className="text-xs text-muted">Upload a JPG, PNG or WebP up to 4 MB, or paste a Drive link shared as “Anyone with the link”. Wide (16:9) photos look best.</p>
         </div>
 
-        {(type === "document" || type === "resource" || type === "programme") && (
-          <div className="space-y-3 rounded-2xl border border-line bg-white p-5">
-            <span className="label">Attachment (PDF)</span>
-            {post?.file_url && <a href={post.file_url} target="_blank" className="block truncate text-sm text-teal underline">Current file</a>}
-            <input type="hidden" name="file_url" value={post?.file_url ?? ""} />
-            <input type="file" name="attachment" accept="application/pdf" className="block w-full text-sm" />
-            <p className="text-xs text-muted">PDF up to 4 MB.{type === "document" && " Publish only approved, authorised versions."}</p>
-          </div>
-        )}
+        <div className="space-y-3 rounded-2xl border border-line bg-white p-5">
+          <span className="label">{type === "event" ? "Event poster or details (PDF, optional)" : "Attachment (PDF, optional)"}</span>
+          {post?.file_url && <a href={post.file_url} target="_blank" className="block truncate text-sm text-teal underline">Current file</a>}
+          <input type="hidden" name="file_url" value={post?.file_url ?? ""} />
+          <input type="file" name="attachment" accept="application/pdf" className="block w-full text-sm" />
+          <input name="file_link" type="url" placeholder="…or paste a Google Drive file link" className="field text-sm" />
+          <p className="text-xs text-muted">PDF up to 4 MB, or a Drive link shared as “Anyone with the link”.{type === "document" && " Publish only approved, authorised versions."}</p>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-line bg-white p-5">
+          <span className="label">{type === "event" ? "Registration form link (optional)" : "Form link (optional)"}</span>
+          <input name="form_url" type="url" defaultValue={post?.form_url} placeholder="https://forms.gle/… or docs.google.com/forms/…" className="field text-sm" />
+          <p className="text-xs text-muted">A Google Form link. Full docs.google.com/forms links are shown inside the page; short forms.gle links open in a new tab.</p>
+        </div>
 
         {state && !state.ok && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{state.message}</p>}
         <button disabled={pending} className="btn btn-primary w-full disabled:opacity-60">

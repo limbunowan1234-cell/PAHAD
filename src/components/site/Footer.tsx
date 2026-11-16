@@ -4,12 +4,14 @@ import { cacheLife } from "next/cache";
 import { Mail, MessageCircle } from "lucide-react";
 import { site } from "@/lib/site";
 import { SocialIcon } from "./SocialIcon";
+import { InstallAppButton } from "./InstallApp";
 
 const columns = [
   {
     title: "Organisation",
     links: [
       ["About PAHAD", "/about"],
+      ["Our Team", "/team"],
       ["Vision & Mission", "/vision-mission"],
       ["Values & Principles", "/values"],
       ["Our Story", "/our-story"],
@@ -82,6 +84,7 @@ export function Footer() {
               <MessageCircle className="h-4 w-4" aria-hidden /> Join the PAHAD WhatsApp community
             </a>
           </div>
+          <InstallAppButton className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-semibold text-ink hover:bg-peach" />
         </div>
 
         <div className="grid gap-10 sm:grid-cols-3">

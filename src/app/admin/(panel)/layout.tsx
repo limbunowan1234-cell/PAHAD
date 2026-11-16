@@ -13,6 +13,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "tasks", label: "Tasks", href: "/admin/tasks", perm: "tasks.view_own" },
   { key: "submissions", label: "Messages", href: "/admin/submissions", perm: "submissions.view" },
   { key: "gallery", label: "Gallery", href: "/admin/gallery", perm: "media.upload" },
+  { key: "people", label: "Our Team", href: "/admin/people", perm: "people.manage" },
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
   { key: "team", label: "Admin Team", href: "/admin/team", perm: "team.view" },
   { key: "activity", label: "Activity Log", href: "/admin/activity", perm: "activity.view" },

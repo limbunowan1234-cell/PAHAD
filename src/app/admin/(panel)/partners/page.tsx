@@ -21,6 +21,7 @@ function PartnerFields({ p }: { p?: Partner }) {
       <Field label="Display order"><input name="sort" type="number" defaultValue={p?.sort ?? 10} className="field" /></Field>
       <Field label="Description" className="sm:col-span-2"><textarea name="description" rows={2} defaultValue={p?.description} className="field" /></Field>
       <Field label="Logo" hint="PNG with transparent background works best."><input type="file" name="logo_file" accept="image/png,image/jpeg,image/webp" className="block w-full text-sm" /></Field>
+      <Field label="…or logo from Google Drive"><input name="logo_link" type="url" className="field" placeholder="https://drive.google.com/file/d/…/view" /></Field>
       <label className="flex items-center gap-2 self-end pb-3 text-sm">
         <input type="checkbox" name="dark_logo" defaultChecked={p?.dark_logo} className="h-4 w-4 accent-teal" /> Logo is light: show on a dark background
       </label>

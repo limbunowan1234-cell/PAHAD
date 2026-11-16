@@ -19,7 +19,9 @@ export const metadata: Metadata = {
     images: [{ url: "/images/hero.jpg", width: 1960, height: 1103, alt: "Kanchenjunga at sunrise above Darjeeling" }],
   },
   twitter: { card: "summary_large_image", site: "@PAHAD_official" },
-  icons: { icon: "/icon.svg", apple: "/images/emblem.png" },
+  icons: { icon: "/icon.svg", apple: "/icons/pahad-apple-180.png" },
+  manifest: "/site.webmanifest",
+  appleWebApp: { capable: true, title: "PAHAD", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = { themeColor: "#164d58" };

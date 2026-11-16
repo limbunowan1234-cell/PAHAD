@@ -7,14 +7,21 @@ import { GridSkeleton } from "@/components/site/posts";
 import { EmptyState, PageHero, PostCard, SectionHeading } from "@/components/site/ui";
 
 export const metadata: Metadata = {
-  title: "Events",
+  title: "Live Events",
   description: "Community conversations, learning sessions, public programmes and activities connected with PAHAD.",
 };
 
 async function EventLists() {
-  const { upcoming, past } = await getUpcomingEvents();
+  const { today: happening, upcoming: all, past } = await getUpcomingEvents();
+  const upcoming = all.filter((e) => !happening.includes(e));
   return (
     <>
+      {happening.length > 0 && (
+        <div className="mb-16">
+          <SectionHeading eyebrow="● Happening today" title="Live today" />
+          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{happening.map((e) => <PostCard key={e.id} post={e} />)}</div>
+        </div>
+      )}
       <SectionHeading eyebrow="Upcoming" title="Upcoming events" />
       <div className="mt-8">
         {upcoming.length ? (

@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Download, MapPin } from "lucide-react";
+import { ArrowLeft, CalendarDays, ClipboardList, Download, MapPin } from "lucide-react";
+import { googleFormEmbedUrl } from "@/lib/drive";
 import { getPostBySlug, getPublishedPosts } from "@/lib/data";
 import type { PostType } from "@/lib/types";
 import { formatDate, POST_TYPE_LABEL, POST_TYPE_PATH } from "@/lib/utils";
@@ -85,10 +86,31 @@ export async function PostDetail({ params, type }: { params: Promise<{ slug: str
         <div className="text-lg">
           <RichText text={post.body} />
         </div>
-        {post.file_url && (
-          <a href={post.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary mt-8">
-            <Download className="h-4 w-4" aria-hidden /> Download attachment
-          </a>
+        <div className="mt-8 flex flex-wrap gap-3">
+          {post.form_url && !googleFormEmbedUrl(post.form_url) && (
+            <a href={post.form_url} target="_blank" rel="noopener noreferrer" className="btn btn-accent">
+              <ClipboardList className="h-4 w-4" aria-hidden /> {type === "event" ? "Register for this event" : "Open the form"}
+            </a>
+          )}
+          {post.file_url && (
+            <a href={post.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+              <Download className="h-4 w-4" aria-hidden /> {type === "event" ? "Event details (PDF)" : "Open attachment"}
+            </a>
+          )}
+        </div>
+        {post.form_url && googleFormEmbedUrl(post.form_url) && (
+          <section className="mt-12" aria-labelledby="form-heading">
+            <h2 id="form-heading" className="text-2xl font-medium text-teal">{type === "event" ? "Register for this event" : "Form"}</h2>
+            <iframe
+              src={googleFormEmbedUrl(post.form_url)!}
+              title={`${post.title}: form`}
+              className="mt-4 h-[900px] w-full rounded-[var(--radius-card)] border border-line bg-white"
+              loading="lazy"
+            />
+            <a href={post.form_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-teal underline">
+              Open the form in a new tab
+            </a>
+          </section>
         )}
       </div>
     </article>

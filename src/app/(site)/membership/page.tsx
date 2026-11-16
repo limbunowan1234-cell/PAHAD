@@ -19,7 +19,7 @@ export default function MembershipPage() {
       <PageHero
         eyebrow="Membership"
         title="Be part of a shared purpose."
-        intro="PAHAD welcomes people interested in community development, knowledge sharing, participation and collective action. Former DSSCOLONY members are warmly invited to reconnect."
+        intro="PAHAD welcomes people interested in community development, knowledge sharing, participation and collective action. People who were part of DSSCOLONY are warmly welcome to join."
         image="/images/naksha-4.jpg"
       />
       <section className="container-page grid gap-12 py-20 lg:grid-cols-[1fr_1.6fr]">

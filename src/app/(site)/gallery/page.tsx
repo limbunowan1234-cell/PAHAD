@@ -7,7 +7,7 @@ import { PageHero } from "@/components/site/ui";
 
 export const metadata: Metadata = {
   title: "Gallery",
-  description: "Photographs from PAHAD's journey, from the DSSCOLONY archive to today's community work.",
+  description: "Photographs from PAHAD's journey, including the DSSCOLONY archive from PAHAD's shared history.",
 };
 
 async function Gallery() {

@@ -60,7 +60,7 @@ function Hero() {
         </div>
         <dl className="mt-14 grid max-w-3xl grid-cols-2 gap-6 border-t border-white/20 pt-8 sm:grid-cols-4">
           {[
-            ["2018", "Roots in DSSCOLONY"],
+            ["7", "Development objectives"],
             ["5", "Connected areas of work"],
             ["6", "Directorates"],
             ["Non-profit", "Independent & non-partisan"],
@@ -275,13 +275,13 @@ function Story() {
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:items-center">
         <div>
           <SectionHeading
-            eyebrow="Our story · since 2018"
-            title="The name has changed. The spirit has not."
-            intro="PAHAD grew from DSSCOLONY, a group of students who began on 24 June 2018 with limited resources and a willingness to contribute."
+            eyebrow="Our story · a shared history"
+            title="Built on the work that came before."
+            intro="PAHAD is an independent organisation. It builds on the work of DSSCOLONY, a student-led group founded on 24 June 2018. The two share a history but are separate organisations."
           />
           <p className="mt-5 leading-relaxed text-muted">
-            Meetings, creative events, busking for an old age home, a cloth donation drive: those years taught us that a lasting institution needs a
-            strong foundation and a purpose that continues beyond any one person.
+            Meetings, creative events, busking for an old age home, a cloth donation drive: that work showed what people can achieve together,
+            and its lessons shape how PAHAD works today.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/our-story" className="btn btn-primary">Read our story</Link>

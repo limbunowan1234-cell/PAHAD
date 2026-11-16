@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { nav, site } from "@/lib/site";
+import { InstallAppButton } from "./InstallApp";
 import { cn } from "@/lib/utils";
 
 /** Reads the URL for active-link styling; wrapped in Suspense by the layout. */
@@ -89,6 +90,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          <LiveEventsButton onClick={() => setOpen(false)} active={pathname.startsWith("/events")} />
           <Link href="/membership" className="btn btn-primary hidden !py-2.5 sm:inline-flex">
             Become a member
           </Link>
@@ -141,6 +143,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
             <Link href="/membership" onClick={() => setOpen(false)} className="btn btn-primary mt-6 w-full">
               Become a member
             </Link>
+            <InstallAppButton className="btn btn-outline mt-3 w-full text-teal" />
             <a href={`mailto:${site.email}`} className="mt-4 block text-center text-sm text-muted">
               {site.email}
             </a>
@@ -148,5 +151,25 @@ export function HeaderView({ pathname }: { pathname: string }) {
         </div>
       )}
     </header>
+  );
+}
+
+function LiveEventsButton({ onClick, active }: { onClick: () => void; active: boolean }) {
+  return (
+    <Link
+      href="/events"
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "btn !gap-2 !px-3.5 !py-2 text-sm sm:!px-4 sm:!py-2.5 sm:text-[15px]",
+        active ? "bg-coral text-ink" : "border-[1.5px] border-coral text-coral-700 hover:bg-coral hover:text-ink",
+      )}
+    >
+      <span className="relative flex h-2.5 w-2.5" aria-hidden>
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-coral opacity-75" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-coral-700" />
+      </span>
+      Live Events
+    </Link>
   );
 }

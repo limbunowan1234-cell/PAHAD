@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "PAHAD: Participatory Action for Holistic Advancement & Development",
+  "short_name": "PAHAD",
+  "description": "People. Knowledge. Action. Community development across the Darjeeling and Kalimpong hills.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf5ee",
+  "theme_color": "#164d58",
+  "icons": [
+    { "src": "/icons/pahad-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pahad-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pahad-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Live Events", "url": "/events", "icons": [{ "src": "/icons/pahad-192.png", "sizes": "192x192" }] },
+    { "name": "Become a member", "url": "/membership", "icons": [{ "src": "/icons/pahad-192.png", "sizes": "192x192" }] }
+  ]
+}

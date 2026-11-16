@@ -61,27 +61,36 @@ export function seedMedia(): Media[] {
   }));
 }
 
+/** The welcome article. PAHAD and DSSCOLONY are separate organisations with a shared history. */
+export const SHARED_HISTORY_POST = {
+  title: "PAHAD and DSSCOLONY: a shared history",
+  slug: "pahad-and-dsscolony-shared-history",
+  excerpt:
+    "PAHAD is an independent organisation that builds on the work of DSSCOLONY, a student-led group founded on 24 June 2018. The two share a history but are separate organisations.",
+  body: [
+    "On 24 June 2018 a group of students came together as DSSCOLONY. With limited resources and no dedicated funding, they found ways to make things happen: meetings, creative events, videos, busking for an old age home and a cloth donation drive.",
+    "PAHAD (Participatory Action for Holistic Advancement & Development) is a separate, independent organisation, with its own constitution, governance and membership. It builds on the work, experience and relationships that DSSCOLONY created.",
+    "PAHAD's work looks towards education, research, skill development, livelihoods, culture, community institutions, enterprise and opportunities for people to realise their potential.",
+    "Everyone who shares PAHAD's purpose is welcome to take part, including people who were part of DSSCOLONY.",
+  ].join("\n\n"),
+};
+/** The original title, used to update existing databases once (only if nobody has edited the article). */
+export const OLD_SHARED_HISTORY_TITLE = "From DSSCOLONY to PAHAD: a new chapter";
+export const OLD_SHARED_HISTORY_SLUG = "from-dsscolony-to-pahad";
+
 export function seedPosts(): Post[] {
   const t = "2026-11-14T00:00:00.000Z";
   return [
     {
       id: "post-seed-1",
       type: "news",
-      title: "From DSSCOLONY to PAHAD: a new chapter",
-      slug: "from-dsscolony-to-pahad",
-      excerpt:
-        "What began on 24 June 2018 as a group of students with limited resources is growing into PAHAD, a holistic development institution for the hills.",
-      body: [
-        "On 24 June 2018 a group of students came together as DSSCOLONY. We had limited resources, no dedicated funding and plenty of challenges, yet we found ways to make things happen: meetings, creative events, videos, busking for an old age home and a cloth donation drive.",
-        "Those years taught us that enthusiasm can bring people together, but a lasting institution needs a stronger foundation, responsible leadership and a purpose that can continue beyond any one person.",
-        "That is why we are beginning a new chapter through PAHAD: Participatory Action for Holistic Advancement & Development. Our work now looks towards education, research, skill development, livelihoods, culture, community institutions, enterprise and opportunities for people to realise their potential.",
-        "PAHAD is not asking anyone to forget DSSCOLONY. It is inviting everyone to be part of what DSSCOLONY helped inspire. If you were once part of the journey, the door is open.",
-      ].join("\n\n"),
+      ...SHARED_HISTORY_POST,
       cover: "/images/first-meet-gdns.jpg",
       category: "Announcement",
       event_date: "",
       location: "",
       file_url: "",
+      form_url: "",
       status: "published",
       author_id: "",
       author_name: "PAHAD Founding Team",

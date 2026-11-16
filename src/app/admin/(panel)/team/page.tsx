@@ -20,6 +20,7 @@ const MATRIX: [string, Permission][] = [
   ["Assign tasks", "tasks.assign"],
   ["Read and handle messages", "submissions.view"],
   ["Manage partners", "partners.manage"],
+  ["Manage the Our Team page", "people.manage"],
   ["View activity log", "activity.view"],
   ["Create admins and change roles", "team.manage"],
 ];

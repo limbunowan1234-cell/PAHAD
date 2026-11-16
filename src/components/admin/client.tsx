@@ -5,15 +5,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
-  Activity, CheckSquare, FileText, Handshake, Image as ImageIcon, Inbox, LayoutDashboard, Loader2, LogOut, Menu,
+  Activity, CheckSquare, FileText, Handshake, IdCard, Image as ImageIcon, Inbox, LayoutDashboard, Loader2, LogOut, Menu,
   ShieldCheck, UserCircle, Users, X,
 } from "lucide-react";
 import type { ActionState } from "@/app/admin/actions";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
+import { InstallAppButton } from "@/components/site/InstallApp";
 import { cn } from "@/lib/utils";
 
 // ------------------------------------------------------------------ sidebar
-const ICONS = { dashboard: LayoutDashboard, content: FileText, members: Users, tasks: CheckSquare, submissions: Inbox, gallery: ImageIcon, partners: Handshake, team: ShieldCheck, activity: Activity, account: UserCircle };
+const ICONS = { dashboard: LayoutDashboard, content: FileText, members: Users, tasks: CheckSquare, submissions: Inbox, gallery: ImageIcon, people: IdCard, partners: Handshake, team: ShieldCheck, activity: Activity, account: UserCircle };
 export type NavKey = keyof typeof ICONS;
 
 export function AdminNav({
@@ -58,6 +59,7 @@ export function AdminNav({
     <div className="border-t border-white/15 pt-4">
       <p className="truncate text-sm font-semibold text-white">{user.name}</p>
       <p className="text-xs text-cream">{user.roleLabel}</p>
+      <InstallAppButton label="Install admin app" className="mt-3 text-sm text-cream hover:text-white" />
       <form action={logoutAction}>
         <button className="mt-3 flex items-center gap-2 text-sm text-white/80 hover:text-white">
           <LogOut className="h-4 w-4" aria-hidden /> Sign out

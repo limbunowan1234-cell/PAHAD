@@ -13,7 +13,8 @@ import {
 } from "@/lib/auth/session";
 import { can, roleLabel, type Permission } from "@/lib/permissions";
 import { storeUpload } from "@/lib/storage";
-import type { MemberStatus, Post, PostStatus, PostType, PublicUser, Role, TaskStatus } from "@/lib/types";
+import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
+import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
 export type ActionState = { ok: boolean; message: string } | null;
@@ -94,11 +95,15 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     const clash = (await db.findBy("posts", "slug", slug)).find((p) => p.id !== id);
     if (clash) slug = `${slug}-${newId().slice(0, 4)}`;
 
-    const cover = (await fileFrom(fd, "cover_file", "images")) ?? str(fd, "cover", 500);
-    const file_url = (await fileFrom(fd, "attachment", "documents")) ?? str(fd, "file_url", 500);
+    // Each file can be uploaded, or given as a link (Google Drive share links are converted automatically).
+    const coverLink = safeUrl(str(fd, "cover_link", 500));
+    const cover = (await fileFrom(fd, "cover_file", "images")) ?? (coverLink ? toImageUrl(coverLink) : str(fd, "cover", 500));
+    const fileLink = safeUrl(str(fd, "file_link", 500));
+    const file_url = (await fileFrom(fd, "attachment", "documents")) ?? (fileLink ? toFileUrl(fileLink) : str(fd, "file_url", 500));
+    const form_url = safeUrl(str(fd, "form_url", 500));
 
     const data: Partial<Post> = {
-      type, title, slug, cover, file_url, status,
+      type, title, slug, cover, file_url, form_url, status,
       excerpt: str(fd, "excerpt", 400),
       body: str(fd, "body", 50_000),
       category: str(fd, "category", 60),
@@ -276,7 +281,8 @@ export async function deleteSubmission(id: string) {
 export async function uploadMedia(_prev: ActionState, fd: FormData): Promise<ActionState> {
   return guarded("media.upload", async (user) => {
     const files = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-    if (!files.length) throw new Error("Choose at least one photo.");
+    const links = str(fd, "links", 20_000).split(/\s+/).map(safeUrl).filter(Boolean);
+    if (!files.length && !links.length) throw new Error("Choose photos to upload or paste Google Drive photo links.");
     const album = str(fd, "album", 80) || "General";
     const caption = str(fd, "caption", 200);
     for (const f of files) {
@@ -285,9 +291,15 @@ export async function uploadMedia(_prev: ActionState, fd: FormData): Promise<Act
       const id = newId();
       await db.insert("media", { id, url, caption: caption || f.name.replace(/\.[^.]+$/, ""), album, uploaded_by: user.name, created_at: now() });
     }
-    await log(user, "uploaded", "gallery", "", `${files.length} photo(s) to ${album}`);
+    for (const [i, link] of links.entries()) {
+      await db.insert("media", {
+        id: newId(), url: toImageUrl(link), caption: caption || `${album} ${i + 1}`, album, uploaded_by: user.name, created_at: now(),
+      });
+    }
+    const count = files.length + links.length;
+    await log(user, "added", "gallery", "", `${count} photo(s) to ${album}`);
     updateTag("media");
-    return `${files.length} photo(s) uploaded.`;
+    return `${count} photo(s) added.`;
   });
 }
 
@@ -310,7 +322,8 @@ export async function savePartner(_prev: ActionState, fd: FormData): Promise<Act
     const url = str(fd, "url", 300);
     if (name.length < 2) throw new Error("Partner name is required.");
     if (url && !/^https?:\/\//.test(url)) throw new Error("Website must start with http:// or https://");
-    const logo = (await fileFrom(fd, "logo_file", "images")) ?? str(fd, "logo", 500);
+    const logoLink = safeUrl(str(fd, "logo_link", 500));
+    const logo = (await fileFrom(fd, "logo_file", "images")) ?? (logoLink ? toImageUrl(logoLink, 600) : str(fd, "logo", 500));
     const data = {
       name, url, logo, role: str(fd, "role", 60) || "Partner", description: str(fd, "description", 400),
       dark_logo: fd.get("dark_logo") === "on", sort: Number(str(fd, "sort", 5)) || 0,
@@ -331,6 +344,42 @@ export async function deletePartner(id: string) {
     await log(user, "removed", "partner", id, p.name);
     updateTag("partners");
     return "Partner removed.";
+  });
+}
+
+// ------------------------------------------------------------------ our team (public people list)
+export async function saveTeamMember(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return guarded("people.manage", async (user) => {
+    const id = str(fd, "id", 60);
+    const name = str(fd, "name", 120);
+    const section = str(fd, "section", 40) as TeamSection;
+    if (name.length < 2) throw new Error("Name is required.");
+    if (!TEAM_SECTIONS.includes(section)) throw new Error("Choose a section.");
+    const photoLink = safeUrl(str(fd, "photo_link", 500));
+    const photo_url = (await fileFrom(fd, "photo_file", "images")) ?? (photoLink ? toImageUrl(photoLink, 600) : str(fd, "photo_url", 500));
+    const data = {
+      name, section, photo_url,
+      designation: str(fd, "designation", 120),
+      department: str(fd, "department", 160),
+      additional_charge: str(fd, "additional_charge", 200),
+      sort: Number(str(fd, "sort", 5)) || 0,
+    };
+    if (id) await db.update("team", id, data);
+    else await db.insert("team", { ...data, id: newId(), created_at: now() });
+    await log(user, id ? "updated" : "added", "team member", id, `${name} (${section})`);
+    updateTag("team");
+    return id ? "Updated." : `${name} added to Our Team.`;
+  });
+}
+
+export async function deleteTeamMember(id: string) {
+  return guarded("people.manage", async (user) => {
+    const m = await db.get("team", id);
+    if (!m) throw new Error("Not found.");
+    await db.remove("team", id);
+    await log(user, "removed", "team member", id, m.name);
+    updateTag("team");
+    return `${m.name} removed from Our Team.`;
   });
 }
 

@@ -1,0 +1,21 @@
+{
+  "id": "/admin",
+  "name": "PAHAD Admin",
+  "short_name": "PAHAD Admin",
+  "description": "Manage the PAHAD website: content, members, tasks and messages.",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fdf5ee",
+  "theme_color": "#0f3a43",
+  "icons": [
+    { "src": "/icons/admin-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New content", "url": "/admin/content/new", "icons": [{ "src": "/icons/admin-192.png", "sizes": "192x192" }] },
+    { "name": "Members", "url": "/admin/members", "icons": [{ "src": "/icons/admin-192.png", "sizes": "192x192" }] }
+  ]
+}

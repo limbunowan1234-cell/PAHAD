@@ -5,7 +5,9 @@ import path from "node:path";
 import { neon } from "@neondatabase/serverless";
 import type { TableName, Tables } from "../types";
 import { createTableSQL, SCHEMA } from "./schema";
-import { DEV_ACCOUNTS, DEV_PASSWORD, seedMedia, seedPartners, seedPosts, seedTasks, type DbShape } from "./seed";
+import {
+  DEV_ACCOUNTS, DEV_PASSWORD, OLD_SHARED_HISTORY_TITLE, SHARED_HISTORY_POST, seedMedia, seedPartners, seedPosts, seedTasks, type DbShape,
+} from "./seed";
 import { hashPassword } from "../auth/password";
 
 /**
@@ -40,6 +42,11 @@ function postgresBackend(url: string): Backend {
   const init = () =>
     (ready ??= (async () => {
       for (const stmt of createTableSQL()) await sql.query(stmt);
+      // One-time rewording: PAHAD and DSSCOLONY are separate organisations. Skipped if an admin edited the article.
+      await sql.query(
+        "UPDATE posts SET title = $1, slug = $2, excerpt = $3, body = $4 WHERE id = 'post-seed-1' AND title = $5",
+        [SHARED_HISTORY_POST.title, SHARED_HISTORY_POST.slug, SHARED_HISTORY_POST.excerpt, SHARED_HISTORY_POST.body, OLD_SHARED_HISTORY_TITLE],
+      );
       const [{ count }] = (await sql.query("SELECT count(*)::int AS count FROM partners")) as { count: number }[];
       if (count === 0) {
         for (const p of seedPartners()) await rawInsert("partners", p);
@@ -128,7 +135,7 @@ function fileBackend(): Backend {
     const editor = users.find((u) => u.role === "editor");
     return {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
-      submissions: [], partners: seedPartners(), media: seedMedia(), activity: [],
+      submissions: [], partners: seedPartners(), media: seedMedia(), team: [], activity: [],
     };
   }
   function load(): DbShape {
@@ -138,7 +145,11 @@ function fileBackend(): Backend {
       writeFileSync(file, JSON.stringify(data, null, 2));
       return data;
     }
-    return JSON.parse(readFileSync(file, "utf8")) as DbShape;
+    const data = JSON.parse(readFileSync(file, "utf8")) as DbShape;
+    for (const t of Object.keys(SCHEMA) as TableName[]) (data[t] as unknown[]) ??= [];
+    const old = data.posts.find((p) => p.id === "post-seed-1" && p.title === OLD_SHARED_HISTORY_TITLE);
+    if (old) Object.assign(old, SHARED_HISTORY_POST);
+    return data;
   }
   function save(data: DbShape) {
     writeFileSync(file, JSON.stringify(data, null, 2));

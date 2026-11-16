@@ -16,15 +16,15 @@ export async function getPublishedPosts(type?: PostType, limit?: number): Promis
   return limit ? rows.slice(0, limit) : rows;
 }
 
-export async function getUpcomingEvents(limit?: number): Promise<{ upcoming: Post[]; past: Post[] }> {
+export async function getUpcomingEvents(limit?: number): Promise<{ today: Post[]; upcoming: Post[]; past: Post[] }> {
   "use cache";
   cacheLife("minutes");
   cacheTag("posts");
   const events = (await db.all("posts")).filter((p) => p.type === "event" && p.status === "published");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // YYYY-MM-DD in India
   const upcoming = events.filter((e) => (e.event_date || "") >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
   const past = events.filter((e) => (e.event_date || "") < today).sort((a, b) => b.event_date.localeCompare(a.event_date));
-  return { upcoming: limit ? upcoming.slice(0, limit) : upcoming, past };
+  return { today: upcoming.filter((e) => e.event_date === today), upcoming: limit ? upcoming.slice(0, limit) : upcoming, past };
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | null> {
@@ -40,6 +40,13 @@ export async function getPartners() {
   cacheLife("hours");
   cacheTag("partners");
   return (await db.all("partners")).sort((a, b) => a.sort - b.sort);
+}
+
+export async function getTeam() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("team");
+  return (await db.all("team")).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
 }
 
 export async function getMedia() {

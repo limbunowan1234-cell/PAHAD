@@ -10,7 +10,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
-    cover: "text", category: "text", event_date: "text", location: "text", file_url: "text",
+    cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text",
     status: "text", author_id: "text", author_name: "text", created_at: "text",
     updated_at: "text", published_at: "text",
   },
@@ -32,6 +32,10 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     dark_logo: "bool", sort: "int", created_at: "text",
   },
   media: { id: "text", url: "text", caption: "text", album: "text", uploaded_by: "text", created_at: "text" },
+  team: {
+    id: "text", name: "text", section: "text", designation: "text", department: "text",
+    additional_charge: "text", photo_url: "text", sort: "int", created_at: "text",
+  },
   activity: {
     id: "text", actor_id: "text", actor_name: "text", action: "text", entity: "text",
     entity_id: "text", summary: "text", created_at: "text",
@@ -47,6 +51,13 @@ export function createTableSQL(): string[] {
     );
     return `CREATE TABLE IF NOT EXISTS ${table} (${cols.join(", ")})`;
   });
+  // Add columns introduced after a table was first created (safe to run every time).
+  for (const table of Object.keys(SCHEMA) as TableName[]) {
+    const adds = Object.entries(SCHEMA[table])
+      .filter(([name]) => name !== "id" && name !== "last_login")
+      .map(([name, type]) => `ADD COLUMN IF NOT EXISTS ${name} ${SQL_TYPE[type]}`);
+    statements.push(`ALTER TABLE ${table} ${adds.join(", ")}`);
+  }
   statements.push(
     "CREATE UNIQUE INDEX IF NOT EXISTS users_email_idx ON users (lower(email))",
     "CREATE UNIQUE INDEX IF NOT EXISTS posts_slug_idx ON posts (slug)",
