@@ -73,6 +73,7 @@ export async function applyForMembership(_prev: FormState, fd: FormData): Promis
     source: "website",
     notes: field(fd, "motivation", 2000),
     added_by: "Website application",
+    directorate: "",
     created_at: new Date().toISOString(),
   });
   return {

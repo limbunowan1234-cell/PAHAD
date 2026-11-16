@@ -4,45 +4,25 @@ import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, newId } from "@/lib/db";
 import { hashPassword, validatePasswordStrength, verifyPassword } from "@/lib/auth/password";
-import {
-  clearSessionCookie,
-  getCurrentUser,
-  PermissionError,
-  requirePermission,
-  setSessionCookie,
-} from "@/lib/auth/session";
-import { can, roleLabel, type Permission } from "@/lib/permissions";
+import { clearSessionCookie, getCurrentUser, setSessionCookie } from "@/lib/auth/session";
+import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
+import { can, canEditPost, canPublish, DIRECTORATES, FINANCE_ACCESS, inScope, roleInfo, roleLabel, ROLES, type FinanceAccess } from "@/lib/permissions";
+import { appendToSheet } from "@/lib/google";
 import { storeUpload } from "@/lib/storage";
 import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
 import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
-export type ActionState = { ok: boolean; message: string } | null;
+export type { ActionState };
 
-const now = () => new Date().toISOString();
-const str = (fd: FormData, k: string, max = 500) => String(fd.get(k) ?? "").trim().slice(0, max);
+const validDirectorate = (d: string) => ((DIRECTORATES as readonly string[]).includes(d) ? d : "");
 
-async function log(actor: PublicUser, action: string, entity: string, entityId: string, summary: string) {
-  await db.insert("activity", {
-    id: newId(), actor_id: actor.id, actor_name: actor.name, action, entity, entity_id: entityId, summary, created_at: now(),
-  });
-}
-
-/** Wraps an action so permission and validation errors come back as friendly messages. */
-async function guarded(permission: Permission, fn: (user: PublicUser) => Promise<string>): Promise<ActionState> {
-  try {
-    const user = await requirePermission(permission);
-    return { ok: true, message: await fn(user) };
-  } catch (e) {
-    if (e instanceof PermissionError || e instanceof Error) return { ok: false, message: e.message };
-    throw e;
+/** Tell the author when someone else changes or removes their content. */
+async function notifyAuthor(actor: PublicUser, post: Post, what: string) {
+  if (post.author_id && post.author_id !== actor.id) {
+    await notify(post.author_id, `${actor.name} (${roleLabel(actor.role)}) ${what} your ${post.type}: “${post.title}”.`, `/admin/content/${post.id}`);
   }
-}
-
-async function fileFrom(fd: FormData, key: string, folder: "images" | "documents") {
-  const f = fd.get(key);
-  return f instanceof File && f.size > 0 ? storeUpload(f, folder) : null;
 }
 
 // ------------------------------------------------------------------ auth
@@ -84,13 +64,15 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
 
     const existing = id ? await db.get("posts", id) : null;
     if (id && !existing) throw new Error("This item no longer exists.");
-    if (existing && !can(user.role, "content.edit_any")) {
-      if (existing.author_id !== user.id) throw new Error("General-level admins can only edit their own items.");
-      if (existing.status === "published") throw new Error("This item is published. Ask an Executive Admin or Super Admin to change it.");
+    if (existing && !canEditPost(user, existing)) {
+      throw new Error("You can't edit this item. Ask the Chief Executive Director, General Secretary or President.");
     }
 
+    // Directorate Heads always work inside their own directorate.
+    const directorate = user.role === "directorate_head" ? user.directorate : validDirectorate(str(fd, "directorate", 120));
     let status = (str(fd, "status", 20) || "draft") as PostStatus;
-    if (!can(user.role, "content.publish") && status === "published") status = "pending";
+    const draft = { author_id: existing?.author_id ?? user.id, directorate };
+    if (status === "published" && !canPublish(user, draft)) status = "pending";
 
     let slug = slugify(str(fd, "slug", 100) || title) || newId().slice(0, 8);
     const clash = (await db.findBy("posts", "slug", slug)).find((p) => p.id !== id);
@@ -104,7 +86,7 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     const form_url = safeUrl(str(fd, "form_url", 500));
 
     const data: Partial<Post> = {
-      type, title, slug, cover, file_url, form_url, status,
+      type, title, slug, cover, file_url, form_url, status, directorate,
       excerpt: str(fd, "excerpt", 400),
       body: str(fd, "body", 50_000),
       category: str(fd, "category", 60),
@@ -116,25 +98,31 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
 
     if (existing) {
       await db.update("posts", existing.id, data);
-      await log(user, "updated", "content", existing.id, `${title} (${status})`);
+      await log(user, "updated", "content", existing.id, `${title} (${status})`, {
+        before: { title: existing.title, status: existing.status, excerpt: existing.excerpt },
+        after: { title, status, excerpt: data.excerpt },
+      });
+      await notifyAuthor(user, existing, "edited");
     } else {
       const row = { ...data, id: newId(), author_id: user.id, author_name: user.name, created_at: now(), published_at: data.published_at ?? "" } as Post;
       await db.insert("posts", row);
       await log(user, "created", "content", row.id, `${title} (${status})`);
     }
     updateTag("posts");
-    return status === "pending" ? "Saved and sent for review. An Executive Admin or Super Admin will publish it." : status === "published" ? "Published." : "Draft saved.";
+    return status === "pending" ? "Saved and sent for review. It will appear on the website once it is approved." : status === "published" ? "Published." : "Draft saved.";
   });
   if (result?.ok) redirect(`/admin/content?saved=${encodeURIComponent(result.message)}`);
   return result;
 }
 
 export async function setPostStatus(id: string, status: PostStatus) {
-  return guarded("content.publish", async (user) => {
+  return guarded("content.create", async (user) => {
     const post = await db.get("posts", id);
     if (!post) throw new Error("Not found.");
+    if (!canPublish(user, post)) throw new Error("You can't publish or unpublish this item.");
     await db.update("posts", id, { status, published_at: status === "published" ? post.published_at || now() : post.published_at, updated_at: now() });
-    await log(user, status === "published" ? "published" : "unpublished", "content", id, post.title);
+    await log(user, status === "published" ? "published" : "unpublished", "content", id, post.title, { before: { status: post.status }, after: { status } });
+    await notifyAuthor(user, post, status === "published" ? "published" : "unpublished");
     updateTag("posts");
     return status === "published" ? "Published." : "Moved back to drafts.";
   });
@@ -145,7 +133,8 @@ export async function deletePost(id: string) {
     const post = await db.get("posts", id);
     if (!post) throw new Error("Not found.");
     await db.remove("posts", id);
-    await log(user, "deleted", "content", id, post.title);
+    await log(user, "deleted", "content", id, post.title, { before: { title: post.title, type: post.type, status: post.status, author: post.author_name } });
+    await notifyAuthor(user, post, "removed");
     updateTag("posts");
     return "Deleted.";
   });
@@ -167,13 +156,14 @@ export async function createMember(_prev: ActionState, fd: FormData): Promise<Ac
     const email = str(fd, "email", 160).toLowerCase();
     if (name.length < 2) throw new Error("Please enter the member's name.");
     if (email && (await db.findBy("members", "email", email)).length) throw new Error("A member with this email already exists.");
+    const directorate = user.role === "directorate_head" ? user.directorate : validDirectorate(str(fd, "directorate", 120));
     const id = newId();
     await db.insert("members", {
       id, member_no: await nextMemberNo(), name, email,
       phone: str(fd, "phone", 30), area: str(fd, "area", 120), address: str(fd, "address", 300),
       occupation: str(fd, "occupation", 160), category: str(fd, "category", 60) || "General",
       interests: str(fd, "interests", 400), status: "active", source: "admin",
-      notes: str(fd, "notes", 2000), added_by: user.name, created_at: now(),
+      notes: str(fd, "notes", 2000), added_by: user.name, directorate, created_at: now(),
     });
     await log(user, "added", "member", id, name);
     return `${name} added as a member.`;
@@ -185,7 +175,9 @@ export async function updateMember(_prev: ActionState, fd: FormData): Promise<Ac
     const id = str(fd, "id", 60);
     const m = await db.get("members", id);
     if (!m) throw new Error("Member not found.");
+    if (!inScope(user, m.directorate)) throw new Error("This member is not in your directorate.");
     await db.update("members", id, {
+      directorate: user.role === "directorate_head" ? user.directorate : validDirectorate(str(fd, "directorate", 120)),
       name: str(fd, "name", 120) || m.name, email: str(fd, "email", 160).toLowerCase(), phone: str(fd, "phone", 30),
       area: str(fd, "area", 120), address: str(fd, "address", 300), occupation: str(fd, "occupation", 160),
       category: str(fd, "category", 60), interests: str(fd, "interests", 400), notes: str(fd, "notes", 2000),
@@ -199,6 +191,7 @@ export async function setMemberStatus(id: string, status: MemberStatus) {
   return guarded("members.approve", async (user) => {
     const m = await db.get("members", id);
     if (!m) throw new Error("Member not found.");
+    if (!inScope(user, m.directorate)) throw new Error("This member is not in your directorate.");
     const patch: { status: MemberStatus; member_no?: string } = { status };
     if (status === "active" && !m.member_no) patch.member_no = await nextMemberNo();
     await db.update("members", id, patch);
@@ -212,7 +205,7 @@ export async function deleteMember(id: string) {
     const m = await db.get("members", id);
     if (!m) throw new Error("Member not found.");
     await db.remove("members", id);
-    await log(user, "deleted", "member", id, m.name);
+    await log(user, "deleted", "member", id, m.name, { before: { name: m.name, email: m.email, phone: m.phone, member_no: m.member_no, status: m.status } });
     return `${m.name} was deleted.`;
   });
 }
@@ -225,6 +218,7 @@ export async function createTask(_prev: ActionState, fd: FormData): Promise<Acti
     if (title.length < 3) throw new Error("Please describe the task.");
     const assignee = await db.get("users", assigned_to);
     if (!assignee || !assignee.active) throw new Error("Choose who this task is for.");
+    if (!inScope(user, assignee.directorate)) throw new Error("You can only assign tasks within your directorate.");
     const id = newId();
     await db.insert("tasks", {
       id, title, description: str(fd, "description", 2000), assigned_to, assigned_by: user.id,
@@ -232,6 +226,7 @@ export async function createTask(_prev: ActionState, fd: FormData): Promise<Acti
       status: "todo", created_at: now(), updated_at: now(),
     });
     await log(user, "assigned", "task", id, `${title} → ${assignee.name}`);
+    await notify(assignee.id, `${user.name} assigned you a task: “${title}”.`, "/admin/tasks");
     return `Task assigned to ${assignee.name}.`;
   });
 }
@@ -412,31 +407,39 @@ export async function deleteTeamMember(id: string) {
 }
 
 // ------------------------------------------------------------------ team (admin accounts)
-const ROLE_IDS: Role[] = ["super_admin", "admin", "editor"];
+const ROLE_IDS = ROLES.map((r) => r.id);
+
+/** Nobody can give anyone a higher level than their own. */
+function assertCanGrant(actor: PublicUser, role: Role) {
+  if (!ROLE_IDS.includes(role)) throw new Error("Choose an access level.");
+  if (roleInfo(role).level < roleInfo(actor.role).level) throw new Error("You can't give someone a higher level than your own.");
+}
 
 export async function createAdmin(_prev: ActionState, fd: FormData): Promise<ActionState> {
   return guarded("team.manage", async (user) => {
     const name = str(fd, "name", 120);
     const email = str(fd, "email", 160).toLowerCase();
-    const role = str(fd, "role", 20) as Role;
+    const role = str(fd, "role", 30) as Role;
     const password = String(fd.get("password") ?? "");
     if (name.length < 2) throw new Error("Name is required.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email.");
-    if (!ROLE_IDS.includes(role)) throw new Error("Choose a role.");
+    assertCanGrant(user, role);
+    const directorate = validDirectorate(str(fd, "directorate", 120));
+    if (role === "directorate_head" && !directorate) throw new Error("Choose the directorate this Directorate Head leads.");
     const weak = validatePasswordStrength(password);
     if (weak) throw new Error(weak);
     if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
     const id = newId();
     await db.insert("users", {
-      id, email, name, role, designation: str(fd, "designation", 120), active: true,
+      id, email, name, role, designation: str(fd, "designation", 120), directorate, owner: false, finance: "", active: true,
       password_hash: hashPassword(password), created_at: now(), last_login: null,
     });
-    await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}`);
+    await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}`, { after: { name, email, role, directorate } });
     return `${name} can now sign in as ${roleLabel(role)}. Share the temporary password privately and ask them to change it.`;
   });
 }
 
-async function superAdminCount() {
+async function presidentCount() {
   return (await db.all("users")).filter((u) => u.role === "super_admin" && u.active).length;
 }
 
@@ -445,19 +448,29 @@ export async function updateAdmin(_prev: ActionState, fd: FormData): Promise<Act
     const id = str(fd, "id", 60);
     const target = await db.get("users", id);
     if (!target) throw new Error("Admin not found.");
-    const role = str(fd, "role", 20) as Role;
+    const role = str(fd, "role", 30) as Role;
     const active = fd.get("active") === "on";
-    if (!ROLE_IDS.includes(role)) throw new Error("Choose a role.");
-    const losingSuper = target.role === "super_admin" && target.active && (role !== "super_admin" || !active);
-    if (losingSuper && (await superAdminCount()) <= 1) throw new Error("There must always be at least one active Super Admin.");
-    await db.update("users", id, { role, active, designation: str(fd, "designation", 120), name: str(fd, "name", 120) || target.name });
+    assertCanGrant(user, role);
+    if (target.owner && (role !== "super_admin" || !active)) {
+      throw new Error("The Founder account is the permanent owner: it always stays President and active.");
+    }
+    const losingPresident = target.role === "super_admin" && target.active && (role !== "super_admin" || !active);
+    if (losingPresident && (await presidentCount()) <= 1) throw new Error("There must always be at least one active President.");
+    const directorate = validDirectorate(str(fd, "directorate", 120));
+    if (role === "directorate_head" && !directorate) throw new Error("Choose the directorate this Directorate Head leads.");
+    const after = { role, active, designation: str(fd, "designation", 120), directorate, name: str(fd, "name", 120) || target.name };
+    await db.update("users", id, after);
     const newPassword = String(fd.get("password") ?? "");
     if (newPassword) {
       const weak = validatePasswordStrength(newPassword);
       if (weak) throw new Error(weak);
       await db.update("users", id, { password_hash: hashPassword(newPassword) });
     }
-    await log(user, "updated admin", "team", id, `${target.name}: ${roleLabel(role)}${active ? "" : " (deactivated)"}`);
+    await log(user, "updated admin", "team", id, `${target.name}: ${roleLabel(role)}${active ? "" : " (deactivated)"}`, {
+      before: { role: target.role, active: target.active, designation: target.designation, directorate: target.directorate },
+      after,
+    });
+    if (target.role !== role) await notify(id, `Your access level was changed to ${roleLabel(role)} by ${user.name}.`, "/admin");
     return "Admin updated.";
   });
 }
@@ -467,11 +480,43 @@ export async function deleteAdmin(id: string) {
     if (id === user.id) throw new Error("You cannot delete your own account.");
     const target = await db.get("users", id);
     if (!target) throw new Error("Admin not found.");
-    if (target.role === "super_admin" && (await superAdminCount()) <= 1) throw new Error("There must always be at least one active Super Admin.");
+    if (target.owner) throw new Error("The Founder account is the permanent owner and cannot be removed.");
+    if (target.role === "super_admin" && (await presidentCount()) <= 1) throw new Error("There must always be at least one active President.");
     await db.remove("users", id);
-    await log(user, "deleted admin", "team", id, target.name);
+    await log(user, "deleted admin", "team", id, target.name, { before: { name: target.name, email: target.email, role: target.role } });
     return `${target.name}'s admin access was removed.`;
   });
+}
+
+/** Finance access is granted, changed or removed only by the Governing Body, and recorded in the Sheet. */
+export async function setFinanceAccess(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return guarded("finance.access.manage", async (user) => {
+    const id = str(fd, "id", 60);
+    const access = str(fd, "finance", 20) as FinanceAccess | "";
+    const target = await db.get("users", id);
+    if (!target) throw new Error("Admin not found.");
+    if (access && !FINANCE_ACCESS.some((f) => f.id === access)) throw new Error("Choose a finance access level.");
+    if (access === "approve" && target.role !== "super_admin" && target.role !== "general_secretary") {
+      throw new Error("Only the Governing Body (President and General Secretary) can approve finance.");
+    }
+    if (target.id === user.id) throw new Error("You can't change your own finance access.");
+    await db.update("users", id, { finance: access });
+    const label = access ? FINANCE_ACCESS.find((f) => f.id === access)!.label : "Default for their role";
+    await log(user, "changed finance access", "team", id, `${target.name}: ${label}`, { before: { finance: target.finance }, after: { finance: access } });
+    await appendToSheet("Access changes", [now(), user.name, roleLabel(user.role), target.name, roleLabel(target.role), target.finance || "default", access || "default"]);
+    await notify(id, `Your finance access was set to “${label}” by ${user.name}.`, "/admin/finance");
+    return `Finance access for ${target.name}: ${label}.`;
+  });
+}
+
+// ------------------------------------------------------------------ notifications
+export async function markNotificationsRead(): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+  for (const n of (await db.findBy("notifications", "user_id", user.id)).filter((x) => !x.read)) {
+    await db.update("notifications", n.id, { read: true });
+  }
+  return { ok: true, message: "All caught up." };
 }
 
 // ------------------------------------------------------------------ own account

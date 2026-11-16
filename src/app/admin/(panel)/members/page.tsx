@@ -5,7 +5,7 @@ import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { Badge, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, DIRECTORATES, inScope } from "@/lib/permissions";
 import type { Member, MemberStatus } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ const TONE = { active: "green", applicant: "amber", inactive: "grey", rejected: 
 const LABEL: Record<MemberStatus, string> = { active: "Active", applicant: "Applicant", inactive: "Inactive", rejected: "Not approved" };
 const CATEGORIES = ["General", "Student / Youth", "Professional", "Former DSSCOLONY member", "Institution representative"];
 
-function MemberFields({ m }: { m?: Member }) {
+function MemberFields({ m, lockedDirectorate }: { m?: Member; lockedDirectorate?: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Full name *"><input name="name" required defaultValue={m?.name} className="field" /></Field>
@@ -27,6 +27,19 @@ function MemberFields({ m }: { m?: Member }) {
         <select name="category" defaultValue={m?.category ?? "General"} className="field">
           {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
         </select>
+      </Field>
+      <Field label="Directorate">
+        {lockedDirectorate ? (
+          <>
+            <input type="hidden" name="directorate" value={lockedDirectorate} />
+            <span className="block rounded-xl bg-sand px-3 py-2 text-sm text-teal">{lockedDirectorate}</span>
+          </>
+        ) : (
+          <select name="directorate" defaultValue={m?.directorate ?? ""} className="field">
+            <option value="">Not assigned</option>
+            {DIRECTORATES.map((d) => <option key={d}>{d}</option>)}
+          </select>
+        )}
       </Field>
       <Field label="Address" className="sm:col-span-2"><input name="address" defaultValue={m?.address} className="field" /></Field>
       <Field label="Interests" className="sm:col-span-2"><input name="interests" defaultValue={m?.interests} className="field" placeholder="e.g. Research, Youth, Media" /></Field>
@@ -40,7 +53,9 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
   const sp = await searchParams;
   const status = (typeof sp.status === "string" ? sp.status : "") as MemberStatus | "";
   const q = (typeof sp.q === "string" ? sp.q : "").toLowerCase().trim();
-  const all = await db.all("members");
+  // Directorate Heads only see members of their own directorate.
+  const all = (await db.all("members")).filter((m) => inScope(user, m.directorate));
+  const locked = user.role === "directorate_head" ? user.directorate : undefined;
   const rows = all.filter(
     (m) => (!status || m.status === status) && (!q || [m.name, m.email, m.phone, m.area, m.member_no].join(" ").toLowerCase().includes(q)),
   );
@@ -64,7 +79,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
         <div id="add" className="mb-8 scroll-mt-24">
           <Disclosure summary="Add a member" defaultOpen={all.length === 0}>
             <AdminForm action={createMember} submitLabel="Add member" resetOnSuccess>
-              <MemberFields />
+              <MemberFields lockedDirectorate={locked} />
             </AdminForm>
           </Disclosure>
         </div>
@@ -103,7 +118,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                     {m.member_no && <span className="text-xs font-mono text-muted">{m.member_no}</span>}
                   </div>
                   <p className="mt-1 text-sm text-muted">
-                    {[m.email, m.phone, m.area, m.category].filter(Boolean).join(" · ")}
+                    {[m.email, m.phone, m.area, m.category, m.directorate].filter(Boolean).join(" · ")}
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     {m.source === "website" ? "Applied on the website" : `Added by ${m.added_by}`} · {formatDate(m.created_at)}
@@ -136,7 +151,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                   <Disclosure summary="Edit details">
                     <AdminForm action={updateMember}>
                       <input type="hidden" name="id" value={m.id} />
-                      <MemberFields m={m} />
+                      <MemberFields m={m} lockedDirectorate={locked} />
                     </AdminForm>
                   </Disclosure>
                 </div>

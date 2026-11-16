@@ -1,11 +1,25 @@
-export type Role = "super_admin" | "admin" | "editor";
+export type Role =
+  | "super_admin" // L1 President
+  | "general_secretary" // L1G
+  | "admin" // L2 Chief Executive Director
+  | "treasurer" // L2F
+  | "program_director" // L2P
+  | "directorate_head" // L2D
+  | "editor"; // L3 General
 
 export type User = {
   id: string;
   email: string;
   name: string;
   role: Role;
+  /** Title shown with the name (Founder, President, Website Head…). Only a label. */
   designation: string;
+  /** Directorate, for scoped roles (Directorate Head) and for filtering. */
+  directorate: string;
+  /** Permanent owner (the bootstrapped Founder/President): cannot be removed, demoted or deactivated. */
+  owner: boolean;
+  /** Finance access set by the Governing Body; empty = default for the role. */
+  finance: string;
   active: boolean;
   password_hash: string;
   created_at: string;
@@ -31,6 +45,7 @@ export type Post = {
   file_url: string;
   /** Registration or application form, e.g. a Google Form link. */
   form_url: string;
+  directorate: string;
   status: PostStatus;
   author_id: string;
   author_name: string;
@@ -55,6 +70,7 @@ export type Member = {
   source: "admin" | "website";
   notes: string;
   added_by: string;
+  directorate: string;
   created_at: string;
 };
 
@@ -146,6 +162,68 @@ export type Activity = {
   entity: string;
   entity_id: string;
   summary: string;
+  /** JSON {before, after} for sensitive actions. */
+  details: string;
+  /** Directorate of the person who acted, so Directorate Heads see their own area. */
+  directorate: string;
+  created_at: string;
+};
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  message: string;
+  link: string;
+  read: boolean;
+  created_at: string;
+};
+
+export type FinanceType = "income" | "expense" | "donation" | "dues";
+export type FinanceStatus = "submitted" | "approved" | "rejected" | "deleted";
+export type FinanceApproval = { by: string; name: string; role: Role; decision: "approved" | "rejected"; note: string; at: string };
+
+export type FinanceEntry = {
+  id: string;
+  entry_no: string;
+  type: FinanceType;
+  /** Amount in rupees, stored as text with two decimals. */
+  amount: string;
+  entry_date: string;
+  description: string;
+  receipt_url: string;
+  submitted_by: string;
+  submitted_by_name: string;
+  status: FinanceStatus;
+  /** JSON array of FinanceApproval. */
+  approvals: string;
+  locked: boolean;
+  /** Whether the latest change reached the Google Sheet. */
+  synced: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinanceRequestKind = "edit" | "delete" | "export";
+export type FinanceRequest = {
+  id: string;
+  entry_id: string;
+  kind: FinanceRequestKind;
+  /** JSON: proposed changes (edit), reason (delete) or filters (export). */
+  payload: string;
+  requested_by: string;
+  requested_by_name: string;
+  status: "pending" | "approved" | "rejected" | "used";
+  decided_by_name: string;
+  created_at: string;
+};
+
+/** Writes to Google Sheets/Drive waiting to be retried. */
+export type OutboxItem = {
+  id: string;
+  action: string;
+  payload: string;
+  attempts: number;
+  last_error: string;
   created_at: string;
 };
 
@@ -160,5 +238,9 @@ export type Tables = {
   team: TeamMember;
   settings: Setting;
   activity: Activity;
+  notifications: Notification;
+  finance: FinanceEntry;
+  finance_requests: FinanceRequest;
+  outbox: OutboxItem;
 };
 export type TableName = keyof Tables;

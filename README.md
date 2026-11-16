@@ -12,25 +12,21 @@ Media partner: [Gorkha TV](https://gorkhatv.site) · News partner: [Khabar Darje
 
 **Public website**: Home, About, Vision & Mission, Values & Principles, Our Story (DSSCOLONY → PAHAD), Governance (organogram), Transparency & Documents, Areas of Work, Programmes, Knowledge & Research, News, Events, Gallery, Partners, Get Involved, Membership application, Contact, Privacy and Terms. Every page works on phones.
 
-**Admin panel** (`/admin`), with three access levels that follow PAHAD’s governance structure:
+**Admin panel** (`/admin`), following the *PAHAD Admin Access Model*:
 
-| | Level 1 · Super Admin<br>Governing Body (e.g. Chairman) | Level 2 · Executive Admin<br>Executive Body (e.g. Chief Executive Director) | Level 3 · General<br>General Assembly members |
-|---|:-:|:-:|:-:|
-| Upload content (news, events, programmes, resources, documents) | ✓ | ✓ | ✓ (sent for review) |
-| Publish / approve content | ✓ | ✓ | |
-| Delete content | ✓ | ✓ | |
-| Upload gallery photos | ✓ | ✓ | ✓ |
-| Add members | ✓ | ✓ | ✓ |
-| Edit, approve and export members | ✓ | ✓ | |
-| **Delete members** | ✓ | | |
-| Assign tasks to the team | ✓ | ✓ | |
-| Work on own tasks | ✓ | ✓ | ✓ |
-| Read and handle website messages | ✓ | ✓ | |
-| Manage partners | ✓ | ✓ | |
-| View activity log | ✓ | ✓ | |
-| **Create admins and change access levels** | ✓ | | |
+| Level | Role | Body | In short |
+|---|---|---|---|
+| L1 | President | Governing Body | Full control; the only role that creates admins and changes roles. The bootstrapped Founder account is a permanent owner. |
+| L1G | General Secretary | Governing Body | Day-to-day work, deletes members, approves finance. No role changes. |
+| L2 | Chief Executive Director | Secretariat | Content, members (no delete), tasks, partners, messages. Read-only finance. |
+| L2F | Treasurer | Secretariat | Records finance entries with receipts. Cannot approve. |
+| L2P | Program Director | Secretariat | Events, programmes, partners, tasks, messages. |
+| L2D | Directorate Head | Secretariat (scoped) | Publishing, members and tasks in their own directorate only. |
+| L3 | General | General Assembly | Uploads go to “Awaiting review”; adds members. |
 
-The rules live in one file, [`src/lib/permissions.ts`](src/lib/permissions.ts). Every server action checks them; the interface only hides what a person can't use. Every change is recorded in the Activity Log. There must always be at least one active Super Admin.
+The full permission matrix is on **Admin → Admin Team**, generated from [`src/lib/permissions.ts`](src/lib/permissions.ts), the single source of truth checked by every server action. Every change is logged with before/after values; authors are notified when others edit or remove their content.
+
+**Finance** (Admin → Finance): the Treasurer records income, expenses, donations and dues, each with a required receipt. The Governing Body approves or rejects; approved entries are locked, and changes, deletions and Treasurer exports go through Governing Body approval. Amounts at or above a threshold set by the President need both the President and the General Secretary. Every step is appended to a Google Sheet and receipts are filed in Google Drive owned by `pahad.org@gmail.com`; see [`google-apps-script/README.md`](google-apps-script/README.md).
 
 Website forms (membership, contact, ideas and volunteering) save straight into the admin panel: applicants appear under **Members → Applicants**, and messages appear under **Messages**.
 
@@ -45,13 +41,17 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. With no `DATABASE_URL` set, the site uses a local file database (`.data/pahad-db.json`, never committed) with three **local-only demo accounts**, one per level:
+Open http://localhost:3000. With no `DATABASE_URL` set, the site uses a local file database (`.data/pahad-db.json`, never committed) with seven **local-only demo accounts**, one per level:
 
 | Email | Level |
 |---|---|
-| `superadmin@pahad.local` | Super Admin (Governing Body) |
-| `admin@pahad.local` | Executive Admin (Executive Body) |
-| `editor@pahad.local` | General (General Assembly) |
+| `superadmin@pahad.local` | L1 President (permanent owner) |
+| `gs@pahad.local` | L1G General Secretary |
+| `admin@pahad.local` | L2 Chief Executive Director |
+| `treasurer@pahad.local` | L2F Treasurer |
+| `programs@pahad.local` | L2P Program Director |
+| `director@pahad.local` | L2D Directorate Head (Media, Communications and Cultural Documentation) |
+| `editor@pahad.local` | L3 General |
 
 The shared demo password is `DEV_PASSWORD` in [`src/lib/db/seed.ts`](src/lib/db/seed.ts). These accounts are never created on Vercel or when a real database is connected. To start over locally, delete the `.data` folder.
 

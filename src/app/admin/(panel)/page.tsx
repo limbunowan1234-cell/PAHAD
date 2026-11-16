@@ -42,7 +42,7 @@ export default async function Dashboard() {
         title={`Namaste, ${user.name.split(" ")[0]}`}
         description={
           <>
-            You are signed in as <strong>{role.label}</strong> ({role.body}, level {role.level}). {role.summary}
+            You are signed in as <strong>{role.label}</strong> ({role.code}, {role.body}){user.designation && user.designation !== role.label ? ` · ${user.designation}` : ""}{user.directorate ? ` · ${user.directorate}` : ""}. {role.summary}
           </>
         }
       />

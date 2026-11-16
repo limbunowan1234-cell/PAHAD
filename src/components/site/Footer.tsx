@@ -83,6 +83,9 @@ export function Footer() {
             <a href={site.whatsapp} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cream">
               <MessageCircle className="h-4 w-4" aria-hidden /> Join the PAHAD WhatsApp community
             </a>
+            <a href={site.whatsappChannel} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cream">
+              <SocialIcon name="WhatsApp" className="h-4 w-4" /> Follow the PAHAD WhatsApp channel
+            </a>
           </div>
           <InstallAppButton className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-semibold text-ink hover:bg-peach" />
         </div>
@@ -123,7 +126,15 @@ export function Footer() {
 
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-3 py-6 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© <CopyrightYear /> PAHAD. {site.promise}</p>
+          <p>
+            © <CopyrightYear /> PAHAD. {site.promise}
+            <span className="mt-1 block sm:ml-2 sm:mt-0 sm:inline">
+              Website designed by{" "}
+              <a href="https://adharlimbu.online" target="_blank" rel="noopener" className="underline hover:text-white">
+                Darjeeling Web Studio
+              </a>
+            </span>
+          </p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/terms" className="hover:text-white">Terms</Link>

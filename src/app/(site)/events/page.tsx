@@ -29,7 +29,7 @@ async function EventLists() {
         ) : (
           <EmptyState title="No upcoming events announced yet">
             Event details are published once dates, venues and organisers are confirmed.{" "}
-            <a href={site.whatsapp} target="_blank" rel="noopener noreferrer" className="font-semibold text-teal underline">Join the WhatsApp community</a> to hear first.
+            <a href={site.whatsappChannel} target="_blank" rel="noopener noreferrer" className="font-semibold text-teal underline">Follow the WhatsApp channel</a> to hear first.
           </EmptyState>
         )}
       </div>

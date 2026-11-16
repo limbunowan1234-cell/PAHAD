@@ -36,6 +36,13 @@ export default function ContactPage() {
               <span className="text-muted">Stay connected and join conversations</span>
             </span>
           </a>
+          <a href={site.whatsappChannel} target="_blank" rel="noopener noreferrer" className="flex gap-4 rounded-[var(--radius-card)] border border-line p-6 hover:border-teal">
+            <SocialIcon name="WhatsApp" className="h-6 w-6 shrink-0 text-coral-700" />
+            <span>
+              <span className="block font-semibold text-teal">WhatsApp channel</span>
+              <span className="text-muted">Official announcements and updates</span>
+            </span>
+          </a>
           <Link href="/membership" className="flex gap-4 rounded-[var(--radius-card)] border border-line p-6 hover:border-teal">
             <Users className="h-6 w-6 shrink-0 text-coral-700" aria-hidden />
             <span>

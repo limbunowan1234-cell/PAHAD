@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { savePost, type ActionState } from "@/app/admin/actions";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import type { Post, PostType } from "@/lib/types";
+import { DIRECTORATES } from "@/lib/permissions";
 import { POST_TYPE_LABEL } from "@/lib/utils";
 
 const CATEGORY_HINT: Record<PostType, string> = {
@@ -16,7 +17,7 @@ const CATEGORY_HINT: Record<PostType, string> = {
   document: "e.g. Constitution v1.0, Policy, Annual report",
 };
 
-export function PostEditor({ post, canPublish }: { post?: Post; canPublish: boolean }) {
+export function PostEditor({ post, canPublish, lockedDirectorate }: { post?: Post; canPublish: boolean; lockedDirectorate?: string }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(savePost, null);
   const [type, setType] = useState<PostType>(post?.type ?? "news");
   const [cover, setCover] = useState(post?.cover ?? "");
@@ -57,6 +58,20 @@ export function PostEditor({ post, canPublish }: { post?: Post; canPublish: bool
               <option value="pending">{canPublish ? "Awaiting review" : "Send for review"}</option>
               {canPublish && <option value="published">Published</option>}
             </select>
+          </label>
+          <label className="block">
+            <span className="label">Directorate</span>
+            {lockedDirectorate ? (
+              <>
+                <input type="hidden" name="directorate" value={lockedDirectorate} />
+                <span className="block rounded-xl bg-sand px-3 py-2 text-sm text-teal">{lockedDirectorate}</span>
+              </>
+            ) : (
+              <select name="directorate" defaultValue={post?.directorate ?? ""} className="field">
+                <option value="">PAHAD (no specific directorate)</option>
+                {DIRECTORATES.map((d) => <option key={d}>{d}</option>)}
+              </select>
+            )}
           </label>
           <label className="block">
             <span className="label">Category / label</span>

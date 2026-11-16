@@ -42,6 +42,10 @@ function postgresBackend(url: string): Backend {
   const init = () =>
     (ready ??= (async () => {
       for (const stmt of createTableSQL()) await sql.query(stmt);
+      // The bootstrapped Founder/President account is the permanent owner.
+      if (process.env.SUPERADMIN_EMAIL) {
+        await sql.query("UPDATE users SET owner = true, role = 'super_admin' WHERE lower(email) = lower($1) AND owner = false", [process.env.SUPERADMIN_EMAIL]);
+      }
       // One-time rewording: PAHAD and DSSCOLONY are separate organisations. Skipped if an admin edited the article.
       await sql.query(
         "UPDATE posts SET title = $1, slug = $2, excerpt = $3, body = $4 WHERE id = 'post-seed-1' AND title = $5",
@@ -59,7 +63,7 @@ function postgresBackend(url: string): Backend {
       if (users === 0 && email && password) {
         await rawInsert("users", {
           id: randomUUID(), email: email.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-          role: "super_admin", designation: "Website Head", active: true,
+          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", owner: true, finance: "", active: true,
           password_hash: hashPassword(password), created_at: new Date().toISOString(), last_login: null,
         });
       }
@@ -123,19 +127,20 @@ function fileBackend(): Backend {
       ? process.env.SUPERADMIN_EMAIL && process.env.SUPERADMIN_PASSWORD
         ? [{
             id: randomUUID(), email: process.env.SUPERADMIN_EMAIL.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-            role: "super_admin" as const, designation: "Website Head", active: true,
+            role: "super_admin" as const, designation: "Founder & President", directorate: "", owner: true, finance: "", active: true,
             password_hash: hashPassword(process.env.SUPERADMIN_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           }]
         : []
       : DEV_ACCOUNTS.map((a) => ({
-          id: randomUUID(), ...a, active: true, password_hash: hashPassword(DEV_PASSWORD),
-          created_at: new Date().toISOString(), last_login: null,
+          id: randomUUID(), ...a, directorate: a.directorate ?? "", owner: a.owner ?? false, finance: "", active: true,
+          password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
         }));
     const admin = users.find((u) => u.role === "admin");
     const editor = users.find((u) => u.role === "editor");
     return {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
+      notifications: [], finance: [], finance_requests: [], outbox: [],
     };
   }
   function load(): DbShape {
@@ -146,9 +151,40 @@ function fileBackend(): Backend {
       return data;
     }
     const data = JSON.parse(readFileSync(file, "utf8")) as DbShape;
-    for (const t of Object.keys(SCHEMA) as TableName[]) (data[t] as unknown[]) ??= [];
+    const DEFAULTS = { text: "", bool: false, int: 0 } as const;
+    let changed = false;
+    for (const t of Object.keys(SCHEMA) as TableName[]) {
+      (data[t] as unknown[]) ??= [];
+      for (const row of data[t] as Record<string, unknown>[]) {
+        for (const [col, type] of Object.entries(SCHEMA[t])) {
+          if (row[col] === undefined && col !== "last_login") {
+            row[col] = DEFAULTS[type];
+            changed = true;
+          }
+        }
+      }
+    }
+    // Local demo: make sure every demo role exists (added after the file was first created).
+    if (!process.env.VERCEL) {
+      for (const a of DEV_ACCOUNTS) {
+        if (!data.users.some((u) => u.email === a.email)) {
+          changed = true;
+          data.users.push({
+            id: randomUUID(), ...a, directorate: a.directorate ?? "", owner: a.owner ?? false, finance: "", active: true,
+            password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
+          });
+        } else if (a.owner && !data.users.find((u) => u.email === a.email)!.owner) {
+          Object.assign(data.users.find((u) => u.email === a.email)!, { owner: true, designation: a.designation, name: a.name });
+          changed = true;
+        }
+      }
+    }
     const old = data.posts.find((p) => p.id === "post-seed-1" && p.title === OLD_SHARED_HISTORY_TITLE);
-    if (old) Object.assign(old, SHARED_HISTORY_POST);
+    if (old) {
+      Object.assign(old, SHARED_HISTORY_POST);
+      changed = true;
+    }
+    if (changed) save(data);
     return data;
   }
   function save(data: DbShape) {

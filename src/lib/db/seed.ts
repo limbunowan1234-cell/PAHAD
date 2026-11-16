@@ -91,6 +91,7 @@ export function seedPosts(): Post[] {
       location: "",
       file_url: "",
       form_url: "",
+      directorate: "",
       status: "published",
       author_id: "",
       author_name: "PAHAD Founding Team",
@@ -105,9 +106,13 @@ export function seedPosts(): Post[] {
  * Local development accounts, one per admin level. These exist only in the
  * local file database (never in production) and are documented in README.md.
  */
-export const DEV_ACCOUNTS: { email: string; name: string; role: User["role"]; designation: string }[] = [
-  { email: "superadmin@pahad.local", name: "Demo Super Admin", role: "super_admin", designation: "Chairman" },
-  { email: "admin@pahad.local", name: "Demo Executive Admin", role: "admin", designation: "Chief Executive Director" },
+export const DEV_ACCOUNTS: { email: string; name: string; role: User["role"]; designation: string; directorate?: string; owner?: boolean }[] = [
+  { email: "superadmin@pahad.local", name: "Demo President", role: "super_admin", designation: "Founder & President", owner: true },
+  { email: "gs@pahad.local", name: "Demo General Secretary", role: "general_secretary", designation: "General Secretary" },
+  { email: "admin@pahad.local", name: "Demo CED", role: "admin", designation: "Chief Executive Director" },
+  { email: "treasurer@pahad.local", name: "Demo Treasurer", role: "treasurer", designation: "Treasurer" },
+  { email: "programs@pahad.local", name: "Demo Program Director", role: "program_director", designation: "Program Director" },
+  { email: "director@pahad.local", name: "Demo Directorate Head", role: "directorate_head", designation: "Managing Director", directorate: "Media, Communications and Cultural Documentation" },
   { email: "editor@pahad.local", name: "Demo General Member", role: "editor", designation: "General Assembly member" },
 ];
 export const DEV_PASSWORD = "pahad-dev-2026";

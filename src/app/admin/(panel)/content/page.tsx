@@ -5,7 +5,7 @@ import { ActionButton } from "@/components/admin/client";
 import { Badge, Empty, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canEditPost, canPublish, inScope } from "@/lib/permissions";
 import type { PostStatus, PostType } from "@/lib/types";
 import { cn, formatDate, POST_TYPE_LABEL, POST_TYPE_PATH } from "@/lib/utils";
 
@@ -22,8 +22,9 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
   const saved = typeof sp.saved === "string" ? sp.saved : "";
 
   const all = await db.all("posts");
-  const rows = all.filter((p) => (!type || p.type === type) && (!status || p.status === status));
-  const canEditAny = can(user.role, "content.edit_any");
+  // Directorate Heads see their own directorate's content and their own items only.
+  const visible = all.filter((p) => user.role !== "directorate_head" || p.author_id === user.id || inScope(user, p.directorate));
+  const rows = visible.filter((p) => (!type || p.type === type) && (!status || p.status === status));
 
   const chip = (label: string, params: Record<string, string>, active: boolean) => (
     <Link
@@ -47,7 +48,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
       />
       {saved && <Notice>{saved}</Notice>}
       {user.role === "editor" && (
-        <Notice tone="warn">At General level, what you upload is sent to an Executive Admin or Super Admin for review before it appears on the website.</Notice>
+        <Notice tone="warn">At General level, what you upload is sent for review and appears on the website once a publisher approves it.</Notice>
       )}
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -76,7 +77,8 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((p) => {
-                const editable = canEditAny || (p.author_id === user.id && p.status !== "published");
+                const editable = canEditPost(user, p);
+                const publishable = canPublish(user, p);
                 return (
                   <tr key={p.id} className="align-top">
                     <td className="max-w-xs px-4 py-3">
@@ -89,15 +91,18 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
                     </td>
                     <td className="px-4 py-3 text-muted">{POST_TYPE_LABEL[p.type]}</td>
                     <td className="px-4 py-3"><Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge></td>
-                    <td className="px-4 py-3 text-muted">{p.author_name}</td>
+                    <td className="px-4 py-3 text-muted">
+                      {p.author_name}
+                      {p.directorate && <span className="block text-xs">{p.directorate}</span>}
+                    </td>
                     <td className="px-4 py-3 text-muted">{formatDate(p.updated_at || p.created_at, { day: "numeric", month: "short", year: "numeric" })}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-end gap-1">
                         {editable && <Link href={`/admin/content/${p.id}`} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-teal hover:bg-sand">Edit</Link>}
-                        {can(user.role, "content.publish") && p.status !== "published" && (
+                        {publishable && p.status !== "published" && (
                           <ActionButton variant="primary" action={setPostStatus.bind(null, p.id, "published")}>Publish</ActionButton>
                         )}
-                        {can(user.role, "content.publish") && p.status === "published" && (
+                        {publishable && p.status === "published" && (
                           <ActionButton action={setPostStatus.bind(null, p.id, "draft")}>Unpublish</ActionButton>
                         )}
                         {can(user.role, "content.delete") && (

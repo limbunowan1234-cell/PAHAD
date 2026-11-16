@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Empty, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, inScope } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Activity Log" };
@@ -10,7 +10,8 @@ export const metadata = { title: "Activity Log" };
 export default async function ActivityPage() {
   const user = await requireUser();
   if (!can(user.role, "activity.view")) redirect("/admin");
-  const rows = (await db.all("activity")).slice(0, 300);
+  // Directorate Heads see their own directorate's activity only.
+  const rows = (await db.all("activity")).filter((a) => inScope(user, a.directorate)).slice(0, 300);
   return (
     <>
       <PageHeader title="Activity Log" description="A record of every change made in the admin panel: who did what, and when." />
@@ -33,7 +34,15 @@ export default async function ActivityPage() {
                   <td className="whitespace-nowrap px-4 py-3 text-muted">{formatDate(a.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                   <td className="px-4 py-3 font-medium text-teal">{a.actor_name}</td>
                   <td className="px-4 py-3">{a.action} {a.entity}</td>
-                  <td className="px-4 py-3 text-ink">{a.summary}</td>
+                  <td className="px-4 py-3 text-ink">
+                    {a.summary}
+                    {a.details && (
+                      <details className="mt-1 text-xs text-muted">
+                        <summary className="cursor-pointer text-teal">Before / after</summary>
+                        <pre className="mt-1 max-w-md overflow-x-auto whitespace-pre-wrap rounded-lg bg-sand p-2">{JSON.stringify(JSON.parse(a.details), null, 2)}</pre>
+                      </details>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

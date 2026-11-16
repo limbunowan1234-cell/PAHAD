@@ -5,19 +5,19 @@ type ColType = "text" | "bool" | "int";
 /** Column registry: used to whitelist columns in generated SQL and to build the DDL. */
 export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   users: {
-    id: "text", email: "text", name: "text", role: "text", designation: "text",
-    active: "bool", password_hash: "text", created_at: "text", last_login: "text",
+    id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text",
+    owner: "bool", finance: "text", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
-    cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text",
+    cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text", directorate: "text",
     status: "text", author_id: "text", author_name: "text", created_at: "text",
     updated_at: "text", published_at: "text",
   },
   members: {
     id: "text", member_no: "text", name: "text", email: "text", phone: "text", area: "text",
     address: "text", occupation: "text", category: "text", interests: "text", status: "text",
-    source: "text", notes: "text", added_by: "text", created_at: "text",
+    source: "text", notes: "text", added_by: "text", directorate: "text", created_at: "text",
   },
   tasks: {
     id: "text", title: "text", description: "text", assigned_to: "text", assigned_by: "text",
@@ -39,8 +39,19 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   settings: { id: "text", value: "text", updated_by: "text", created_at: "text" },
   activity: {
     id: "text", actor_id: "text", actor_name: "text", action: "text", entity: "text",
-    entity_id: "text", summary: "text", created_at: "text",
+    entity_id: "text", summary: "text", details: "text", directorate: "text", created_at: "text",
   },
+  notifications: { id: "text", user_id: "text", message: "text", link: "text", read: "bool", created_at: "text" },
+  finance: {
+    id: "text", entry_no: "text", type: "text", amount: "text", entry_date: "text", description: "text",
+    receipt_url: "text", submitted_by: "text", submitted_by_name: "text", status: "text", approvals: "text",
+    locked: "bool", synced: "bool", created_at: "text", updated_at: "text",
+  },
+  finance_requests: {
+    id: "text", entry_id: "text", kind: "text", payload: "text", requested_by: "text", requested_by_name: "text",
+    status: "text", decided_by_name: "text", created_at: "text",
+  },
+  outbox: { id: "text", action: "text", payload: "text", attempts: "int", last_error: "text", created_at: "text" },
 };
 
 const SQL_TYPE: Record<ColType, string> = { text: "TEXT NOT NULL DEFAULT ''", bool: "BOOLEAN NOT NULL DEFAULT false", int: "INTEGER NOT NULL DEFAULT 0" };
@@ -66,6 +77,8 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS members_status_idx ON members (status)",
     "CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks (assigned_to)",
     "CREATE INDEX IF NOT EXISTS activity_created_idx ON activity (created_at)",
+    "CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id)",
+    "CREATE INDEX IF NOT EXISTS finance_status_idx ON finance (status)",
   );
   return statements;
 }

@@ -3,7 +3,7 @@ import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { Badge, Card, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can, roleLabel } from "@/lib/permissions";
+import { can, inScope, roleLabel } from "@/lib/permissions";
 import type { Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -19,9 +19,10 @@ export default async function TasksPage() {
   const user = await requireUser();
   const [tasks, users] = await Promise.all([db.all("tasks"), db.all("users")]);
   const seeAll = can(user.role, "tasks.view_all");
-  const visible = seeAll ? tasks : tasks.filter((t) => t.assigned_to === user.id);
+  // Directorate Heads also see tasks they assigned within their directorate.
+  const visible = seeAll ? tasks : tasks.filter((t) => t.assigned_to === user.id || t.assigned_by === user.id);
   const name = (id: string) => users.find((u) => u.id === id)?.name ?? "Former admin";
-  const assignable = users.filter((u) => u.active);
+  const assignable = users.filter((u) => u.active && inScope(user, u.directorate));
 
   return (
     <>
