@@ -22,12 +22,14 @@ export function PageHero({
     <section className="relative isolate overflow-hidden bg-teal-900 text-white">
       {image && (
         <>
-          <Image src={image} alt="" fill priority sizes="100vw" className="-z-20 object-cover opacity-40" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-teal-950 via-teal-900/90 to-teal-900/40" />
+          <Image src={image} alt="" fill priority sizes="100vw" className="-z-20 object-cover" />
+          {/* Phones: an even tint (text spans the full width). Wider screens: dark only
+              behind the text on the left, so the photo stays visible on the right. */}
+          <div className="absolute inset-0 -z-10 bg-teal-950/55 md:bg-transparent md:bg-gradient-to-r md:from-teal-950/90 md:via-teal-950/60 md:to-teal-950/5" />
         </>
       )}
-      <MountainLine className="absolute bottom-0 left-0 -z-10 w-full text-white/[0.06]" />
-      <div className="container-page py-20 sm:py-24 lg:py-28">
+      {!image && <MountainLine className="absolute bottom-0 left-0 -z-10 w-full text-white/[0.06]" />}
+      <div className="container-page py-20 [text-shadow:0_1px_12px_rgb(11_46_53/0.45)] sm:py-24 lg:py-28">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-cream">{eyebrow}</p>
         <h1 className="mt-4 max-w-4xl text-4xl font-medium leading-[1.08] sm:text-5xl lg:text-6xl">{title}</h1>
         {intro && <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85">{intro}</p>}
