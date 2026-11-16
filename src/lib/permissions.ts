@@ -22,7 +22,7 @@ export const ROLES: { id: Role; code: string; label: string; level: number; body
     summary: "Records finance entries with receipts. Cannot approve." },
   { id: "program_director", code: "L2P", label: "Program Director", level: 2, body: "Secretariat",
     summary: "Events, programmes, partners, tasks and messages." },
-  { id: "directorate_head", code: "L2D", label: "Directorate Head", level: 2, body: "Secretariat (own directorate)",
+  { id: "directorate_head", code: "L2D", label: "Directorate Head", level: 2, body: "Secretariat, own directorate",
     summary: "Publishing, members and tasks within their own directorate only." },
   { id: "editor", code: "L3", label: "General", level: 3, body: "General Assembly",
     summary: "Uploads content for review and adds new members." },

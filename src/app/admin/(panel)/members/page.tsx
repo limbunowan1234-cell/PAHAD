@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Download, Search } from "lucide-react";
-import { createMember, deleteMember, setMemberStatus, updateMember } from "../../actions";
+import { createMember, deleteMember, makeMemberAdmin, setMemberStatus, updateMember } from "../../actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { Badge, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can, DIRECTORATES, inScope } from "@/lib/permissions";
+import { can, DIRECTORATES, inScope, roleInfo, roleLabel, ROLES } from "@/lib/permissions";
 import type { Member, MemberStatus } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -55,6 +55,10 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
   const q = (typeof sp.q === "string" ? sp.q : "").toLowerCase().trim();
   // Directorate Heads only see members of their own directorate.
   const all = (await db.all("members")).filter((m) => inScope(user, m.directorate));
+  // Members who already have an admin account (matched by email).
+  const admins = new Map((await db.all("users")).map((u) => [u.email.toLowerCase(), u]));
+  const canPromote = can(user.role, "team.manage");
+  const myLevel = roleInfo(user.role).level;
   const locked = user.role === "directorate_head" ? user.directorate : undefined;
   const rows = all.filter(
     (m) => (!status || m.status === status) && (!q || [m.name, m.email, m.phone, m.area, m.member_no].join(" ").toLowerCase().includes(q)),
@@ -116,6 +120,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                     <p className="font-semibold text-ink">{m.name}</p>
                     <Badge tone={TONE[m.status]}>{LABEL[m.status]}</Badge>
                     {m.member_no && <span className="text-xs font-mono text-muted">{m.member_no}</span>}
+                    {m.email && admins.has(m.email.toLowerCase()) && <Badge tone="teal">Admin: {roleLabel(admins.get(m.email.toLowerCase())!.role)}</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-muted">
                     {[m.email, m.phone, m.area, m.category, m.directorate].filter(Boolean).join(" · ")}
@@ -146,6 +151,41 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                   )}
                 </div>
               </div>
+              {canPromote && m.status === "active" && !(m.email && admins.has(m.email.toLowerCase())) && (
+                <div className="mt-4">
+                  <Disclosure summary="Make admin">
+                    {m.email ? (
+                      <AdminForm action={makeMemberAdmin} submitLabel={`Give ${m.name.split(" ")[0]} admin access`}>
+                        <input type="hidden" name="member_id" value={m.id} />
+                        <p className="text-sm text-muted">
+                          {m.name} will sign in with <strong>{m.email}</strong>. Choose their access level and set a temporary password to share with them privately.
+                        </p>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="Access level *">
+                            <select name="role" defaultValue="editor" className="field">
+                              {ROLES.filter((r) => r.level >= myLevel).map((r) => (
+                                <option key={r.id} value={r.id}>{r.code}: {r.label} ({r.body})</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Title" hint="Only a label, e.g. Managing Director, Volunteer Editor."><input name="designation" className="field" /></Field>
+                          <Field label="Directorate" hint="Required for Directorate Heads.">
+                            <select name="directorate" defaultValue={m.directorate} className="field">
+                              <option value="">None (not scoped)</option>
+                              {DIRECTORATES.map((d) => <option key={d}>{d}</option>)}
+                            </select>
+                          </Field>
+                          <Field label="Temporary password *" hint="At least 10 characters with letters and numbers.">
+                            <input name="password" type="text" required minLength={10} autoComplete="new-password" className="field" />
+                          </Field>
+                        </div>
+                      </AdminForm>
+                    ) : (
+                      <p className="text-sm text-muted">Add an email address to this member first (Edit details): it is what they will sign in with.</p>
+                    )}
+                  </Disclosure>
+                </div>
+              )}
               {can(user.role, "members.edit") && (
                 <div className="mt-4">
                   <Disclosure summary="Edit details">

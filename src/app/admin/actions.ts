@@ -415,27 +415,55 @@ function assertCanGrant(actor: PublicUser, role: Role) {
   if (roleInfo(role).level < roleInfo(actor.role).level) throw new Error("You can't give someone a higher level than your own.");
 }
 
+/** Shared by "Add an admin" and "Make admin" on a member. */
+async function createAdminAccount(
+  user: PublicUser,
+  input: { name: string; email: string; role: Role; designation: string; directorate: string; password: string },
+  source = "",
+) {
+  const { name, role, designation, password } = input;
+  const email = input.email.toLowerCase();
+  if (name.length < 2) throw new Error("Name is required.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("A valid email is needed to sign in.");
+  assertCanGrant(user, role);
+  const directorate = validDirectorate(input.directorate);
+  if (role === "directorate_head" && !directorate) throw new Error("Choose the directorate this Directorate Head leads.");
+  const weak = validatePasswordStrength(password);
+  if (weak) throw new Error(weak);
+  if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
+  const id = newId();
+  await db.insert("users", {
+    id, email, name, role, designation, directorate, owner: false, finance: "", active: true,
+    password_hash: hashPassword(password), created_at: now(), last_login: null,
+  });
+  await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}${source}`, { after: { name, email, role, directorate } });
+  return `${name} can now sign in as ${roleLabel(role)} with ${email}. Share the temporary password privately and ask them to change it.`;
+}
+
 export async function createAdmin(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return guarded("team.manage", (user) =>
+    createAdminAccount(user, {
+      name: str(fd, "name", 120), email: str(fd, "email", 160), role: str(fd, "role", 30) as Role,
+      designation: str(fd, "designation", 120), directorate: str(fd, "directorate", 120), password: String(fd.get("password") ?? ""),
+    }),
+  );
+}
+
+/** Give an existing member an admin account, reusing their name and email. */
+export async function makeMemberAdmin(_prev: ActionState, fd: FormData): Promise<ActionState> {
   return guarded("team.manage", async (user) => {
-    const name = str(fd, "name", 120);
-    const email = str(fd, "email", 160).toLowerCase();
-    const role = str(fd, "role", 30) as Role;
-    const password = String(fd.get("password") ?? "");
-    if (name.length < 2) throw new Error("Name is required.");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email.");
-    assertCanGrant(user, role);
-    const directorate = validDirectorate(str(fd, "directorate", 120));
-    if (role === "directorate_head" && !directorate) throw new Error("Choose the directorate this Directorate Head leads.");
-    const weak = validatePasswordStrength(password);
-    if (weak) throw new Error(weak);
-    if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
-    const id = newId();
-    await db.insert("users", {
-      id, email, name, role, designation: str(fd, "designation", 120), directorate, owner: false, finance: "", active: true,
-      password_hash: hashPassword(password), created_at: now(), last_login: null,
-    });
-    await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}`, { after: { name, email, role, directorate } });
-    return `${name} can now sign in as ${roleLabel(role)}. Share the temporary password privately and ask them to change it.`;
+    const m = await db.get("members", str(fd, "member_id", 60));
+    if (!m) throw new Error("Member not found.");
+    if (m.status !== "active") throw new Error("Only active members can be made admins. Approve the member first.");
+    if (!m.email) throw new Error("Add an email address to this member first: it is what they sign in with.");
+    return createAdminAccount(
+      user,
+      {
+        name: m.name, email: m.email, role: str(fd, "role", 30) as Role, designation: str(fd, "designation", 120),
+        directorate: str(fd, "directorate", 120) || m.directorate, password: String(fd.get("password") ?? ""),
+      },
+      ` (member ${m.member_no || m.name})`,
+    );
   });
 }
 
