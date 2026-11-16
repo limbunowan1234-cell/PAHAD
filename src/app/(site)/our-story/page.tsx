@@ -17,7 +17,7 @@ export default function OurStoryPage() {
         eyebrow="A shared history · since 24 June 2018"
         title="Built on the work that came before."
         intro="PAHAD is a separate, independent organisation. It builds on the work and experience of DSSCOLONY, a student-led group founded on 24 June 2018. The two share a history; they are different organisations."
-        image="/images/first-meet-gdns.jpg"
+        page="our-story"
       >
         <Link href="/membership" className="btn btn-accent">Join PAHAD</Link>
       </PageHero>

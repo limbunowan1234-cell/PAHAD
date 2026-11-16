@@ -16,7 +16,7 @@ export const site = {
     { label: "X", href: "https://x.com/PAHAD_official" },
     { label: "LinkedIn", href: "https://www.linkedin.com/in/pahad-org-8a343244a/" },
   ],
-  whatsapp: "https://chat.whatsapp.com/KvAayYwPgVz0laXrm2pAnN",
+  whatsapp: "https://chat.whatsapp.com/CDLvaDxFMhuKmFPTuyGXMB",
 } as const;
 
 export type NavItem = { label: string; href: string; description?: string };

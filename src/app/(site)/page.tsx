@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight, BookOpen, HandHeart, Lightbulb, Users } from "lucide-react";
 import { coreValues, cycle, storyMoments, workAreas } from "@/lib/content";
-import { getPartners, getPublishedPosts, getUpcomingEvents } from "@/lib/data";
+import { getPartners, getPublishedPosts, getSiteImages, getUpcomingEvents } from "@/lib/data";
+import { HERO_PAGES, heroSettingId } from "@/lib/heroes";
 import { site } from "@/lib/site";
 import { CtaBand, EmptyState, MountainLine, PostCard, SectionHeading, TextLink } from "@/components/site/ui";
 
@@ -27,12 +28,13 @@ export default function HomePage() {
   );
 }
 
-function Hero() {
+async function Hero() {
+  const image = (await getSiteImages())[heroSettingId("home")] || HERO_PAGES.home.fallback;
   return (
     <section className="relative isolate flex min-h-[calc(100svh-72px)] items-end overflow-hidden bg-teal-950 text-white">
       <Image
-        src="/images/hero.jpg"
-        alt="Kanchenjunga glowing at sunrise above Darjeeling town"
+        src={image}
+        alt={image === HERO_PAGES.home.fallback ? "Kanchenjunga glowing at sunrise above Darjeeling town" : ""}
         fill
         priority
         sizes="100vw"

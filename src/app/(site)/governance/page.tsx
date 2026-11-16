@@ -32,7 +32,7 @@ export default function GovernancePage() {
         eyebrow="Governance"
         title="Responsible, transparent and participatory."
         intro="PAHAD's governance framework provides clear oversight, defined responsibilities and accountable administration as the institution develops."
-        image="/images/general-meeting.jpg"
+        page="governance"
       />
 
       <section className="container-page py-20 lg:py-24">

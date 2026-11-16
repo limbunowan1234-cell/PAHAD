@@ -55,7 +55,7 @@ export default function TeamPage() {
         eyebrow="Our team"
         title="The people of PAHAD."
         intro="Members of the Governing Body, Executive Body, Secretariat, Directorates, Departments and Geographical Units who carry PAHAD's work forward."
-        image="/images/general-meeting.jpg"
+        page="team"
       />
       <section className="container-page py-16">
         <Suspense fallback={<GridSkeleton />}>

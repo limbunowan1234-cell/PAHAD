@@ -36,6 +36,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     id: "text", name: "text", section: "text", designation: "text", department: "text",
     additional_charge: "text", photo_url: "text", sort: "int", created_at: "text",
   },
+  settings: { id: "text", value: "text", updated_by: "text", created_at: "text" },
   activity: {
     id: "text", actor_id: "text", actor_name: "text", action: "text", entity: "text",
     entity_id: "text", summary: "text", created_at: "text",

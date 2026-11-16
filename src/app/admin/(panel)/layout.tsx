@@ -14,6 +14,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "submissions", label: "Messages", href: "/admin/submissions", perm: "submissions.view" },
   { key: "gallery", label: "Gallery", href: "/admin/gallery", perm: "media.upload" },
   { key: "people", label: "Our Team", href: "/admin/people", perm: "people.manage" },
+  { key: "heroes", label: "Page Images", href: "/admin/page-images", perm: "site.images" },
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
   { key: "team", label: "Admin Team", href: "/admin/team", perm: "team.view" },
   { key: "activity", label: "Activity Log", href: "/admin/activity", perm: "activity.view" },

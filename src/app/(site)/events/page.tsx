@@ -50,7 +50,7 @@ export default function EventsPage() {
         eyebrow="Live events"
         title="Meet, learn and take part."
         intro="A shared calendar for community conversations, learning sessions, workshops and public programmes connected with PAHAD."
-        image="/images/naksha-2.jpg"
+        page="events"
       >
         <Link href="/get-involved" className="btn btn-accent">Propose an event</Link>
       </PageHero>

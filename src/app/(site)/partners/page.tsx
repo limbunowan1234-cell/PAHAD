@@ -42,6 +42,7 @@ export default function PartnersPage() {
   return (
     <>
       <PageHero
+        page="partners"
         eyebrow="Partners"
         title="Stronger together."
         intro="PAHAD works with partners who share a commitment to the people, voices and stories of the hills."

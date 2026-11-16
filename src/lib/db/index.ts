@@ -135,7 +135,7 @@ function fileBackend(): Backend {
     const editor = users.find((u) => u.role === "editor");
     return {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
-      submissions: [], partners: seedPartners(), media: seedMedia(), team: [], activity: [],
+      submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
     };
   }
   function load(): DbShape {

@@ -16,7 +16,7 @@ export default function OurWorkPage() {
         eyebrow="Our work"
         title="People-led action for stronger communities."
         intro="PAHAD works across five connected areas. Progress in one supports progress in the others, and our work responds to the needs, capacities and opportunities identified with communities."
-        image="/images/cloth-donation.jpg"
+        page="our-work"
       />
 
       <nav aria-label="Areas of work" className="sticky top-[72px] z-30 border-b border-line bg-white/95 backdrop-blur">

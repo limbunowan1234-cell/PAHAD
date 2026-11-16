@@ -8,7 +8,7 @@ import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 export function LoginForm() {
   const [state, action, pending] = useActionState<ActionState, FormData>(login, null);
   return (
-    <form onSubmit={keepValuesOnSubmit(action)} className="mt-8 space-y-4">
+    <form method="post" onSubmit={keepValuesOnSubmit(action)} className="mt-8 space-y-4">
       <label className="block">
         <span className="label">Email</span>
         <input name="email" type="email" required autoComplete="username" className="field" />

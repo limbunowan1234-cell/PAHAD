@@ -22,7 +22,7 @@ export default function GalleryPage() {
         eyebrow="Gallery"
         title="Moments from our journey."
         intro="Meetings, creative initiatives, community work and milestones. Photographs are shared with appropriate context, permission and captions."
-        image="/images/naksha-3.jpg"
+        page="gallery"
       />
       <section className="container-page py-16">
         <Suspense fallback={<GridSkeleton />}>

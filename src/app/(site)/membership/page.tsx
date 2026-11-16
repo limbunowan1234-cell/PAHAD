@@ -20,7 +20,7 @@ export default function MembershipPage() {
         eyebrow="Membership"
         title="Be part of a shared purpose."
         intro="PAHAD welcomes people interested in community development, knowledge sharing, participation and collective action. People who were part of DSSCOLONY are warmly welcome to join."
-        image="/images/naksha-4.jpg"
+        page="membership"
       />
       <section className="container-page grid gap-12 py-20 lg:grid-cols-[1fr_1.6fr]">
         <aside className="space-y-8 lg:sticky lg:top-28 lg:self-start">

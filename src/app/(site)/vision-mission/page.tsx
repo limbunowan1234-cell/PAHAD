@@ -14,7 +14,7 @@ export default function VisionMissionPage() {
         eyebrow="Our direction · our purpose"
         title="From local potential to regional progress."
         intro="A stronger future begins when people, knowledge and resources come together, and communities have the power to shape what happens next."
-        image="/images/hero.jpg"
+        page="vision-mission"
       />
 
       <section className="container-page py-20 lg:py-24">

@@ -130,6 +130,14 @@ export type TeamMember = {
   created_at: string;
 };
 
+/** Small key/value settings, e.g. "hero:about" → image URL. */
+export type Setting = {
+  id: string;
+  value: string;
+  updated_by: string;
+  created_at: string;
+};
+
 export type Activity = {
   id: string;
   actor_id: string;
@@ -150,6 +158,7 @@ export type Tables = {
   partners: Partner;
   media: Media;
   team: TeamMember;
+  settings: Setting;
   activity: Activity;
 };
 export type TableName = keyof Tables;

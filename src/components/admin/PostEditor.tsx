@@ -22,7 +22,7 @@ export function PostEditor({ post, canPublish }: { post?: Post; canPublish: bool
   const [cover, setCover] = useState(post?.cover ?? "");
 
   return (
-    <form onSubmit={keepValuesOnSubmit(action)} className="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <form method="post" onSubmit={keepValuesOnSubmit(action)} className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <input type="hidden" name="id" value={post?.id ?? ""} />
       <div className="space-y-5 rounded-2xl border border-line bg-white p-5 sm:p-6">
         <label className="block">

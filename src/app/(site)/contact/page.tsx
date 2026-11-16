@@ -15,6 +15,7 @@ export default function ContactPage() {
   return (
     <>
       <PageHero
+        page="contact"
         eyebrow="Contact PAHAD"
         title="Start a conversation."
         intro="For general enquiries, collaboration proposals, ideas, media requests or questions about participation."

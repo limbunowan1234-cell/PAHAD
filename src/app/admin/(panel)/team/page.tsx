@@ -21,6 +21,7 @@ const MATRIX: [string, Permission][] = [
   ["Read and handle messages", "submissions.view"],
   ["Manage partners", "partners.manage"],
   ["Manage the Our Team page", "people.manage"],
+  ["Change page banner photos", "site.images"],
   ["View activity log", "activity.view"],
   ["Create admins and change roles", "team.manage"],
 ];

@@ -20,7 +20,7 @@ export default function GetInvolvedPage() {
         eyebrow="Get involved"
         title="Your ideas can help shape what comes next."
         intro="Strong communities grow when people contribute in ways that reflect their interests, knowledge, skills and capacity."
-        image="/images/busking-old-age-home.jpg"
+        page="get-involved"
       >
         <Link href="/membership" className="btn btn-accent">Become a member</Link>
         <a href="#share" className="btn btn-outline text-white">Share an idea</a>

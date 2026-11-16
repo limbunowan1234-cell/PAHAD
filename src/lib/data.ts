@@ -42,6 +42,14 @@ export async function getPartners() {
   return (await db.all("partners")).sort((a, b) => a.sort - b.sort);
 }
 
+/** Hero image chosen by a Super Admin for each page, keyed by setting id ("hero:about"). */
+export async function getSiteImages(): Promise<Record<string, string>> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+  return Object.fromEntries((await db.all("settings")).filter((s) => s.id.startsWith("hero:") && s.value).map((s) => [s.id, s.value]));
+}
+
 export async function getTeam() {
   "use cache";
   cacheLife("hours");

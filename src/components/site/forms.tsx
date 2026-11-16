@@ -55,7 +55,7 @@ export function InquiryForm({ defaultKind = "contact", showKind = true }: { defa
   const [state, action, pending] = useActionState<FormState, FormData>(submitInquiry, null);
   if (state?.ok) return <Success message={state.message} />;
   return (
-    <form onSubmit={keepValuesOnSubmit(action)} className="relative space-y-5" noValidate>
+    <form method="post" onSubmit={keepValuesOnSubmit(action)} className="relative space-y-5" noValidate>
       <Honeypot />
       {state && !state.ok && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{state.message}</p>}
       {showKind ? (
@@ -102,7 +102,7 @@ export function MembershipForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(applyForMembership, null);
   if (state?.ok) return <Success message={state.message} />;
   return (
-    <form onSubmit={keepValuesOnSubmit(action)} className="relative space-y-6" noValidate>
+    <form method="post" onSubmit={keepValuesOnSubmit(action)} className="relative space-y-6" noValidate>
       <Honeypot />
       {state && !state.ok && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{state.message}</p>}
       <fieldset className="grid gap-5 sm:grid-cols-2">

@@ -14,6 +14,7 @@ import {
 import { can, roleLabel, type Permission } from "@/lib/permissions";
 import { storeUpload } from "@/lib/storage";
 import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
+import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
@@ -344,6 +345,33 @@ export async function deletePartner(id: string) {
     await log(user, "removed", "partner", id, p.name);
     updateTag("partners");
     return "Partner removed.";
+  });
+}
+
+// ------------------------------------------------------------------ page banner images
+export async function saveHeroImage(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return guarded("site.images", async (user) => {
+    const key = str(fd, "page", 40) as HeroKey;
+    if (!(key in HERO_PAGES)) throw new Error("Unknown page.");
+    const link = safeUrl(str(fd, "link", 500));
+    const url = (await fileFrom(fd, "file", "images")) ?? (link ? toImageUrl(link, 2400) : "");
+    if (!url) throw new Error("Choose a photo to upload or paste a Google Drive link.");
+    const id = heroSettingId(key);
+    if (await db.get("settings", id)) await db.update("settings", id, { value: url, updated_by: user.name });
+    else await db.insert("settings", { id, value: url, updated_by: user.name, created_at: now() });
+    await log(user, "changed banner", "page", key, HERO_PAGES[key].label);
+    updateTag("settings");
+    return `${HERO_PAGES[key].label} banner updated.`;
+  });
+}
+
+export async function resetHeroImage(key: HeroKey) {
+  return guarded("site.images", async (user) => {
+    if (!(key in HERO_PAGES)) throw new Error("Unknown page.");
+    await db.remove("settings", heroSettingId(key));
+    await log(user, "reset banner", "page", key, HERO_PAGES[key].label);
+    updateTag("settings");
+    return `${HERO_PAGES[key].label} banner reset to the default.`;
   });
 }
 

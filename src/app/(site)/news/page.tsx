@@ -13,6 +13,7 @@ export default function NewsPage() {
   return (
     <>
       <PageHero
+        page="news"
         eyebrow="News & media"
         title="Stories, announcements and updates."
         intro="Official PAHAD announcements, programme updates and community stories. Only verified information is published as an official update."

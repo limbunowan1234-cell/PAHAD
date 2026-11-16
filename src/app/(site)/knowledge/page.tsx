@@ -22,7 +22,7 @@ export default function KnowledgePage() {
         eyebrow="Knowledge & research"
         title="Local knowledge. Shared learning. Collective action."
         intro="Useful knowledge comes from lived experience, community memory, research, documentation and exchange."
-        image="/images/general-meeting.jpg"
+        page="knowledge"
       />
       <section className="container-page grid gap-6 py-20 md:grid-cols-3">
         {pillars.map(([t, d], i) => (

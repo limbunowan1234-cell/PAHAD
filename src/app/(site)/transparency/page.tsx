@@ -55,6 +55,7 @@ export default function TransparencyPage() {
   return (
     <>
       <PageHero
+        page="transparency"
         eyebrow="Transparency"
         title="Trust through openness and accountability."
         intro="PAHAD makes relevant institutional information accessible as it is formally approved."

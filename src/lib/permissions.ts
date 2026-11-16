@@ -66,6 +66,8 @@ export const PERMISSIONS = {
 
   "people.manage": [S, A], // the public "Our Team" page
 
+  "site.images": [S], // banner photos on every page
+
   "team.view": [S, A],
   "team.manage": [S],
 
@@ -93,6 +95,7 @@ export function abilities(role: Role): string[] {
     ["submissions.view", "Read and handle messages"],
     ["partners.manage", "Manage partners"],
     ["people.manage", "Manage the Our Team page"],
+    ["site.images", "Change the banner photo on any page"],
     ["team.manage", "Create admins and change access levels"],
   ];
   return list.filter(([p]) => can(role, p)).map(([, label]) => label);

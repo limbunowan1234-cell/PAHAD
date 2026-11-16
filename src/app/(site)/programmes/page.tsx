@@ -23,7 +23,7 @@ export default function ProgrammesPage() {
         eyebrow="Programmes"
         title="Turning shared priorities into practical work."
         intro="Programmes connect community needs, local knowledge, partnerships and achievable action. Specific projects are announced here once approved and resourced."
-        image="/images/drawing-svda-1.jpg"
+        page="programmes"
       />
       <section className="container-page py-20">
         <SectionHeading eyebrow="Programme streams" title="Where our programmes focus" />

@@ -14,7 +14,7 @@ export default function ValuesPage() {
         eyebrow="The way we work · the standards we uphold"
         title="Values that guide us. Principles that shape our work."
         intro="Meaningful development begins with people, grows through knowledge and becomes real through responsible collective action."
-        image="/images/general-meeting.jpg"
+        page="values"
       />
 
       <section className="container-page py-20 lg:py-24">

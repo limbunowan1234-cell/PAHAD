@@ -3,21 +3,25 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Post } from "@/lib/types";
+import { getSiteImages } from "@/lib/data";
+import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { cn, formatDate, POST_TYPE_PATH } from "@/lib/utils";
 
-export function PageHero({
+export async function PageHero({
   eyebrow,
   title,
   intro,
-  image,
+  page,
   children,
 }: {
   eyebrow: string;
   title: ReactNode;
   intro?: ReactNode;
-  image?: string;
+  /** Which page this is; its banner photo can be changed by Super Admins. */
+  page?: HeroKey;
   children?: ReactNode;
 }) {
+  const image = page ? (await getSiteImages())[heroSettingId(page)] || HERO_PAGES[page].fallback : "";
   return (
     <section className="relative isolate overflow-hidden bg-teal-900 text-white">
       {image && (

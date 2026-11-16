@@ -16,7 +16,7 @@ export default function AboutPage() {
         eyebrow="About the organisation"
         title={<>Rooted in our communities. Connected by possibility.</>}
         intro="PAHAD brings people, knowledge and collective action together to strengthen communities, recognise local potential and contribute to a more inclusive, capable and self-reliant society."
-        image="/images/hills-mural.jpg"
+        page="about"
       />
 
       <section className="container-page grid gap-12 py-20 lg:grid-cols-2 lg:py-24">
