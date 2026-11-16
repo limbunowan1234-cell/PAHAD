@@ -15,6 +15,7 @@ export const site = {
     { label: "YouTube", href: "https://youtube.com/@pahad_org" },
     { label: "X", href: "https://x.com/PAHAD_official" },
     { label: "LinkedIn", href: "https://www.linkedin.com/in/pahad-org-8a343244a/" },
+    { label: "WhatsApp", href: "https://whatsapp.com/channel/0029VbDfvyb8qIzxBquSpO0z" },
   ],
   whatsapp: "https://chat.whatsapp.com/CDLvaDxFMhuKmFPTuyGXMB",
   whatsappChannel: "https://whatsapp.com/channel/0029VbDfvyb8qIzxBquSpO0z",

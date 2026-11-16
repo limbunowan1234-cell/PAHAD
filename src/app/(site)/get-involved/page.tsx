@@ -42,7 +42,7 @@ export default function GetInvolvedPage() {
             );
           })}
         </div>
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           <Link href="/membership" className="rounded-[var(--radius-card)] bg-teal p-8 text-white hover:bg-teal-900">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-cream">Membership</p>
             <p className="mt-2 font-display text-2xl">Become part of the community →</p>
@@ -51,7 +51,12 @@ export default function GetInvolvedPage() {
           <a href={site.whatsapp} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-card)] bg-cream p-8 text-teal hover:bg-peach">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-coral-700">Stay connected</p>
             <p className="mt-2 flex items-center gap-2 font-display text-2xl"><MessageCircle className="h-6 w-6" aria-hidden /> Join the WhatsApp community →</p>
-            <p className="mt-2">Follow conversations and official announcements.</p>
+            <p className="mt-2">Take part in conversations with members.</p>
+          </a>
+          <a href={site.whatsappChannel} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-card)] bg-sage-100 p-8 text-teal hover:bg-cream">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-coral-700">Official updates</p>
+            <p className="mt-2 flex items-center gap-2 font-display text-2xl"><MessageCircle className="h-6 w-6" aria-hidden /> Follow the WhatsApp channel →</p>
+            <p className="mt-2">Announcements, events and news from PAHAD.</p>
           </a>
         </div>
       </section>

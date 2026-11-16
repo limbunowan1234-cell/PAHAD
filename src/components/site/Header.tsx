@@ -144,7 +144,10 @@ export function HeaderView({ pathname }: { pathname: string }) {
               Become a member
             </Link>
             <InstallAppButton className="btn btn-outline mt-3 w-full text-teal" />
-            <a href={`mailto:${site.email}`} className="mt-4 block text-center text-sm text-muted">
+            <a href={site.whatsappChannel} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="mt-4 block text-center text-sm font-semibold text-teal">
+              Follow PAHAD on WhatsApp
+            </a>
+            <a href={`mailto:${site.email}`} className="mt-2 block text-center text-sm text-muted">
               {site.email}
             </a>
           </nav>
