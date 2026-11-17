@@ -4,6 +4,7 @@ import { AdminNav, type NavKey } from "@/components/admin/client";
 import { requireUser } from "@/lib/auth/session";
 import { db, usingPostgres } from "@/lib/db";
 import { can, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
+import { phaseOf } from "@/lib/polls";
 import { usingCloudStorage } from "@/lib/storage";
 
 const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
@@ -21,6 +22,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "featured", label: "Featured", href: "/admin/featured", perm: "featured.manage" },
   { key: "finance", label: "Finance", href: "/admin/finance", perm: "dashboard.view" },
   { key: "meetings", label: "GB Meetings", href: "/admin/meetings", perm: "gbm.view" },
+  { key: "voting", label: "Voting", href: "/admin/voting", perm: "dashboard.view" },
   { key: "circulars", label: "Circulars", href: "/admin/circulars", perm: "circulars.view" },
   { key: "structure", label: "Structure", href: "/admin/structure", perm: "structure.view" },
   { key: "team", label: "Admin Team", href: "/admin/team", perm: "team.view" },
@@ -30,7 +32,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
 
 async function Shell({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [tasks, submissions, posts, members, notes, finance, videos] = await Promise.all([
+  const [tasks, submissions, posts, members, notes, finance, videos, myBallots, myReceipts] = await Promise.all([
     db.findBy("tasks", "assigned_to", user.id),
     can(user.role, "submissions.view") ? db.findBy("submissions", "status", "new") : Promise.resolve([]),
     can(user.role, "content.publish") ? db.findBy("posts", "status", "pending") : Promise.resolve([]),
@@ -38,7 +40,13 @@ async function Shell({ children }: { children: React.ReactNode }) {
     db.findBy("notifications", "user_id", user.id),
     financeAccess(user) === "approve" ? db.findBy("finance", "status", "submitted") : Promise.resolve([]),
     can(user.role, "videos.manage") ? db.findBy("videos", "status", "pending") : Promise.resolve([]),
+    db.findBy("poll_voters", "user_id", user.id),
+    db.findBy("poll_receipts", "user_id", user.id),
   ]);
+  // Open polls this member can still vote in.
+  const votedIn = new Set(myReceipts.map((r) => r.poll_id));
+  const openBallots = (await Promise.all(myBallots.filter((v) => !votedIn.has(v.poll_id)).map((v) => db.get("polls", v.poll_id))))
+    .filter((p) => p && !p.archived && phaseOf(p) === "active").length;
   const badges: Partial<Record<NavKey, number>> = {
     tasks: tasks.filter((t) => t.status !== "done").length,
     submissions: submissions.length,
@@ -47,6 +55,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
     notifications: notes.filter((n) => !n.read).length,
     finance: finance.length,
     videos: videos.length,
+    voting: openBallots,
   };
   const showVideos = can(user.role, "videos.manage") || user.can_submit_videos;
   const items = NAV.filter((n) => can(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));

@@ -2,7 +2,8 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
 import { onPage, todayInIndia } from "./placements";
-import type { FeaturedKind, PageKey, Post, PostType, Video } from "./types";
+import { phaseOf, tally, type Tally } from "./polls";
+import type { FeaturedKind, PageKey, Poll, Post, PostType, Video } from "./types";
 import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
 import { youTubeThumb, youTubeWatchUrl } from "./youtube";
 
@@ -155,4 +156,23 @@ export async function getPageFeatured(page: PageKey): Promise<{ public: Featured
     }
   }
   return out;
+}
+
+// ------------------------------------------------------------------ voting
+/** Closed polls whose results the President has authorised for the website. Admin changes call updateTag("polls"). */
+export async function getPublicPollResults(): Promise<{ poll: Poll; tally: Tally }[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("polls");
+  const polls = (await db.all("polls")).filter(
+    (p) => p.results_visibility === "public" && p.public_authorized && !p.archived && phaseOf(p) === "closed",
+  );
+  return Promise.all(
+    polls.map(async (poll) => {
+      const [voters, receipts, ballots] = await Promise.all([db.findBy("poll_voters", "poll_id", poll.id), db.findBy("poll_receipts", "poll_id", poll.id), db.findBy("ballots", "poll_id", poll.id)]);
+      const t = tally(poll, voters, receipts, ballots);
+      // The public page never needs names of who did or didn't vote.
+      return { poll, tally: { ...t, notVoted: [] } };
+    }),
+  );
 }

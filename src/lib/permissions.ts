@@ -122,6 +122,11 @@ export const PERMISSIONS = {
   "videos.manage": [P], // add, approve, reject, edit, delete, publish, pages and ON/OFF
   "videos.permission": [P], // grant or revoke YouTube Embed Submission Permission
   "featured.manage": [P],
+
+  // Voting (GB, EB and General Assembly). The General Secretary is the authorised administrator.
+  // Every signed-in account can open Voting; only eligible members (per poll) can vote.
+  "polls.manage": [P, GS], // create, edit, open, pause, close, archive, results, export
+  "polls.publish_results": [P], // authorise public results on the website
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
