@@ -443,7 +443,7 @@ async function createAdminAccount(
   if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
   const id = newId();
   await db.insert("users", {
-    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: role === "sysadmin" ? "none" : "", can_submit_videos: false, active: true,
+    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: "", can_submit_videos: false, active: true,
     password_hash: hashPassword(password), created_at: now(), last_login: null,
   });
   await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}${source}`, { after: { name, email, role, directorate, unit, geo } });
@@ -504,7 +504,6 @@ export async function updateAdmin(_prev: ActionState, fd: FormData): Promise<Act
     await assertSeat(role, active, target.id);
     const after = {
       role, active, designation: str(fd, "designation", 120), directorate, unit, geo, name: str(fd, "name", 120) || target.name,
-      ...(role === "sysadmin" ? { finance: "none" } : {}),
     };
     await db.update("users", id, after);
     const newPassword = String(fd.get("password") ?? "");
@@ -544,7 +543,6 @@ export async function setFinanceAccess(_prev: ActionState, fd: FormData): Promis
     if (!target) throw new Error("Admin not found.");
     if (access && !FINANCE_ACCESS.some((f) => f.id === access)) throw new Error("Choose a finance access level.");
     if (access === "approve" && !FINANCE_APPROVERS.includes(target.role)) throw new Error("Only the President (or General Secretary) can be given finance approval.");
-    if (target.role === "sysadmin" && access && access !== "none") throw new Error("The System account has no finance access.");
     if (target.id === user.id) throw new Error("You can't change your own finance access.");
     await db.update("users", id, { finance: access });
     const label = access ? FINANCE_ACCESS.find((f) => f.id === access)!.label : "Default for their role";

@@ -24,7 +24,7 @@ export default async function TasksPage() {
   const visible = seeAll ? tasks : tasks.filter((t) => t.assigned_to === user.id || t.assigned_by === user.id);
   const name = (id: string) => users.find((u) => u.id === id)?.name ?? "Former admin";
   const s = await loadStructure();
-  const assignable = users.filter((u) => u.active && u.role !== "sysadmin" && inScope(s, user, u));
+  const assignable = users.filter((u) => u.active && inScope(s, user, u));
 
   return (
     <>

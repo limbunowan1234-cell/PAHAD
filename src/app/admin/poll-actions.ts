@@ -19,7 +19,7 @@ const votersOf = async (pollId: string) => db.findBy("poll_voters", "poll_id", p
 
 /** Replace the eligibility register for a poll (only allowed before anyone has voted). */
 async function setVoters(pollId: string, userIds: string[]) {
-  const users = new Map((await db.all("users")).filter((u) => u.active && u.role !== "sysadmin").map((u) => [u.id, u]));
+  const users = new Map((await db.all("users")).filter((u) => u.active).map((u) => [u.id, u]));
   const wanted = new Set(userIds.filter((id) => users.has(id)));
   const current = await votersOf(pollId);
   for (const v of current) if (!wanted.has(v.user_id)) await db.remove("poll_voters", v.id);
