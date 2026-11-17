@@ -105,7 +105,7 @@ export default async function TeamPage() {
           </tbody>
         </table>
         <p className="mt-3 text-xs text-muted">
-          LA Founder-Owner is held together with L1 A President on one account and cannot be removed. SYS is technical support only: no executive authority and no finance access.
+          LA Founder-Owner is held together with L1 A President on one account and cannot be removed. SYS Website Administrator has full L1 access to every function.
           Geographical tags (G1 District → G4 GP / Ward) limit what scoped leaders see.
         </p>
       </Card>
@@ -182,7 +182,7 @@ export default async function TeamPage() {
                       </AdminForm>
                     </Disclosure>
                   )}
-                  {financeManage && u.id !== user.id && u.role !== "sysadmin" && (
+                  {financeManage && u.id !== user.id && (
                     <Disclosure summary="Finance access">
                       <AdminForm action={setFinanceAccess} submitLabel="Save finance access">
                         <input type="hidden" name="id" value={u.id} />

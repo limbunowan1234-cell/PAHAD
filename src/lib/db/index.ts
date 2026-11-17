@@ -67,7 +67,7 @@ function postgresBackend(url: string): Backend {
         if (done.length) continue;
         const rows = (await sql.query("SELECT id, owner FROM users WHERE lower(email) = $1", [sysEmail])) as { id: string; owner: boolean }[];
         if (!rows.length || rows[0].owner) continue; // never demote the owner
-        await sql.query("UPDATE users SET role = 'sysadmin', finance = 'none', directorate = '', unit = '', geo = '' WHERE id = $1", [rows[0].id]);
+        await sql.query("UPDATE users SET role = 'sysadmin', finance = '', directorate = '', unit = '', geo = '' WHERE id = $1", [rows[0].id]);
         await rawInsert("settings", { id: marker, value: new Date().toISOString(), updated_by: "system", created_at: new Date().toISOString() });
       }
       // One-time rewording: PAHAD and DSSCOLONY are separate organisations. Skipped if an admin edited the article.

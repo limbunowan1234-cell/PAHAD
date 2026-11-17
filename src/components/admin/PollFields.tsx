@@ -9,7 +9,7 @@ export const PHASE_TONE: Record<PollPhase, "grey" | "amber" | "green" | "red" | 
 
 /** Fields shared by "create" and "edit" (edit locks options and voters once voting starts). */
 export async function PollFields({ poll, voterIds, locked = false }: { poll?: Poll; voterIds?: string[]; locked?: boolean }) {
-  const users = (await db.all("users")).filter((u) => u.active && u.role !== "sysadmin").sort((a, b) => a.name.localeCompare(b.name));
+  const users = (await db.all("users")).filter((u) => u.active).sort((a, b) => a.name.localeCompare(b.name));
   const voters = users.map((u) => ({
     id: u.id, name: u.name, roleLabel: roleLabel(u.role),
     defaults: { gb: defaultEligible("gb", u), eb: defaultEligible("eb", u), ga: defaultEligible("ga", u) } as Record<PollCategory, boolean>,

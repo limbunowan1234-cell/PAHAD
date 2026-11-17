@@ -43,8 +43,8 @@ export const ROLES: RoleInfo[] = [
     summary: "Projects within their Programme: add, edit, archive and mark complete." },
   { id: "editor", code: "L6", label: "Member of General Assembly", tier: "General Assembly", level: 6,
     summary: "Uploads content for review and adds members." },
-  { id: "sysadmin", code: "SYS", label: "System", tier: "Technical Support", level: 9,
-    summary: "Technical custodian: read-only view of the whole panel, plus website appearance. No executive authority and no finance access." },
+  { id: "sysadmin", code: "SYS", label: "Website Administrator", tier: "Website Administration", level: 1,
+    summary: "Web admin with full L1 access: every permission in the panel, including finance approval, voting, videos, featured content and appointments." },
 ];
 
 const P: Role = "super_admin";
@@ -133,6 +133,8 @@ export type Permission = keyof typeof PERMISSIONS;
 
 export function can(role: Role | null | undefined, permission: Permission): boolean {
   if (!role) return false;
+  if (role === "sysadmin") return true; // SYS Website Administrator: full L1 access to everything
+  // (the permanent owner account is still protected: it can't be removed, demoted or deactivated)
   return (PERMISSIONS[permission] as readonly Role[]).includes(role);
 }
 
@@ -230,12 +232,12 @@ export const FINANCE_ACCESS: { id: FinanceAccess; label: string }[] = [
   { id: "approve", label: "Approve entries" },
 ];
 /** Roles that may ever be given finance approval. */
-export const FINANCE_APPROVERS: Role[] = [P, GS];
+export const FINANCE_APPROVERS: Role[] = [P, GS, SYS];
 
 const FINANCE_DEFAULT: Partial<Record<Role, FinanceAccess>> = { super_admin: "approve", treasurer: "record", general_secretary: "view", admin: "view" };
 
 export function financeAccess(user: Pick<PublicUser, "role" | "finance">): FinanceAccess {
-  if (user.role === "sysadmin") return "none"; // technical support never sees finance
+  if (user.role === "sysadmin") return "approve"; // full L1 access
   const explicit = user.finance as FinanceAccess;
   if (explicit === "approve" && !FINANCE_APPROVERS.includes(user.role)) return "view";
   return explicit && FINANCE_ACCESS.some((f) => f.id === explicit) ? explicit : FINANCE_DEFAULT[user.role] ?? "none";

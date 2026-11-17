@@ -8,7 +8,7 @@ import { can, GEO_KINDS, within, type Permission } from "@/lib/permissions";
 import { loadStructure } from "@/lib/structure";
 import type { CircularAudience, Meeting, PublicUser, Role, Vote } from "@/lib/types";
 
-const GB_ROLES: Role[] = ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member"];
+const GB_ROLES: Role[] = ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member", "sysadmin"]; // L1, incl. SYS Website Administrator
 const EXEC_ROLES: Role[] = ["admin", "executive_secretary", "record_officer"];
 
 async function run(permission: Permission, fn: (user: PublicUser) => Promise<string>): Promise<ActionState> {
@@ -206,7 +206,7 @@ export async function issueCircular(_prev: ActionState, fd: FormData): Promise<A
     const [users, members] = await Promise.all([db.all("users"), db.all("members")]);
     const memberGeo = new Map(members.map((m) => [m.email.toLowerCase(), m.geo]));
     const recipients = users.filter((u) => {
-      if (!u.active || u.role === "sysadmin" || u.id === user.id) return false;
+      if (!u.active || u.id === user.id) return false;
       const inAudience =
         audience === "all" ||
         (audience === "general_assembly" && u.role === "editor") ||

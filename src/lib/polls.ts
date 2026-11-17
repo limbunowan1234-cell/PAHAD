@@ -1,20 +1,20 @@
 import type { Ballot, Poll, PollCategory, PollOption, PollReceipt, PollResultsVisibility, PollVoter, PublicUser, Role } from "./types";
 
 export const CATEGORY: Record<PollCategory, { short: string; label: string; hint: string }> = {
-  gb: { short: "GB", label: "Governing Body", hint: "L1: President, General Secretary, Joint Secretary, Treasury and Additional Members of GB" },
+  gb: { short: "GB", label: "Governing Body", hint: "L1: President, General Secretary, Joint Secretary, Treasury, Additional Members of GB and Website Administrators" },
   eb: { short: "EB", label: "Executive Body", hint: "L2: Chief Executive Director, Executive Secretary and Record Officer" },
   ga: { short: "GA", label: "General Assembly", hint: "All active member accounts" },
 };
 
 const DEFAULT_ROLES: Record<PollCategory, Role[] | "all"> = {
-  gb: ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member"],
+  gb: ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member", "sysadmin"],
   eb: ["admin", "executive_secretary", "record_officer"],
   ga: "all",
 };
 
 /** Suggested voters for a category. The President can change the list for each poll before voting starts. */
 export function defaultEligible(category: PollCategory, u: Pick<PublicUser, "role" | "active">) {
-  if (!u.active || u.role === "sysadmin") return false; // technical support never votes
+  if (!u.active) return false;
   const roles = DEFAULT_ROLES[category];
   return roles === "all" || roles.includes(u.role);
 }

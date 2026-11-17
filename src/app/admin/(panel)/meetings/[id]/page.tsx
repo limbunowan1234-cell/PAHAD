@@ -217,7 +217,7 @@ export default async function MeetingPage({ params }: PageProps<"/admin/meetings
                   <Field label="Who *">
                     <select name="assigned_to" required defaultValue="" className="field">
                       <option value="" disabled>Choose</option>
-                      {users.filter((u) => u.active && u.role !== "sysadmin").map((u) => <option key={u.id} value={u.id}>{u.name} ({roleLabel(u.role)})</option>)}
+                      {users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name} ({roleLabel(u.role)})</option>)}
                     </select>
                   </Field>
                   <Field label="Due"><input name="due_date" type="date" className="field" /></Field>
