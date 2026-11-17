@@ -65,6 +65,13 @@ function doPost(e) {
       var file = folder.createFile(blob); // private: only people the organisation shares the folder with can open it
       return json({ ok: true, id: file.getId(), url: file.getUrl() });
     }
+    if (body.action === 'email') {
+      // Password reset links and similar messages, sent from this Google account.
+      var to = String(body.to || '');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json({ ok: false, error: 'Bad address' });
+      MailApp.sendEmail({ to: to, subject: String(body.subject || '').slice(0, 200), body: String(body.body || '').slice(0, 5000), name: 'PAHAD' });
+      return json({ ok: true });
+    }
     return json({ ok: false, error: 'Unknown action' });
   } catch (err) {
     return json({ ok: false, error: String(err) });

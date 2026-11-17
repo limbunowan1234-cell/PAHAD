@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -17,7 +18,10 @@ export function LoginForm() {
         <input name="email" type="email" required autoComplete="username" className="field" />
       </label>
       <label className="block">
-        <span className="label">Password</span>
+        <span className="flex items-center justify-between">
+          <span className="label">Password</span>
+          <Link href="/admin/forgot-password" className="text-xs font-semibold text-teal hover:underline">Forgot password?</Link>
+        </span>
         <input name="password" type="password" required autoComplete="current-password" className="field" />
       </label>
       {state && !state.ok && (
