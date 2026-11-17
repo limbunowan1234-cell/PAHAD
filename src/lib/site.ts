@@ -63,6 +63,7 @@ export const nav: NavGroup[] = [
     items: [
       { label: "Ways to Get Involved", href: "/get-involved", description: "Volunteer, collaborate, share" },
       { label: "Membership", href: "/membership", description: "Apply to become a member" },
+      { label: "Training (members)", href: "/training", description: "Training material for signed-in members" },
       { label: "Contact", href: "/contact", description: "Start a conversation" },
     ],
   },

@@ -14,6 +14,7 @@ import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
 import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
+import { trainingAudience } from "@/lib/training";
 
 export type { ActionState };
 
@@ -57,7 +58,7 @@ export async function logout() {
 }
 
 // ------------------------------------------------------------------ content
-const POST_TYPES: PostType[] = ["news", "event", "programme", "resource", "document"];
+const POST_TYPES: PostType[] = ["news", "event", "programme", "resource", "document", "training"];
 
 export async function savePost(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const result = await guarded("content.create", async (user) => {
@@ -92,10 +93,12 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     const form_url = safeUrl(str(fd, "form_url", 500));
 
     // Privacy: Public by default. Documents are plain file links on /transparency, so they are always public.
-    const visibility = type !== "document" && str(fd, "visibility", 10) === "members" ? "members" : "public";
+    // Training Material is always Members Only, limited further to the levels chosen.
+    const visibility = type === "training" ? "members" : type !== "document" && str(fd, "visibility", 10) === "members" ? "members" : "public";
+    const audience = type === "training" ? trainingAudience(str(fd, "audience", 20)) : "";
 
     const data: Partial<Post> = {
-      type, title, slug, cover, file_url, form_url, status, visibility, directorate, unit,
+      type, title, slug, cover, file_url, form_url, status, visibility, audience, directorate, unit,
       excerpt: str(fd, "excerpt", 400),
       body: str(fd, "body", 50_000),
       category: str(fd, "category", 60),

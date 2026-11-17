@@ -37,13 +37,26 @@ export async function getUpcomingEvents(limit?: number): Promise<{ today: Post[]
   return { today: upcoming.filter((e) => e.event_date === today), upcoming: limit ? upcoming.slice(0, limit) : upcoming, past };
 }
 
-/** Published Members Only posts. Only call this after checking the visitor is signed in. */
+/**
+ * Published Members Only posts open to every signed-in account. Training Material limited to
+ * certain levels is left out (see getTrainingPosts). Only call this after checking the visitor is signed in.
+ */
 export async function getMembersOnlyPosts(type?: PostType): Promise<Post[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag("posts");
   return (await db.all("posts"))
-    .filter((p) => p.status === "published" && !isPublicPost(p) && (!type || p.type === type))
+    .filter((p) => p.status === "published" && !isPublicPost(p) && (!type || p.type === type) && !p.audience)
+    .sort((a, b) => (b.published_at || b.created_at).localeCompare(a.published_at || a.created_at));
+}
+
+/** All published Training Material. Callers must filter each item with canSeePost(user, post). */
+export async function getTrainingPosts(): Promise<Post[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("posts");
+  return (await db.all("posts"))
+    .filter((p) => p.status === "published" && p.type === "training")
     .sort((a, b) => (b.published_at || b.created_at).localeCompare(a.published_at || a.created_at));
 }
 
@@ -140,7 +153,7 @@ export async function getPageFeatured(page: PageKey): Promise<{ public: Featured
     const base = { id: f.id, kind: f.kind, external: false, youtubeId: "" };
     if (f.kind === "post") {
       const p = posts.find((x) => x.id === f.ref_id && x.status === "published");
-      if (!p || p.type === "document") continue;
+      if (!p || p.type === "document" || p.audience) continue;
       const card = { ...base, label: POST_TYPE_LABEL[p.type], title: f.title || p.title, text: f.text || p.excerpt, image: p.cover, href: `${POST_TYPE_PATH[p.type]}/${p.slug}` };
       (isPublicPost(p) ? out.public : out.members).push(card);
     } else if (f.kind === "video") {

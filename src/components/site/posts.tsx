@@ -153,7 +153,7 @@ export async function PostDetail({ params, type }: { params: Promise<{ slug: str
       <header className="bg-teal-900 text-white">
         <div className="container-page max-w-4xl py-16 sm:py-20">
           <Link href={back} className="inline-flex items-center gap-2 text-sm text-cream hover:underline">
-            <ArrowLeft className="h-4 w-4" aria-hidden /> Back to {POST_TYPE_LABEL[type].toLowerCase()}s
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Back to {type === "training" ? "training" : `${POST_TYPE_LABEL[type].toLowerCase()}s`}
           </Link>
           <p className="mt-6 flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.18em] text-cream">
             {post.category || POST_TYPE_LABEL[type]}
@@ -174,7 +174,7 @@ export async function PostDetail({ params, type }: { params: Promise<{ slug: str
       <div className="container-page max-w-4xl py-12">
         {membersOnly ? (
           <Suspense fallback={<MembersOnlySkeleton />}>
-            <MembersOnly next={`${back}/${post.slug}`}>
+            <MembersOnly next={`${back}/${post.slug}`} post={post}>
               {post.excerpt && <p className="mb-8 text-xl text-muted">{post.excerpt}</p>}
               <PostBody post={post} type={type} />
             </MembersOnly>

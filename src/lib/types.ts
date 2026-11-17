@@ -56,7 +56,7 @@ export type User = {
 };
 export type PublicUser = Omit<User, "password_hash">;
 
-export type PostType = "news" | "event" | "programme" | "resource" | "document";
+export type PostType = "news" | "event" | "programme" | "resource" | "document" | "training";
 export type PostStatus = "draft" | "pending" | "published";
 /** Who can read a published post. "" (older posts) counts as public. */
 export type PostVisibility = "public" | "members";
@@ -82,6 +82,8 @@ export type Post = {
   status: PostStatus;
   /** Public, or Members Only (signed-in accounts). */
   visibility: PostVisibility | "";
+  /** Training Material only: "" = all members, "executive" = L1–L2, "governing_body" = L1. */
+  audience: string;
   author_id: string;
   author_name: string;
   created_at: string;

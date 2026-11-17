@@ -61,6 +61,10 @@ export async function MemberPortal({ user }: { user: PublicUser }) {
             </ul>
           )}
         </Card>
+        <Card title="Training material">
+          <p className="text-sm text-muted">Guides and learning material for members.</p>
+          <a href="/training" target="_blank" className="mt-2 inline-block text-sm font-semibold text-teal hover:underline">Open the Training page</a>
+        </Card>
         <Card title="Upcoming events">
           {upcoming.length === 0 ? (
             <p className="text-sm text-muted">No events announced yet.</p>

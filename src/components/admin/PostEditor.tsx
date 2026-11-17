@@ -9,6 +9,7 @@ import type { Post, PostType } from "@/lib/types";
 import type { Unit } from "@/lib/types";
 import { ScopePicker } from "./ScopePicker";
 import { POST_TYPE_LABEL } from "@/lib/utils";
+import { TRAINING_AUDIENCE, trainingAudience, type TrainingAudience } from "@/lib/training";
 
 const CATEGORY_HINT: Record<PostType, string> = {
   news: "e.g. Announcement, Community story, Press",
@@ -16,6 +17,7 @@ const CATEGORY_HINT: Record<PostType, string> = {
   programme: "e.g. Community learning, Youth, Livelihood",
   resource: "e.g. Report, Publication, Learning material",
   document: "e.g. Constitution v1.0, Policy, Annual report",
+  training: "e.g. Orientation, Field guide, Facilitator notes",
 };
 
 export function PostEditor({ post, canPublish, units }: { post?: Post; canPublish: boolean; units: Unit[] }) {
@@ -60,7 +62,18 @@ export function PostEditor({ post, canPublish, units }: { post?: Post; canPublis
               {canPublish && <option value="published">Published</option>}
             </select>
           </label>
-          {type !== "document" && (
+          {type === "training" && (
+            <label className="block">
+              <span className="label">Who can see it</span>
+              <select name="audience" defaultValue={trainingAudience(post?.audience ?? "")} className="field">
+                {(Object.keys(TRAINING_AUDIENCE) as TrainingAudience[]).map((a) => (
+                  <option key={a} value={a}>{TRAINING_AUDIENCE[a]}</option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-muted">Training material is always members only. It appears on the Training page for the levels chosen here.</span>
+            </label>
+          )}
+          {type !== "document" && type !== "training" && (
             <label className="block">
               <span className="label">Privacy</span>
               <select name="visibility" defaultValue={post?.visibility === "members" ? "members" : "public"} className="field">

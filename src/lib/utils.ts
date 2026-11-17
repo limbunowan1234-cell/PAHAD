@@ -25,6 +25,7 @@ export const POST_TYPE_LABEL = {
   programme: "Programme",
   resource: "Knowledge Resource",
   document: "Document",
+  training: "Training Material",
 } as const;
 
 export const POST_TYPE_PATH = {
@@ -33,4 +34,5 @@ export const POST_TYPE_PATH = {
   programme: "/programmes",
   resource: "/knowledge",
   document: "/transparency",
+  training: "/training",
 } as const;
