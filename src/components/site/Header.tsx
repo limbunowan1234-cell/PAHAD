@@ -108,7 +108,13 @@ export function HeaderView({ pathname }: { pathname: string }) {
       </div>
 
       {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 top-[72px] bottom-0 overflow-y-auto border-t border-line bg-white lg:hidden">
+        // The header's backdrop-blur makes it the containing block for positioned
+        // children, so `fixed … bottom-0` would collapse to the header's height.
+        // Size the panel from the viewport explicitly instead.
+        <div
+          id="mobile-menu"
+          className="absolute inset-x-0 top-full h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain border-t border-line bg-white lg:hidden"
+        >
           <nav aria-label="Mobile" className="container-page py-4">
             {nav.map((group) => (
               <div key={group.label} className="border-b border-line">
