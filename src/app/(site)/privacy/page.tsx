@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
 import { PageHero } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Privacy Notice" };
+export const metadata: Metadata = pageMetadata({
+  title: "Privacy Notice",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

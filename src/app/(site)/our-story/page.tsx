@@ -3,12 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { storyMoments } from "@/lib/content";
 import { PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Our Story",
   description:
     "PAHAD is an independent organisation that builds on the work of DSSCOLONY. The two share a history that began on 24 June 2018, but they are separate organisations.",
-};
+  path: "/our-story",
+});
 
 export default function OurStoryPage() {
   return (

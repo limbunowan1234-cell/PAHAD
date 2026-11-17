@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { coreValues, cycle, objectives } from "@/lib/content";
 import { CtaBand, PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Vision & Mission",
-  description: "From local potential to regional progress: PAHAD's vision, mission and development objectives.",
-};
+  description:
+    "From local potential to regional progress: PAHAD's vision, mission and development objectives.",
+  path: "/vision-mission",
+});
 
 export default function VisionMissionPage() {
   return (

@@ -5,11 +5,14 @@ import { getUpcomingEvents } from "@/lib/data";
 import { site } from "@/lib/site";
 import { GridSkeleton } from "@/components/site/posts";
 import { EmptyState, PageHero, PostCard, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Live Events",
-  description: "Community conversations, learning sessions, public programmes and activities connected with PAHAD.",
-};
+  description:
+    "Community conversations, learning sessions, public programmes and activities connected with PAHAD.",
+  path: "/events",
+});
 
 async function EventLists() {
   const { today: happening, upcoming: all, past } = await getUpcomingEvents();

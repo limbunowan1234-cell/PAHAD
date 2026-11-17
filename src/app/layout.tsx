@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg", apple: "/icons/pahad-apple-180.png" },
   manifest: "/site.webmanifest",
   appleWebApp: { capable: true, title: "PAHAD", statusBarStyle: "default" },
+  // Google Search Console ownership check.
+  verification: { google: "d8Jnw6yf-hzPUTlME6B6U7W6iybinll212XmT3nq8Lw" },
 };
 
 export const viewport: Viewport = { themeColor: "#164d58" };

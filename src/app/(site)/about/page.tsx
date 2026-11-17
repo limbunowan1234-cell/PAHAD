@@ -3,11 +3,14 @@ import Image from "next/image";
 import { ecosystem, workAreas } from "@/lib/content";
 import { site } from "@/lib/site";
 import { CtaBand, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "About PAHAD",
-  description: "Rooted in our communities, connected by possibility. Learn who PAHAD is, why it exists and how it works.",
-};
+  description:
+    "Rooted in our communities, connected by possibility. Learn who PAHAD is, why it exists and how it works.",
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (

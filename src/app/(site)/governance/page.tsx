@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { governance } from "@/lib/content";
 import { getActiveDirectorates } from "@/lib/data";
 import { CtaBand, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Governance",
-  description: "PAHAD's governance framework: General Assembly, Governing Body, Chief Executive Director, Central Secretariat and six Directorates.",
-};
+  description:
+    "PAHAD's governance framework: General Assembly, Governing Body, Chief Executive Director, Central Secretariat and six Directorates.",
+  path: "/governance",
+});
 
 function Tier({ step, title, children }: { step: string; title: string; children: React.ReactNode }) {
   return (

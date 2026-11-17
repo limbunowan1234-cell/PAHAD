@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -6,7 +7,14 @@ import { coreValues, cycle, storyMoments, workAreas } from "@/lib/content";
 import { getPartners, getPublishedPosts, getSiteImages, getUpcomingEvents } from "@/lib/data";
 import { HERO_PAGES, heroSettingId } from "@/lib/heroes";
 import { site } from "@/lib/site";
+import { pageMetadata } from "@/lib/seo";
 import { CtaBand, EmptyState, MountainLine, PostCard, SectionHeading, TextLink } from "@/components/site/ui";
+
+export const metadata: Metadata = {
+  ...pageMetadata({ title: `${site.name}: ${site.fullName}`, path: "/" }),
+  // Keep the root layout's full "PAHAD | People. Knowledge. Action." title on the home page.
+  title: { absolute: `${site.name} | ${site.tagline}` },
+};
 
 export default function HomePage() {
   return (

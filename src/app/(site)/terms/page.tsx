@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
 import { PageHero } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Terms & Conditions" };
+export const metadata: Metadata = pageMetadata({
+  title: "Terms & Conditions",
+  path: "/terms",
+});
 
 const sections: [string, string][] = [
   ["About PAHAD", "PAHAD (Participatory Action for Holistic Advancement & Development) provides information about its institutional purpose, activities, programmes and opportunities for public participation. Website content is for general information and community engagement."],

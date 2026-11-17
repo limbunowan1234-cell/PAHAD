@@ -5,11 +5,14 @@ import { waysToHelp } from "@/lib/content";
 import { site } from "@/lib/site";
 import { InquiryForm } from "@/components/site/forms";
 import { PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Get Involved",
-  description: "Share an idea, volunteer, collaborate or contribute knowledge. Your ideas can help shape what PAHAD does next.",
-};
+  description:
+    "Share an idea, volunteer, collaborate or contribute knowledge. Your ideas can help shape what PAHAD does next.",
+  path: "/get-involved",
+});
 
 const icons = { idea: Lightbulb, volunteer: HandHeart, collaborate: Handshake, knowledge: BookOpen } as const;
 
