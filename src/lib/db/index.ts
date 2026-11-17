@@ -6,7 +6,8 @@ import { neon } from "@neondatabase/serverless";
 import type { TableName, Tables } from "../types";
 import { createTableSQL, SCHEMA } from "./schema";
 import {
-  DEV_ACCOUNTS, DEV_PASSWORD, OLD_SHARED_HISTORY_TITLE, SHARED_HISTORY_POST, seedMedia, seedPartners, seedPosts, seedTasks, type DbShape,
+  DEFAULT_DIRECTORATES, DEV_ACCOUNTS, DEV_PASSWORD, OLD_SHARED_HISTORY_TITLE, SHARED_HISTORY_POST, seedMedia, seedPartners, seedPosts, seedTasks, seedUnits,
+  type DbShape,
 } from "./seed";
 import { hashPassword } from "../auth/password";
 
@@ -42,9 +43,32 @@ function postgresBackend(url: string): Backend {
   const init = () =>
     (ready ??= (async () => {
       for (const stmt of createTableSQL()) await sql.query(stmt);
-      // The bootstrapped Founder/President account is the permanent owner.
-      if (process.env.SUPERADMIN_EMAIL) {
-        await sql.query("UPDATE users SET owner = true, role = 'super_admin' WHERE lower(email) = lower($1) AND owner = false", [process.env.SUPERADMIN_EMAIL]);
+      // ---- Structure: the six Directorates become units; names stored earlier become unit ids.
+      const [{ dirs }] = (await sql.query("SELECT count(*)::int AS dirs FROM units WHERE kind = 'directorate'")) as { dirs: number }[];
+      if (dirs === 0) for (const u of seedUnits()) await rawInsert("units", u);
+      for (const d of DEFAULT_DIRECTORATES) {
+        for (const t of ["users", "posts", "members", "activity"]) await sql.query(`UPDATE ${t} SET directorate = $1 WHERE directorate = $2`, [d.id, d.name]);
+      }
+      // ---- Roles from the Master Instruction Chart: Program Director becomes Project Coordinator (L5-1).
+      await sql.query("UPDATE users SET role = 'project_coordinator' WHERE role = 'program_director'");
+      // ---- Apex ownership: OWNER_EMAIL holds LA Founder-Owner + L1 A President; nobody else is locked.
+      const ownerEmail = process.env.OWNER_EMAIL;
+      if (ownerEmail) {
+        const rows = (await sql.query("SELECT id FROM users WHERE lower(email) = lower($1)", [ownerEmail])) as { id: string }[];
+        if (rows.length) {
+          await sql.query("UPDATE users SET owner = false WHERE owner = true AND lower(email) <> lower($1)", [ownerEmail]);
+          await sql.query("UPDATE users SET owner = true, role = 'super_admin', active = true WHERE lower(email) = lower($1)", [ownerEmail]);
+        }
+      }
+      // ---- Technical accounts (SYS_EMAILS) become SYS Website Administrator, once per email.
+      for (const sysEmail of (process.env.SYS_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)) {
+        const marker = `migration:sys:${sysEmail}`;
+        const done = (await sql.query("SELECT id FROM settings WHERE id = $1", [marker])) as unknown[];
+        if (done.length) continue;
+        const rows = (await sql.query("SELECT id, owner FROM users WHERE lower(email) = $1", [sysEmail])) as { id: string; owner: boolean }[];
+        if (!rows.length || rows[0].owner) continue; // never demote the owner
+        await sql.query("UPDATE users SET role = 'sysadmin', finance = 'none', directorate = '', unit = '', geo = '' WHERE id = $1", [rows[0].id]);
+        await rawInsert("settings", { id: marker, value: new Date().toISOString(), updated_by: "system", created_at: new Date().toISOString() });
       }
       // One-time rewording: PAHAD and DSSCOLONY are separate organisations. Skipped if an admin edited the article.
       await sql.query(
@@ -63,7 +87,7 @@ function postgresBackend(url: string): Backend {
       if (users === 0 && email && password) {
         await rawInsert("users", {
           id: randomUUID(), email: email.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", owner: true, finance: "", active: true,
+          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", active: true,
           password_hash: hashPassword(password), created_at: new Date().toISOString(), last_login: null,
         });
       }
@@ -127,12 +151,12 @@ function fileBackend(): Backend {
       ? process.env.SUPERADMIN_EMAIL && process.env.SUPERADMIN_PASSWORD
         ? [{
             id: randomUUID(), email: process.env.SUPERADMIN_EMAIL.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-            role: "super_admin" as const, designation: "Founder & President", directorate: "", owner: true, finance: "", active: true,
+            role: "super_admin" as const, designation: "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", active: true,
             password_hash: hashPassword(process.env.SUPERADMIN_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           }]
         : []
       : DEV_ACCOUNTS.map((a) => ({
-          id: randomUUID(), ...a, directorate: a.directorate ?? "", owner: a.owner ?? false, finance: "", active: true,
+          id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", active: true,
           password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
         }));
     const admin = users.find((u) => u.role === "admin");
@@ -140,7 +164,7 @@ function fileBackend(): Backend {
     return {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
-      notifications: [], finance: [], finance_requests: [], outbox: [],
+      notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(),
     };
   }
   function load(): DbShape {
@@ -164,13 +188,23 @@ function fileBackend(): Backend {
         }
       }
     }
+    if (!data.units.some((u) => u.kind === "directorate")) {
+      data.units.push(...seedUnits());
+      changed = true;
+    }
+    for (const d of DEFAULT_DIRECTORATES) {
+      for (const t of ["users", "posts", "members", "activity"] as const) {
+        for (const row of data[t] as { directorate: string }[]) if (row.directorate === d.name) { row.directorate = d.id; changed = true; }
+      }
+    }
+    for (const u of data.users) if ((u.role as string) === "program_director") { u.role = "project_coordinator"; changed = true; }
     // Local demo: make sure every demo role exists (added after the file was first created).
     if (!process.env.VERCEL) {
       for (const a of DEV_ACCOUNTS) {
         if (!data.users.some((u) => u.email === a.email)) {
           changed = true;
           data.users.push({
-            id: randomUUID(), ...a, directorate: a.directorate ?? "", owner: a.owner ?? false, finance: "", active: true,
+            id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", active: true,
             password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           });
         } else if (a.owner && !data.users.find((u) => u.email === a.email)!.owner) {

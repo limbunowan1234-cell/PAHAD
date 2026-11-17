@@ -42,6 +42,14 @@ export async function getPartners() {
   return (await db.all("partners")).sort((a, b) => a.sort - b.sort);
 }
 
+/** Directorates that are switched ON in Admin → Structure. */
+export async function getActiveDirectorates(): Promise<string[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("units");
+  return (await db.all("units")).filter((u) => u.kind === "directorate" && u.active).sort((a, b) => a.sort - b.sort).map((u) => u.name);
+}
+
 /** Hero image chosen by a Super Admin for each page, keyed by setting id ("hero:about"). */
 export async function getSiteImages(): Promise<Record<string, string>> {
   "use cache";

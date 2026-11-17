@@ -26,7 +26,7 @@ function needAccess(user: PublicUser, level: "view" | "record" | "approve") {
   const ok = level === "view" ? a !== "none" : a === level;
   if (!ok) {
     throw new Error(
-      level === "approve" ? "Only the Governing Body can approve finance." : level === "record" ? "Only the Treasurer can record finance entries." : "You don't have finance access.",
+      level === "approve" ? "Only the President can approve finance." : level === "record" ? "Only Treasury (L1 D) records finance entries." : "You don't have finance access.",
     );
   }
 }
@@ -116,12 +116,12 @@ export async function decideFinanceEntry(_prev: ActionState, fd: FormData): Prom
       message = `${entry.entry_no} rejected.`;
     } else {
       const dual = threshold > 0 && Number(entry.amount) >= threshold;
-      const approvedRoles = new Set(approvals.filter((a) => a.decision === "approved").map((a) => a.role));
-      const complete = !dual || (approvedRoles.has("super_admin") && approvedRoles.has("general_secretary"));
+      const approved = approvals.filter((a) => a.decision === "approved");
+      const complete = !dual || (new Set(approved.map((a) => a.by)).size >= 2 && approved.some((a) => a.role === "super_admin"));
       status = complete ? "approved" : "submitted";
       message = complete
         ? `${entry.entry_no} approved and locked.`
-        : `Approval recorded. ₹${entry.amount} is at or above ₹${threshold.toLocaleString("en-IN")}, so it also needs the ${user.role === "super_admin" ? "General Secretary" : "President"}.`;
+        : `Approval recorded. ₹${entry.amount} is at or above ₹${threshold.toLocaleString("en-IN")}, so it needs a second approval${user.role === "super_admin" ? " from another approver" : " including the President"}.`;
     }
     const updated = { ...entry, status, approvals: JSON.stringify(approvals), locked: status !== "submitted", updated_at: now() };
     await db.update("finance", entry.id, updated);

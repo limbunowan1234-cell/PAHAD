@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckSquare, FilePlus2, ImagePlus, Inbox, UserPlus, Users } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { abilities, can, ROLES } from "@/lib/permissions";
+import { abilities, can, ROLES, roleTitle } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
 
@@ -42,7 +42,7 @@ export default async function Dashboard() {
         title={`Namaste, ${user.name.split(" ")[0]}`}
         description={
           <>
-            You are signed in as <strong>{role.label}</strong> ({role.code}, {role.body}){user.designation && user.designation !== role.label ? ` · ${user.designation}` : ""}{user.directorate ? ` · ${user.directorate}` : ""}. {role.summary}
+            You are signed in as <strong>{roleTitle(user)}</strong> ({role.tier}){user.designation && user.designation !== role.label ? ` · ${user.designation}` : ""}. {role.summary}
           </>
         }
       />

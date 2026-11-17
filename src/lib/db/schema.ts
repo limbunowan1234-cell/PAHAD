@@ -5,19 +5,19 @@ type ColType = "text" | "bool" | "int";
 /** Column registry: used to whitelist columns in generated SQL and to build the DDL. */
 export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   users: {
-    id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text",
+    id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text", unit: "text", geo: "text",
     owner: "bool", finance: "text", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
-    cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text", directorate: "text",
+    cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text", directorate: "text", unit: "text",
     status: "text", author_id: "text", author_name: "text", created_at: "text",
     updated_at: "text", published_at: "text",
   },
   members: {
     id: "text", member_no: "text", name: "text", email: "text", phone: "text", area: "text",
     address: "text", occupation: "text", category: "text", interests: "text", status: "text",
-    source: "text", notes: "text", added_by: "text", directorate: "text", created_at: "text",
+    source: "text", notes: "text", added_by: "text", directorate: "text", unit: "text", geo: "text", created_at: "text",
   },
   tasks: {
     id: "text", title: "text", description: "text", assigned_to: "text", assigned_by: "text",
@@ -41,6 +41,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     id: "text", actor_id: "text", actor_name: "text", action: "text", entity: "text",
     entity_id: "text", summary: "text", details: "text", directorate: "text", created_at: "text",
   },
+  units: { id: "text", kind: "text", name: "text", parent_id: "text", active: "bool", status: "text", sort: "int", created_at: "text" },
   notifications: { id: "text", user_id: "text", message: "text", link: "text", read: "bool", created_at: "text" },
   finance: {
     id: "text", entry_no: "text", type: "text", amount: "text", entry_date: "text", description: "text",

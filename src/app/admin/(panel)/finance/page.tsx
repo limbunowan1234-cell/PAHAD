@@ -66,8 +66,8 @@ export default async function FinancePage() {
       <PageHeader
         title="Finance"
         description={
-          isGB ? "Review and approve entries recorded by the Treasurer. Approved entries are locked."
-            : isTreasurer ? "Record income, expenses, donations and dues. Every entry needs a receipt and Governing Body approval."
+          isGB ? "Approve entries recorded and verified by Treasury (L1 D). Approved entries are locked."
+            : isTreasurer ? "Record and verify income, expenses, donations and dues. Every entry needs a receipt and the President’s approval."
               : "Read-only view of PAHAD's finance records."
         }
         actions={
@@ -154,7 +154,7 @@ export default async function FinancePage() {
       {isGB && pending.length > 0 && (
         <Notice tone="warn">
           {pending.length} entr{pending.length === 1 ? "y is" : "ies are"} waiting for your approval.
-          {settings.threshold > 0 && ` Amounts of ${inr(settings.threshold)} or more need both the President and the General Secretary.`}
+          {settings.threshold > 0 && ` Amounts of ${inr(settings.threshold)} or more need two approvals, including the President.`}
         </Notice>
       )}
 
@@ -182,7 +182,7 @@ export default async function FinancePage() {
                     <p className="mt-1 text-xs text-muted">
                       {formatDate(e.entry_date)} · recorded by {e.submitted_by_name}
                       {approvals.length > 0 && ` · ${approvals.map((a) => `${a.decision} by ${a.name}`).join(", ")}`}
-                      {e.status === "submitted" && needsDual && " · needs President and General Secretary"}
+                      {e.status === "submitted" && needsDual && " · needs two approvals incl. the President"}
                     </p>
                   </div>
                   <a href={e.receipt_url} target="_blank" rel="noopener noreferrer" className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-teal hover:underline">
@@ -252,7 +252,7 @@ export default async function FinancePage() {
         <Card title="Finance settings" className="mt-8">
           <AdminForm action={saveFinanceSettings} submitLabel="Save settings">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Dual approval from (₹)" hint="Entries of this amount or more need both the President and the General Secretary. 0 = one approval is always enough.">
+              <Field label="Dual approval from (₹)" hint="Entries of this amount or more need two approvals, including the President. 0 = the President’s approval is always enough.">
                 <input name="threshold" inputMode="decimal" defaultValue={settings.threshold} className="field" />
               </Field>
               <Field label="Treasurer exports">

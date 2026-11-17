@@ -6,6 +6,7 @@ import { Badge, Empty, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { can, canEditPost, canPublish, inScope } from "@/lib/permissions";
+import { loadStructure } from "@/lib/structure";
 import type { PostStatus, PostType } from "@/lib/types";
 import { cn, formatDate, POST_TYPE_LABEL, POST_TYPE_PATH } from "@/lib/utils";
 
@@ -23,7 +24,8 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
 
   const all = await db.all("posts");
   // Directorate Heads see their own directorate's content and their own items only.
-  const visible = all.filter((p) => user.role !== "directorate_head" || p.author_id === user.id || inScope(user, p.directorate));
+  const s = await loadStructure();
+  const visible = all.filter((p) => p.author_id === user.id || inScope(s, user, p));
   const rows = visible.filter((p) => (!type || p.type === type) && (!status || p.status === status));
 
   const chip = (label: string, params: Record<string, string>, active: boolean) => (
@@ -77,8 +79,8 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((p) => {
-                const editable = canEditPost(user, p);
-                const publishable = canPublish(user, p);
+                const editable = canEditPost(s, user, p);
+                const publishable = canPublish(s, user, p);
                 return (
                   <tr key={p.id} className="align-top">
                     <td className="max-w-xs px-4 py-3">
@@ -93,7 +95,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
                     <td className="px-4 py-3"><Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge></td>
                     <td className="px-4 py-3 text-muted">
                       {p.author_name}
-                      {p.directorate && <span className="block text-xs">{p.directorate}</span>}
+                      {(p.unit || p.directorate) && <span className="block text-xs">{s.byId.get(p.unit || p.directorate)?.name}</span>}
                     </td>
                     <td className="px-4 py-3 text-muted">{formatDate(p.updated_at || p.created_at, { day: "numeric", month: "short", year: "numeric" })}</td>
                     <td className="px-4 py-3">

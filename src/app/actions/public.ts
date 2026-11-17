@@ -74,6 +74,8 @@ export async function applyForMembership(_prev: FormState, fd: FormData): Promis
     notes: field(fd, "motivation", 2000),
     added_by: "Website application",
     directorate: "",
+    unit: "",
+    geo: String(fd.get("geo") ?? "").slice(0, 60),
     created_at: new Date().toISOString(),
   });
   return {

@@ -6,7 +6,8 @@ import { Loader2 } from "lucide-react";
 import { savePost, type ActionState } from "@/app/admin/actions";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import type { Post, PostType } from "@/lib/types";
-import { DIRECTORATES } from "@/lib/permissions";
+import type { Unit } from "@/lib/types";
+import { ScopePicker } from "./ScopePicker";
 import { POST_TYPE_LABEL } from "@/lib/utils";
 
 const CATEGORY_HINT: Record<PostType, string> = {
@@ -17,7 +18,7 @@ const CATEGORY_HINT: Record<PostType, string> = {
   document: "e.g. Constitution v1.0, Policy, Annual report",
 };
 
-export function PostEditor({ post, canPublish, lockedDirectorate }: { post?: Post; canPublish: boolean; lockedDirectorate?: string }) {
+export function PostEditor({ post, canPublish, units }: { post?: Post; canPublish: boolean; units: Unit[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(savePost, null);
   const [type, setType] = useState<PostType>(post?.type ?? "news");
   const [cover, setCover] = useState(post?.cover ?? "");
@@ -59,20 +60,9 @@ export function PostEditor({ post, canPublish, lockedDirectorate }: { post?: Pos
               {canPublish && <option value="published">Published</option>}
             </select>
           </label>
-          <label className="block">
-            <span className="label">Directorate</span>
-            {lockedDirectorate ? (
-              <>
-                <input type="hidden" name="directorate" value={lockedDirectorate} />
-                <span className="block rounded-xl bg-sand px-3 py-2 text-sm text-teal">{lockedDirectorate}</span>
-              </>
-            ) : (
-              <select name="directorate" defaultValue={post?.directorate ?? ""} className="field">
-                <option value="">PAHAD (no specific directorate)</option>
-                {DIRECTORATES.map((d) => <option key={d}>{d}</option>)}
-              </select>
-            )}
-          </label>
+          <div className="[&>div]:!grid-cols-1">
+            <ScopePicker units={units} mode="record" showGeo={false} value={post} />
+          </div>
           <label className="block">
             <span className="label">Category / label</span>
             <input name="category" defaultValue={post?.category} className="field" placeholder={CATEGORY_HINT[type]} />

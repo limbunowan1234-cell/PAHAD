@@ -1,11 +1,34 @@
+/** Access levels from the PAHAD Admin Panel Master Instruction Chart (LA–L6 + SYS). */
 export type Role =
-  | "super_admin" // L1 President
-  | "general_secretary" // L1G
-  | "admin" // L2 Chief Executive Director
-  | "treasurer" // L2F
-  | "program_director" // L2P
-  | "directorate_head" // L2D
-  | "editor"; // L3 General
+  | "super_admin" // L1 A President (the owner account is also LA Founder-Owner)
+  | "general_secretary" // L1 B
+  | "joint_secretary" // L1 C Joint / Additional Secretary
+  | "treasurer" // L1 D Treasury
+  | "gb_member" // L1 E Additional Member of the Governing Body (max 5 active)
+  | "admin" // L2 E1 Chief Executive Director
+  | "executive_secretary" // L2 E2
+  | "record_officer" // L2 E3
+  | "directorate_head" // L3 D0 Managing Director (scoped to a Directorate)
+  | "department_head" // L4 D1 Department Head (scoped to a Department)
+  | "project_coordinator" // L5-1 Project Coordinator (scoped to a Programme)
+  | "editor" // L6 Member of the General Assembly
+  | "sysadmin"; // SYS Website Administrator (technical support only)
+
+export type UnitKind = "directorate" | "department" | "programme" | "project" | "designation" | "district" | "subdivision" | "block" | "gp";
+
+/** Organisational and geographical structure, managed in Admin → Structure. */
+export type Unit = {
+  id: string;
+  kind: UnitKind;
+  name: string;
+  parent_id: string;
+  /** Off = hidden/dormant without deleting anything. */
+  active: boolean;
+  /** Projects: active, completed or archived. */
+  status: string;
+  sort: number;
+  created_at: string;
+};
 
 export type User = {
   id: string;
@@ -14,8 +37,12 @@ export type User = {
   role: Role;
   /** Title shown with the name (Founder, President, Website Head…). Only a label. */
   designation: string;
-  /** Directorate, for scoped roles (Directorate Head) and for filtering. */
+  /** Directorate unit id (L3 scope). */
   directorate: string;
+  /** Department or Programme unit id (L4 / L5 scope). */
+  unit: string;
+  /** Geographical tag: District, Subdivision, Block or GP/Ward unit id (G1–G4). */
+  geo: string;
   /** Permanent owner (the bootstrapped Founder/President): cannot be removed, demoted or deactivated. */
   owner: boolean;
   /** Finance access set by the Governing Body; empty = default for the role. */
@@ -46,6 +73,8 @@ export type Post = {
   /** Registration or application form, e.g. a Google Form link. */
   form_url: string;
   directorate: string;
+  /** Department or Programme the item belongs to (optional). */
+  unit: string;
   status: PostStatus;
   author_id: string;
   author_name: string;
@@ -71,6 +100,9 @@ export type Member = {
   notes: string;
   added_by: string;
   directorate: string;
+  unit: string;
+  /** G4 GP/Ward (or any geo unit). */
+  geo: string;
   created_at: string;
 };
 
@@ -239,6 +271,7 @@ export type Tables = {
   settings: Setting;
   activity: Activity;
   notifications: Notification;
+  units: Unit;
   finance: FinanceEntry;
   finance_requests: FinanceRequest;
   outbox: OutboxItem;

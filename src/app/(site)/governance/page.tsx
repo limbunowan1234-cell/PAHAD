@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { governance } from "@/lib/content";
+import { getActiveDirectorates } from "@/lib/data";
 import { CtaBand, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
 
 export const metadata: Metadata = {
@@ -25,7 +26,8 @@ const Connector = ({ label }: { label: string }) => (
   </div>
 );
 
-export default function GovernancePage() {
+export default async function GovernancePage() {
+  const directorates = await getActiveDirectorates();
   return (
     <>
       <PageHero
@@ -67,10 +69,10 @@ export default function GovernancePage() {
           <Connector label="Coordinates" />
           <div className="rounded-[var(--radius-card)] bg-teal p-6 text-white sm:p-8">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-cream">04 · Implementation</p>
-            <h3 className="mt-2 text-2xl font-medium">Six Directorates</h3>
+            <h3 className="mt-2 text-2xl font-medium">{directorates.length} Directorates</h3>
             <p className="mt-2 text-white/80">Each led by a Managing Director.</p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {governance.directorates.map((d, i) => (
+              {directorates.map((d, i) => (
                 <li key={d} className="rounded-2xl bg-white/10 p-4 text-sm font-medium">
                   <span className="block text-xs text-coral">D{i + 1}</span>
                   {d}

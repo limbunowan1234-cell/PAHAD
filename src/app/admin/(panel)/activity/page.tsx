@@ -3,6 +3,7 @@ import { Empty, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { can, inScope } from "@/lib/permissions";
+import { loadStructure } from "@/lib/structure";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Activity Log" };
@@ -10,8 +11,10 @@ export const metadata = { title: "Activity Log" };
 export default async function ActivityPage() {
   const user = await requireUser();
   if (!can(user.role, "activity.view")) redirect("/admin");
-  // Directorate Heads see their own directorate's activity only.
-  const rows = (await db.all("activity")).filter((a) => inScope(user, a.directorate)).slice(0, 300);
+  // Scoped leaders see activity by people inside their own unit only.
+  const s = await loadStructure();
+  const people = new Set((await db.all("users")).filter((u) => inScope(s, user, u)).map((u) => u.id));
+  const rows = (await db.all("activity")).filter((a) => people.has(a.actor_id)).slice(0, 300);
   return (
     <>
       <PageHeader title="Activity Log" description="A record of every change made in the admin panel: who did what, and when." />

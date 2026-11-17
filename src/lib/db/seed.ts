@@ -1,6 +1,21 @@
-import type { Media, Partner, Post, Task, Tables, User } from "../types";
+import type { Media, Partner, Post, Task, Tables, Unit, User } from "../types";
 
 const now = () => new Date().toISOString();
+
+/** PAHAD's six Directorates (from the organogram), seeded once as structure units. */
+export const DEFAULT_DIRECTORATES: { id: string; name: string }[] = [
+  { id: "dir-research", name: "Research, Knowledge and Innovation" },
+  { id: "dir-civic", name: "Civic and Community Development" },
+  { id: "dir-economic", name: "Economic Development and Enterprise" },
+  { id: "dir-media", name: "Media, Communications and Cultural Documentation" },
+  { id: "dir-policy", name: "Policy, Governance and Public Affairs" },
+  { id: "dir-admin", name: "Administration, Finance and Institutional Development" },
+];
+export function seedUnits(): Unit[] {
+  return DEFAULT_DIRECTORATES.map((d, i) => ({
+    id: d.id, kind: "directorate", name: d.name, parent_id: "", active: true, status: "", sort: i + 1, created_at: new Date(Date.UTC(2026, 10, 1, 0, 0, i)).toISOString(),
+  }));
+}
 
 export function seedPartners(): Partner[] {
   return [
@@ -92,6 +107,7 @@ export function seedPosts(): Post[] {
       file_url: "",
       form_url: "",
       directorate: "",
+      unit: "",
       status: "published",
       author_id: "",
       author_name: "PAHAD Founding Team",
@@ -110,9 +126,9 @@ export const DEV_ACCOUNTS: { email: string; name: string; role: User["role"]; de
   { email: "superadmin@pahad.local", name: "Demo President", role: "super_admin", designation: "Founder & President", owner: true },
   { email: "gs@pahad.local", name: "Demo General Secretary", role: "general_secretary", designation: "General Secretary" },
   { email: "admin@pahad.local", name: "Demo CED", role: "admin", designation: "Chief Executive Director" },
-  { email: "treasurer@pahad.local", name: "Demo Treasurer", role: "treasurer", designation: "Treasurer" },
-  { email: "programs@pahad.local", name: "Demo Program Director", role: "program_director", designation: "Program Director" },
-  { email: "director@pahad.local", name: "Demo Directorate Head", role: "directorate_head", designation: "Managing Director", directorate: "Media, Communications and Cultural Documentation" },
+  { email: "treasurer@pahad.local", name: "Demo Treasury", role: "treasurer", designation: "Treasurer" },
+  { email: "director@pahad.local", name: "Demo Managing Director", role: "directorate_head", designation: "Managing Director", directorate: "dir-media" },
+  { email: "sys@pahad.local", name: "Demo Website Administrator", role: "sysadmin", designation: "Website Administrator" },
   { email: "editor@pahad.local", name: "Demo General Member", role: "editor", designation: "General Assembly member" },
 ];
 export const DEV_PASSWORD = "pahad-dev-2026";

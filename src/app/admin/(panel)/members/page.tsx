@@ -5,7 +5,10 @@ import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { Badge, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can, DIRECTORATES, inScope, roleInfo, roleLabel, ROLES } from "@/lib/permissions";
+import { can, inGeoScope, inScope, roleInfo, roleLabel, ROLES, type Structure } from "@/lib/permissions";
+import { loadStructure, pickableUnits } from "@/lib/structure";
+import { ScopePicker } from "@/components/admin/ScopePicker";
+import type { Unit } from "@/lib/types";
 import type { Member, MemberStatus } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -15,7 +18,7 @@ const TONE = { active: "green", applicant: "amber", inactive: "grey", rejected: 
 const LABEL: Record<MemberStatus, string> = { active: "Active", applicant: "Applicant", inactive: "Inactive", rejected: "Not approved" };
 const CATEGORIES = ["General", "Student / Youth", "Professional", "Former DSSCOLONY member", "Institution representative"];
 
-function MemberFields({ m, lockedDirectorate }: { m?: Member; lockedDirectorate?: string }) {
+function MemberFields({ m, units }: { m?: Member; units: Unit[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Full name *"><input name="name" required defaultValue={m?.name} className="field" /></Field>
@@ -28,19 +31,7 @@ function MemberFields({ m, lockedDirectorate }: { m?: Member; lockedDirectorate?
           {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
         </select>
       </Field>
-      <Field label="Directorate">
-        {lockedDirectorate ? (
-          <>
-            <input type="hidden" name="directorate" value={lockedDirectorate} />
-            <span className="block rounded-xl bg-sand px-3 py-2 text-sm text-teal">{lockedDirectorate}</span>
-          </>
-        ) : (
-          <select name="directorate" defaultValue={m?.directorate ?? ""} className="field">
-            <option value="">Not assigned</option>
-            {DIRECTORATES.map((d) => <option key={d}>{d}</option>)}
-          </select>
-        )}
-      </Field>
+      <ScopePicker units={units} mode="record" value={m} />
       <Field label="Address" className="sm:col-span-2"><input name="address" defaultValue={m?.address} className="field" /></Field>
       <Field label="Interests" className="sm:col-span-2"><input name="interests" defaultValue={m?.interests} className="field" placeholder="e.g. Research, Youth, Media" /></Field>
       <Field label="Notes (internal)" className="sm:col-span-2"><textarea name="notes" rows={2} defaultValue={m?.notes} className="field" /></Field>
@@ -48,18 +39,26 @@ function MemberFields({ m, lockedDirectorate }: { m?: Member; lockedDirectorate?
   );
 }
 
+function place(s: Structure, m: Member) {
+  const geo: string[] = [];
+  for (let cur = s.byId.get(m.geo); cur; cur = cur.parent_id ? s.byId.get(cur.parent_id) : undefined) geo.unshift(cur.name);
+  return [s.byId.get(m.unit || m.directorate)?.name, geo.join(" › ")].filter(Boolean).join(" · ");
+}
+
 export default async function MembersPage({ searchParams }: PageProps<"/admin/members">) {
   const user = await requireUser();
   const sp = await searchParams;
   const status = (typeof sp.status === "string" ? sp.status : "") as MemberStatus | "";
   const q = (typeof sp.q === "string" ? sp.q : "").toLowerCase().trim();
-  // Directorate Heads only see members of their own directorate.
-  const all = (await db.all("members")).filter((m) => inScope(user, m.directorate));
+  // Scoped leaders see members of their own unit; geo-tagged leaders see members inside their area.
+  const s = await loadStructure();
+  const all = (await db.all("members")).filter((m) => inScope(s, user, m) && inGeoScope(s, user, m.geo));
+  const units = [...pickableUnits(s, user), ...s.units.filter((u) => ["district", "subdivision", "block", "gp"].includes(u.kind))];
+  const allUnits = s.units.filter((u) => u.kind !== "designation" && u.kind !== "project");
   // Members who already have an admin account (matched by email).
   const admins = new Map((await db.all("users")).map((u) => [u.email.toLowerCase(), u]));
   const canPromote = can(user.role, "team.manage");
   const myLevel = roleInfo(user.role).level;
-  const locked = user.role === "directorate_head" ? user.directorate : undefined;
   const rows = all.filter(
     (m) => (!status || m.status === status) && (!q || [m.name, m.email, m.phone, m.area, m.member_no].join(" ").toLowerCase().includes(q)),
   );
@@ -83,7 +82,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
         <div id="add" className="mb-8 scroll-mt-24">
           <Disclosure summary="Add a member" defaultOpen={all.length === 0}>
             <AdminForm action={createMember} submitLabel="Add member" resetOnSuccess>
-              <MemberFields lockedDirectorate={locked} />
+              <MemberFields units={units} />
             </AdminForm>
           </Disclosure>
         </div>
@@ -123,7 +122,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                     {m.email && admins.has(m.email.toLowerCase()) && <Badge tone="teal">Admin: {roleLabel(admins.get(m.email.toLowerCase())!.role)}</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-muted">
-                    {[m.email, m.phone, m.area, m.category, m.directorate].filter(Boolean).join(" · ")}
+                    {[m.email, m.phone, m.area, m.category, place(s, m)].filter(Boolean).join(" · ")}
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     {m.source === "website" ? "Applied on the website" : `Added by ${m.added_by}`} · {formatDate(m.created_at)}
@@ -161,20 +160,8 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                           {m.name} will sign in with <strong>{m.email}</strong>. Choose their access level and set a temporary password to share with them privately.
                         </p>
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <Field label="Access level *">
-                            <select name="role" defaultValue="editor" className="field">
-                              {ROLES.filter((r) => r.level >= myLevel).map((r) => (
-                                <option key={r.id} value={r.id}>{r.code}: {r.label} ({r.body})</option>
-                              ))}
-                            </select>
-                          </Field>
-                          <Field label="Title" hint="Only a label, e.g. Managing Director, Volunteer Editor."><input name="designation" className="field" /></Field>
-                          <Field label="Directorate" hint="Required for Directorate Heads.">
-                            <select name="directorate" defaultValue={m.directorate} className="field">
-                              <option value="">None (not scoped)</option>
-                              {DIRECTORATES.map((d) => <option key={d}>{d}</option>)}
-                            </select>
-                          </Field>
+                          <ScopePicker units={allUnits} roles={ROLES.filter((r) => r.level >= myLevel)} defaultRole="editor" value={m} />
+                          <Field label="Title" hint="Only a label, e.g. Managing Director, Block Coordinator."><input name="designation" className="field" /></Field>
                           <Field label="Temporary password *" hint="At least 10 characters with letters and numbers.">
                             <input name="password" type="text" required minLength={10} autoComplete="new-password" className="field" />
                           </Field>
@@ -191,7 +178,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                   <Disclosure summary="Edit details">
                     <AdminForm action={updateMember}>
                       <input type="hidden" name="id" value={m.id} />
-                      <MemberFields m={m} lockedDirectorate={locked} />
+                      <MemberFields m={m} units={units} />
                     </AdminForm>
                   </Disclosure>
                 </div>

@@ -1,80 +1,109 @@
-import type { Post, PublicUser, Role } from "./types";
+import type { Post, PublicUser, Role, Unit, UnitKind } from "./types";
 
 /**
- * PAHAD admin access model. The single source of truth for what each level may do.
+ * PAHAD access model, per the Admin Panel Master Instruction Chart (17 Nov 2026).
  * Every server action checks these rules; the admin UI only uses them to hide
  * controls a person cannot use.
  *
- * The access level decides what someone can do. The title (Founder, President,
- * Website Head…) is only a label stored on the account.
- *
- * Internal ids are kept stable so existing accounts keep working:
- *   super_admin = L1 President, admin = L2 Chief Executive Director, editor = L3 General.
+ * LA Founder-Owner is not a separate role: it is the President (L1 A) account
+ * marked as permanent owner. The access level decides what someone can do;
+ * the title is only a label.
  */
-export const ROLES: { id: Role; code: string; label: string; level: number; body: string; summary: string }[] = [
-  { id: "super_admin", code: "L1", label: "President", level: 1, body: "Governing Body",
-    summary: "Full control. The only level that can create admins and change roles." },
-  { id: "general_secretary", code: "L1G", label: "General Secretary", level: 1, body: "Governing Body",
-    summary: "Runs day-to-day work, deletes members and approves finance. Cannot change roles." },
-  { id: "admin", code: "L2", label: "Chief Executive Director", level: 2, body: "Secretariat",
-    summary: "Runs the Secretariat: content, members, tasks, partners and messages. Read-only finance." },
-  { id: "treasurer", code: "L2F", label: "Treasurer", level: 2, body: "Secretariat",
-    summary: "Records finance entries with receipts. Cannot approve." },
-  { id: "program_director", code: "L2P", label: "Program Director", level: 2, body: "Secretariat",
-    summary: "Events, programmes, partners, tasks and messages." },
-  { id: "directorate_head", code: "L2D", label: "Directorate Head", level: 2, body: "Secretariat, own directorate",
-    summary: "Publishing, members and tasks within their own directorate only." },
-  { id: "editor", code: "L3", label: "General", level: 3, body: "General Assembly",
-    summary: "Uploads content for review and adds new members." },
+export type RoleInfo = {
+  id: Role; code: string; label: string; tier: string; level: number;
+  /** Seats: how many active accounts may hold the role (undefined = open). */
+  seats?: number;
+  /** Which structure unit the role is scoped to, if any. */
+  scope?: "directorate" | "department" | "programme";
+  summary: string;
+};
+
+export const ROLES: RoleInfo[] = [
+  { id: "super_admin", code: "L1 A", label: "President", tier: "Governing Body", level: 1, seats: 1,
+    summary: "Full control: dashboards, access for all levels, directorates and the whole structure. Approves finance." },
+  { id: "general_secretary", code: "L1 B", label: "General Secretary", tier: "Governing Body", level: 1, seats: 1,
+    summary: "Governing Body agendas, minutes, notices and official institutional records." },
+  { id: "joint_secretary", code: "L1 C", label: "Joint / Additional Secretary", tier: "Governing Body", level: 1,
+    summary: "Assists the General Secretary with documentation and secretariat duties." },
+  { id: "treasurer", code: "L1 D", label: "Treasury", tier: "Governing Body", level: 1, seats: 1,
+    summary: "Records and verifies finance entries and reviews the ledger." },
+  { id: "gb_member", code: "L1 E", label: "Additional Member of GB", tier: "Governing Body", level: 1, seats: 5,
+    summary: "Governing Body meeting and resolution access." },
+  { id: "admin", code: "L2 E1", label: "Chief Executive Director", tier: "Executive Body", level: 2, seats: 1,
+    summary: "Runs active Directorates and inter-directorate coordination." },
+  { id: "executive_secretary", code: "L2 E2", label: "Executive Secretary", tier: "Executive Body", level: 2, seats: 1,
+    summary: "Executive Secretariat administration and scheduling." },
+  { id: "record_officer", code: "L2 E3", label: "Record Officer", tier: "Executive Body", level: 2, seats: 1,
+    summary: "System-wide archives, records and audit log." },
+  { id: "directorate_head", code: "L3 D0", label: "Managing Director", tier: "Directorate", level: 3, scope: "directorate",
+    summary: "Departments, content, members and tasks within their Directorate." },
+  { id: "department_head", code: "L4 D1", label: "Department Head", tier: "Department", level: 4, scope: "department",
+    summary: "Programmes, content, members and tasks within their Department." },
+  { id: "project_coordinator", code: "L5-1", label: "Project Coordinator", tier: "Programme", level: 5, scope: "programme",
+    summary: "Projects within their Programme: add, edit, archive and mark complete." },
+  { id: "editor", code: "L6", label: "Member of General Assembly", tier: "General Assembly", level: 6,
+    summary: "Uploads content for review and adds members." },
+  { id: "sysadmin", code: "SYS", label: "Website Administrator", tier: "Technical Support", level: 9,
+    summary: "Technical support only: website appearance and fixes. No executive authority and no finance access." },
 ];
 
 const P: Role = "super_admin";
-const G: Role = "general_secretary";
+const GS: Role = "general_secretary";
+const JS: Role = "joint_secretary";
+const TR: Role = "treasurer";
+const GB: Role = "gb_member";
 const C: Role = "admin";
-const T: Role = "treasurer";
-const R: Role = "program_director"; // pRogram director
-const D: Role = "directorate_head";
+const ES: Role = "executive_secretary";
+const RO: Role = "record_officer";
+const MD: Role = "directorate_head";
+const DH: Role = "department_head";
+const PC: Role = "project_coordinator";
 const E: Role = "editor";
-const ALL = [P, G, C, T, R, D, E];
+const SYS: Role = "sysadmin";
+const EXEC = [P, GS, JS, TR, GB, C, ES, RO, MD, DH, PC, E]; // everyone with organisational duties
 
 export const PERMISSIONS = {
-  "dashboard.view": ALL,
+  "dashboard.view": [...EXEC, SYS],
 
-  "content.create": ALL, // General: always "Awaiting review"
-  "content.publish": [P, G, C], // publish / approve anyone's content
-  "content.publish_own": [T, R, D], // publish own items directly (Directorate Head: own directorate)
-  "content.edit_any": [P, G, C], // edit or remove others' content (author is notified)
-  "content.delete": [P, G, C],
+  "content.create": EXEC, // L6 / L1 E: always "Awaiting review"
+  "content.publish": [P, GS, JS, C], // publish / approve anyone's content
+  "content.publish_own": [ES, RO, MD, DH, PC], // own items, or within own unit for scoped roles
+  "content.edit_any": [P, GS, C],
+  "content.delete": [P, GS, C],
 
-  "media.upload": ALL,
-  "media.delete": [P, G, C],
+  "media.upload": EXEC,
+  "media.delete": [P, GS, C],
 
-  "members.view": [P, G, C, D, E],
-  "members.create": [P, G, C, D, E], // Directorate Head: own directorate
-  "members.edit": [P, G, C, D],
-  "members.approve": [P, G, C, D],
-  "members.delete": [P, G],
-  "members.export": [P, G, C],
+  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E],
+  "members.create": [P, GS, JS, C, ES, MD, DH, PC, E], // scoped roles: own unit
+  "members.edit": [P, GS, JS, C, MD, DH],
+  "members.approve": [P, GS, JS, C, MD, DH],
+  "members.delete": [P, GS],
+  "members.export": [P, GS, C, RO],
 
-  "tasks.view_own": ALL,
-  "tasks.view_all": [P, G, C, R],
-  "tasks.assign": [P, G, C, R, D], // Directorate Head: own directorate's admins
-  "tasks.delete": [P, G, C],
+  "tasks.view_own": EXEC,
+  "tasks.view_all": [P, GS, C, ES],
+  "tasks.assign": [P, GS, JS, C, ES, MD, DH, PC], // scoped roles: own unit
+  "tasks.delete": [P, GS, C],
 
-  "submissions.view": [P, G, C, R],
-  "submissions.manage": [P, G, C, R],
-  "submissions.delete": [P, G],
+  "submissions.view": [P, GS, JS, C, ES],
+  "submissions.manage": [P, GS, JS, C, ES],
+  "submissions.delete": [P, GS],
 
-  "partners.manage": [P, G, C, R],
-  "people.manage": [P, G, C], // the public "Our Team" page
-  "site.images": [P, G], // banner photos on every page
+  "partners.manage": [P, GS, C],
+  "people.manage": [P, GS, C], // the public "Our Team" page
+  "site.images": [P, SYS], // banner photos: website appearance
   "settings.manage": [P], // finance thresholds and rules
 
-  "team.view": [P, G, C],
-  "team.manage": [P], // create admins and change roles
-  "finance.access.manage": [P, G], // grant, change or remove finance access
+  "structure.view": [P, GS, JS, C, ES, RO, MD, DH, PC], // General Secretary: read and draft proposals only
+  "structure.manage": [P], // the whole structure, directorate toggles, designations, geo units
+  "structure.manage_own": [MD, DH, PC], // departments / programmes / projects inside own unit
 
-  "activity.view": [P, G, C, T, D], // Directorate Head: own directorate only
+  "team.view": [P, GS, C, RO],
+  "team.manage": [P], // create admins and change roles
+  "finance.access.manage": [P], // grant, change or remove finance access
+
+  "activity.view": [P, GS, C, RO, TR, MD, DH], // scoped roles: own unit
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -84,26 +113,89 @@ export function can(role: Role | null | undefined, permission: Permission): bool
   return (PERMISSIONS[permission] as readonly Role[]).includes(role);
 }
 
-/** Directorate Heads are limited to their own directorate; everyone else is not scoped. */
-export function inScope(user: Pick<PublicUser, "role" | "directorate">, directorate: string | null | undefined) {
-  if (user.role !== "directorate_head") return true;
-  return Boolean(user.directorate) && directorate === user.directorate;
+export function roleInfo(role: Role): RoleInfo {
+  return ROLES.find((r) => r.id === role) ?? ROLES.find((r) => r.id === "editor")!;
+}
+export const roleLabel = (role: Role) => roleInfo(role).label;
+export const roleCode = (role: Role) => roleInfo(role).code;
+
+/** Display name, e.g. "LA / L1 A · Founder-Owner & President" for the owner account. */
+export function roleTitle(u: Pick<PublicUser, "role" | "owner">) {
+  const r = roleInfo(u.role);
+  return u.owner ? `LA / ${r.code} · Founder-Owner & ${r.label}` : `${r.code} · ${r.label}`;
+}
+
+// ---------------------------------------------------------------- structure scope
+export type Structure = { byId: Map<string, Unit>; units: Unit[] };
+export const makeStructure = (units: Unit[]): Structure => ({ units, byId: new Map(units.map((u) => [u.id, u])) });
+
+/** True when `id` is `ancestorId` or lies underneath it. */
+export function within(s: Structure, id: string | null | undefined, ancestorId: string | null | undefined): boolean {
+  if (!id || !ancestorId) return false;
+  let cur = s.byId.get(id);
+  for (let guard = 0; cur && guard < 10; guard++) {
+    if (cur.id === ancestorId) return true;
+    cur = cur.parent_id ? s.byId.get(cur.parent_id) : undefined;
+  }
+  return false;
+}
+
+/** The directorate a unit (department, programme, project) belongs to. */
+export function directorateOf(s: Structure, id: string | null | undefined): string {
+  let cur = id ? s.byId.get(id) : undefined;
+  for (let guard = 0; cur && guard < 10; guard++) {
+    if (cur.kind === "directorate") return cur.id;
+    cur = cur.parent_id ? s.byId.get(cur.parent_id) : undefined;
+  }
+  return "";
+}
+
+/** The unit a scoped person is limited to, or "" for unscoped (organisation-wide) roles. */
+export function scopeUnit(user: Pick<PublicUser, "role" | "directorate" | "unit">): string | null {
+  const r = roleInfo(user.role);
+  if (r.scope === "directorate") return user.directorate || "∅";
+  if (r.scope === "department" || r.scope === "programme") return user.unit || "∅";
+  return null;
+}
+
+/** Can this person act on a record that belongs to this directorate / unit? */
+export function inScope(s: Structure, user: Pick<PublicUser, "role" | "directorate" | "unit">, rec: { directorate?: string; unit?: string }) {
+  const scope = scopeUnit(user);
+  if (scope === null) return true;
+  if (scope === "∅") return false;
+  return rec.directorate === scope || within(s, rec.unit, scope);
+}
+
+/** Geographical supervision: a person tagged to a District/Subdivision/Block sees records inside it. */
+const GLOBAL_GEO: Role[] = [P, GS, JS, TR, GB, C, ES, RO];
+export function inGeoScope(s: Structure, user: Pick<PublicUser, "role" | "geo">, recGeo: string | null | undefined) {
+  if (GLOBAL_GEO.includes(user.role) || !user.geo) return true;
+  return within(s, recGeo, user.geo);
 }
 
 /** Can this person publish (or approve) this item? Without an item: can they publish anything at all? */
-export function canPublish(user: Pick<PublicUser, "id" | "role" | "directorate">, post?: Pick<Post, "author_id" | "directorate">) {
+export function canPublish(s: Structure, user: Pick<PublicUser, "id" | "role" | "directorate" | "unit">, post?: Pick<Post, "author_id" | "directorate" | "unit">) {
   if (can(user.role, "content.publish")) return true;
   if (!can(user.role, "content.publish_own")) return false;
-  if (!post) return true;
-  if (post.author_id === user.id) return true;
-  return user.role === "directorate_head" && inScope(user, post.directorate);
+  if (!post || post.author_id === user.id) return true;
+  return scopeUnit(user) !== null && inScope(s, user, post);
 }
 
-/** Can this person edit this item? */
-export function canEditPost(user: Pick<PublicUser, "id" | "role" | "directorate">, post: Pick<Post, "author_id" | "directorate" | "status">) {
+export function canEditPost(s: Structure, user: Pick<PublicUser, "id" | "role" | "directorate" | "unit">, post: Pick<Post, "author_id" | "directorate" | "unit" | "status">) {
   if (can(user.role, "content.edit_any")) return true;
-  if (canPublish(user, post) && (post.author_id === user.id || user.role === "directorate_head")) return true;
+  if (canPublish(s, user, post) && (post.author_id === user.id || scopeUnit(user) !== null)) return true;
   return post.author_id === user.id && post.status !== "published";
+}
+
+/** Which structure kinds a person may add/edit/remove, and under which parent. */
+export function canManageUnit(s: Structure, user: Pick<PublicUser, "role" | "directorate" | "unit">, kind: UnitKind, parentId: string): boolean {
+  if (can(user.role, "structure.manage")) return true;
+  if (!can(user.role, "structure.manage_own")) return false;
+  const r = roleInfo(user.role);
+  if (r.scope === "directorate") return kind === "department" && parentId === user.directorate;
+  if (r.scope === "department") return kind === "programme" && parentId === user.unit;
+  if (r.scope === "programme") return kind === "project" && parentId === user.unit;
+  return false;
 }
 
 // ---------------------------------------------------------------- finance
@@ -111,60 +203,47 @@ export type FinanceAccess = "none" | "view" | "record" | "approve";
 export const FINANCE_ACCESS: { id: FinanceAccess; label: string }[] = [
   { id: "none", label: "No finance access" },
   { id: "view", label: "View reports (read-only)" },
-  { id: "record", label: "Record entries (Treasurer)" },
-  { id: "approve", label: "Approve entries (Governing Body)" },
+  { id: "record", label: "Record and verify entries (Treasury)" },
+  { id: "approve", label: "Approve entries" },
 ];
+/** Roles that may ever be given finance approval. */
+export const FINANCE_APPROVERS: Role[] = [P, GS];
 
-const FINANCE_DEFAULT: Record<Role, FinanceAccess> = {
-  super_admin: "approve", general_secretary: "approve", admin: "view", treasurer: "record",
-  program_director: "none", directorate_head: "none", editor: "none",
-};
+const FINANCE_DEFAULT: Partial<Record<Role, FinanceAccess>> = { super_admin: "approve", treasurer: "record", general_secretary: "view", admin: "view" };
 
-/** Finance access is its own permission group: role default unless the Governing Body set it explicitly. */
 export function financeAccess(user: Pick<PublicUser, "role" | "finance">): FinanceAccess {
+  if (user.role === "sysadmin") return "none"; // technical support never sees finance
   const explicit = user.finance as FinanceAccess;
-  // Approval always stays with the Governing Body, whatever is stored on the account.
-  if (explicit === "approve" && user.role !== "super_admin" && user.role !== "general_secretary") return "view";
-  return explicit && FINANCE_ACCESS.some((f) => f.id === explicit) ? explicit : FINANCE_DEFAULT[user.role];
-}
-
-// ---------------------------------------------------------------- labels
-export function roleInfo(role: Role) {
-  return ROLES.find((r) => r.id === role) ?? ROLES[ROLES.length - 1];
-}
-
-export function roleLabel(role: Role) {
-  return roleInfo(role).label;
+  if (explicit === "approve" && !FINANCE_APPROVERS.includes(user.role)) return "view";
+  return explicit && FINANCE_ACCESS.some((f) => f.id === explicit) ? explicit : FINANCE_DEFAULT[user.role] ?? "none";
 }
 
 /** Plain-language summary of a role's abilities, for the dashboard. */
 export function abilities(role: Role): string[] {
   const list: [Permission, string][] = [
     ["content.publish", "Publish and approve anyone's content"],
-    ["content.publish_own", role === "directorate_head" ? "Publish content for your directorate" : "Publish your own content directly"],
+    ["content.publish_own", roleInfo(role).scope ? "Publish content within your unit" : "Publish your own content directly"],
     ["content.create", "Upload content"],
-    ["media.upload", "Upload gallery photos"],
-    ["members.create", role === "directorate_head" ? "Add and approve members in your directorate" : "Add members"],
-    ["members.export", "Edit, approve and export members"],
+    ["members.create", "Add members"],
+    ["members.approve", "Edit and approve members"],
     ["members.delete", "Delete members"],
-    ["tasks.assign", role === "directorate_head" ? "Assign tasks within your directorate" : "Assign tasks"],
-    ["tasks.view_own", "Work on tasks assigned to you"],
+    ["tasks.assign", "Assign tasks"],
     ["submissions.view", "Read and handle messages"],
-    ["partners.manage", "Manage partners"],
-    ["people.manage", "Manage the Our Team page"],
-    ["site.images", "Change the banner photo on any page"],
+    ["structure.manage", "Manage the whole structure and directorate toggles"],
+    ["structure.manage_own", "Manage the structure inside your unit"],
+    ["site.images", "Change page banner photos"],
     ["team.manage", "Create admins and change roles"],
     ["finance.access.manage", "Grant or change finance access"],
   ];
   return list.filter(([p]) => can(role, p)).map(([, label]) => label);
 }
 
-/** Directorates, from PAHAD's governance structure. */
-export const DIRECTORATES = [
-  "Research, Knowledge and Innovation",
-  "Civic and Community Development",
-  "Economic Development and Enterprise",
-  "Media, Communications and Cultural Documentation",
-  "Policy, Governance and Public Affairs",
-  "Administration, Finance and Institutional Development",
-] as const;
+export const UNIT_LABEL: Record<UnitKind, string> = {
+  directorate: "Directorate", department: "Department", programme: "Programme", project: "Project", designation: "Designation",
+  district: "District (G1)", subdivision: "Subdivision (G2)", block: "Block / Municipality (G3)", gp: "GP / Ward (G4)",
+};
+/** What may sit under what. */
+export const UNIT_PARENT: Partial<Record<UnitKind, UnitKind>> = {
+  department: "directorate", programme: "department", project: "programme", subdivision: "district", block: "subdivision", gp: "block",
+};
+export const GEO_KINDS: UnitKind[] = ["district", "subdivision", "block", "gp"];

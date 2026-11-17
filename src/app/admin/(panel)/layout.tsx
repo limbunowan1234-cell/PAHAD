@@ -18,6 +18,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "heroes", label: "Page Images", href: "/admin/page-images", perm: "site.images" },
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
   { key: "finance", label: "Finance", href: "/admin/finance", perm: "dashboard.view" },
+  { key: "structure", label: "Structure", href: "/admin/structure", perm: "structure.view" },
   { key: "team", label: "Admin Team", href: "/admin/team", perm: "team.view" },
   { key: "activity", label: "Activity Log", href: "/admin/activity", perm: "activity.view" },
   { key: "account", label: "My Account", href: "/admin/account", perm: "dashboard.view" },

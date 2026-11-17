@@ -6,7 +6,8 @@ import { db, newId } from "@/lib/db";
 import { hashPassword, validatePasswordStrength, verifyPassword } from "@/lib/auth/password";
 import { clearSessionCookie, getCurrentUser, setSessionCookie } from "@/lib/auth/session";
 import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
-import { can, canEditPost, canPublish, DIRECTORATES, FINANCE_ACCESS, inScope, roleInfo, roleLabel, ROLES, type FinanceAccess } from "@/lib/permissions";
+import { can, canEditPost, canPublish, FINANCE_ACCESS, FINANCE_APPROVERS, inScope, roleInfo, roleLabel, ROLES, type FinanceAccess } from "@/lib/permissions";
+import { assertRoleScope, assertSeat, loadStructure, recordScope, scopeFromForm } from "@/lib/structure";
 import { appendToSheet } from "@/lib/google";
 import { storeUpload } from "@/lib/storage";
 import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
@@ -16,7 +17,6 @@ import { slugify } from "@/lib/utils";
 
 export type { ActionState };
 
-const validDirectorate = (d: string) => ((DIRECTORATES as readonly string[]).includes(d) ? d : "");
 
 /** Tell the author when someone else changes or removes their content. */
 async function notifyAuthor(actor: PublicUser, post: Post, what: string) {
@@ -64,15 +64,16 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
 
     const existing = id ? await db.get("posts", id) : null;
     if (id && !existing) throw new Error("This item no longer exists.");
-    if (existing && !canEditPost(user, existing)) {
+    const s = await loadStructure();
+    if (existing && !canEditPost(s, user, existing)) {
       throw new Error("You can't edit this item. Ask the Chief Executive Director, General Secretary or President.");
     }
 
-    // Directorate Heads always work inside their own directorate.
-    const directorate = user.role === "directorate_head" ? user.directorate : validDirectorate(str(fd, "directorate", 120));
+    // Scoped people always file inside their own Directorate / Department / Programme.
+    const { directorate, unit } = recordScope(s, user, fd);
     let status = (str(fd, "status", 20) || "draft") as PostStatus;
-    const draft = { author_id: existing?.author_id ?? user.id, directorate };
-    if (status === "published" && !canPublish(user, draft)) status = "pending";
+    const draft = { author_id: existing?.author_id ?? user.id, directorate, unit };
+    if (status === "published" && !canPublish(s, user, draft)) status = "pending";
 
     let slug = slugify(str(fd, "slug", 100) || title) || newId().slice(0, 8);
     const clash = (await db.findBy("posts", "slug", slug)).find((p) => p.id !== id);
@@ -86,7 +87,7 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     const form_url = safeUrl(str(fd, "form_url", 500));
 
     const data: Partial<Post> = {
-      type, title, slug, cover, file_url, form_url, status, directorate,
+      type, title, slug, cover, file_url, form_url, status, directorate, unit,
       excerpt: str(fd, "excerpt", 400),
       body: str(fd, "body", 50_000),
       category: str(fd, "category", 60),
@@ -119,7 +120,7 @@ export async function setPostStatus(id: string, status: PostStatus) {
   return guarded("content.create", async (user) => {
     const post = await db.get("posts", id);
     if (!post) throw new Error("Not found.");
-    if (!canPublish(user, post)) throw new Error("You can't publish or unpublish this item.");
+    if (!canPublish(await loadStructure(), user, post)) throw new Error("You can't publish or unpublish this item.");
     await db.update("posts", id, { status, published_at: status === "published" ? post.published_at || now() : post.published_at, updated_at: now() });
     await log(user, status === "published" ? "published" : "unpublished", "content", id, post.title, { before: { status: post.status }, after: { status } });
     await notifyAuthor(user, post, status === "published" ? "published" : "unpublished");
@@ -156,14 +157,14 @@ export async function createMember(_prev: ActionState, fd: FormData): Promise<Ac
     const email = str(fd, "email", 160).toLowerCase();
     if (name.length < 2) throw new Error("Please enter the member's name.");
     if (email && (await db.findBy("members", "email", email)).length) throw new Error("A member with this email already exists.");
-    const directorate = user.role === "directorate_head" ? user.directorate : validDirectorate(str(fd, "directorate", 120));
+    const { directorate, unit, geo } = recordScope(await loadStructure(), user, fd);
     const id = newId();
     await db.insert("members", {
       id, member_no: await nextMemberNo(), name, email,
       phone: str(fd, "phone", 30), area: str(fd, "area", 120), address: str(fd, "address", 300),
       occupation: str(fd, "occupation", 160), category: str(fd, "category", 60) || "General",
       interests: str(fd, "interests", 400), status: "active", source: "admin",
-      notes: str(fd, "notes", 2000), added_by: user.name, directorate, created_at: now(),
+      notes: str(fd, "notes", 2000), added_by: user.name, directorate, unit, geo, created_at: now(),
     });
     await log(user, "added", "member", id, name);
     return `${name} added as a member.`;
@@ -175,9 +176,10 @@ export async function updateMember(_prev: ActionState, fd: FormData): Promise<Ac
     const id = str(fd, "id", 60);
     const m = await db.get("members", id);
     if (!m) throw new Error("Member not found.");
-    if (!inScope(user, m.directorate)) throw new Error("This member is not in your directorate.");
+    const s = await loadStructure();
+    if (!inScope(s, user, m)) throw new Error("This member is not in your unit.");
     await db.update("members", id, {
-      directorate: user.role === "directorate_head" ? user.directorate : validDirectorate(str(fd, "directorate", 120)),
+      ...recordScope(s, user, fd),
       name: str(fd, "name", 120) || m.name, email: str(fd, "email", 160).toLowerCase(), phone: str(fd, "phone", 30),
       area: str(fd, "area", 120), address: str(fd, "address", 300), occupation: str(fd, "occupation", 160),
       category: str(fd, "category", 60), interests: str(fd, "interests", 400), notes: str(fd, "notes", 2000),
@@ -191,7 +193,7 @@ export async function setMemberStatus(id: string, status: MemberStatus) {
   return guarded("members.approve", async (user) => {
     const m = await db.get("members", id);
     if (!m) throw new Error("Member not found.");
-    if (!inScope(user, m.directorate)) throw new Error("This member is not in your directorate.");
+    if (!inScope(await loadStructure(), user, m)) throw new Error("This member is not in your unit.");
     const patch: { status: MemberStatus; member_no?: string } = { status };
     if (status === "active" && !m.member_no) patch.member_no = await nextMemberNo();
     await db.update("members", id, patch);
@@ -218,7 +220,7 @@ export async function createTask(_prev: ActionState, fd: FormData): Promise<Acti
     if (title.length < 3) throw new Error("Please describe the task.");
     const assignee = await db.get("users", assigned_to);
     if (!assignee || !assignee.active) throw new Error("Choose who this task is for.");
-    if (!inScope(user, assignee.directorate)) throw new Error("You can only assign tasks within your directorate.");
+    if (!inScope(await loadStructure(), user, assignee)) throw new Error("You can only assign tasks within your unit.");
     const id = newId();
     await db.insert("tasks", {
       id, title, description: str(fd, "description", 2000), assigned_to, assigned_by: user.id,
@@ -418,7 +420,7 @@ function assertCanGrant(actor: PublicUser, role: Role) {
 /** Shared by "Add an admin" and "Make admin" on a member. */
 async function createAdminAccount(
   user: PublicUser,
-  input: { name: string; email: string; role: Role; designation: string; directorate: string; password: string },
+  input: { name: string; email: string; role: Role; designation: string; scope: { directorate: string; unit: string; geo: string }; password: string },
   source = "",
 ) {
   const { name, role, designation, password } = input;
@@ -426,25 +428,25 @@ async function createAdminAccount(
   if (name.length < 2) throw new Error("Name is required.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("A valid email is needed to sign in.");
   assertCanGrant(user, role);
-  const directorate = validDirectorate(input.directorate);
-  if (role === "directorate_head" && !directorate) throw new Error("Choose the directorate this Directorate Head leads.");
+  const { directorate, unit, geo } = assertRoleScope(await loadStructure(), role, input.scope);
+  await assertSeat(role, true);
   const weak = validatePasswordStrength(password);
   if (weak) throw new Error(weak);
   if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
   const id = newId();
   await db.insert("users", {
-    id, email, name, role, designation, directorate, owner: false, finance: "", active: true,
+    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: role === "sysadmin" ? "none" : "", active: true,
     password_hash: hashPassword(password), created_at: now(), last_login: null,
   });
-  await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}${source}`, { after: { name, email, role, directorate } });
+  await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}${source}`, { after: { name, email, role, directorate, unit, geo } });
   return `${name} can now sign in as ${roleLabel(role)} with ${email}. Share the temporary password privately and ask them to change it.`;
 }
 
 export async function createAdmin(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  return guarded("team.manage", (user) =>
+  return guarded("team.manage", async (user) =>
     createAdminAccount(user, {
       name: str(fd, "name", 120), email: str(fd, "email", 160), role: str(fd, "role", 30) as Role,
-      designation: str(fd, "designation", 120), directorate: str(fd, "directorate", 120), password: String(fd.get("password") ?? ""),
+      designation: str(fd, "designation", 120), scope: scopeFromForm(await loadStructure(), fd), password: String(fd.get("password") ?? ""),
     }),
   );
 }
@@ -454,13 +456,18 @@ export async function makeMemberAdmin(_prev: ActionState, fd: FormData): Promise
   return guarded("team.manage", async (user) => {
     const m = await db.get("members", str(fd, "member_id", 60));
     if (!m) throw new Error("Member not found.");
+    const s = await loadStructure();
     if (m.status !== "active") throw new Error("Only active members can be made admins. Approve the member first.");
     if (!m.email) throw new Error("Add an email address to this member first: it is what they sign in with.");
     return createAdminAccount(
       user,
       {
         name: m.name, email: m.email, role: str(fd, "role", 30) as Role, designation: str(fd, "designation", 120),
-        directorate: str(fd, "directorate", 120) || m.directorate, password: String(fd.get("password") ?? ""),
+        scope: (() => {
+          const picked = scopeFromForm(s, fd);
+          return { directorate: picked.directorate || m.directorate, unit: picked.unit || m.unit, geo: picked.geo || m.geo };
+        })(),
+        password: String(fd.get("password") ?? ""),
       },
       ` (member ${m.member_no || m.name})`,
     );
@@ -480,13 +487,16 @@ export async function updateAdmin(_prev: ActionState, fd: FormData): Promise<Act
     const active = fd.get("active") === "on";
     assertCanGrant(user, role);
     if (target.owner && (role !== "super_admin" || !active)) {
-      throw new Error("The Founder account is the permanent owner: it always stays President and active.");
+      throw new Error("The Founder-Owner account (LA) always stays President and active.");
     }
     const losingPresident = target.role === "super_admin" && target.active && (role !== "super_admin" || !active);
-    if (losingPresident && (await presidentCount()) <= 1) throw new Error("There must always be at least one active President.");
-    const directorate = validDirectorate(str(fd, "directorate", 120));
-    if (role === "directorate_head" && !directorate) throw new Error("Choose the directorate this Directorate Head leads.");
-    const after = { role, active, designation: str(fd, "designation", 120), directorate, name: str(fd, "name", 120) || target.name };
+    if (losingPresident && (await presidentCount()) <= 1) throw new Error("There must always be an active President.");
+    const { directorate, unit, geo } = assertRoleScope(await loadStructure(), role, scopeFromForm(await loadStructure(), fd));
+    await assertSeat(role, active, target.id);
+    const after = {
+      role, active, designation: str(fd, "designation", 120), directorate, unit, geo, name: str(fd, "name", 120) || target.name,
+      ...(role === "sysadmin" ? { finance: "none" } : {}),
+    };
     await db.update("users", id, after);
     const newPassword = String(fd.get("password") ?? "");
     if (newPassword) {
@@ -495,7 +505,7 @@ export async function updateAdmin(_prev: ActionState, fd: FormData): Promise<Act
       await db.update("users", id, { password_hash: hashPassword(newPassword) });
     }
     await log(user, "updated admin", "team", id, `${target.name}: ${roleLabel(role)}${active ? "" : " (deactivated)"}`, {
-      before: { role: target.role, active: target.active, designation: target.designation, directorate: target.directorate },
+      before: { role: target.role, active: target.active, designation: target.designation, directorate: target.directorate, unit: target.unit, geo: target.geo },
       after,
     });
     if (target.role !== role) await notify(id, `Your access level was changed to ${roleLabel(role)} by ${user.name}.`, "/admin");
@@ -508,8 +518,8 @@ export async function deleteAdmin(id: string) {
     if (id === user.id) throw new Error("You cannot delete your own account.");
     const target = await db.get("users", id);
     if (!target) throw new Error("Admin not found.");
-    if (target.owner) throw new Error("The Founder account is the permanent owner and cannot be removed.");
-    if (target.role === "super_admin" && (await presidentCount()) <= 1) throw new Error("There must always be at least one active President.");
+    if (target.owner) throw new Error("The Founder-Owner account (LA) cannot be removed.");
+    if (target.role === "super_admin" && (await presidentCount()) <= 1) throw new Error("There must always be an active President.");
     await db.remove("users", id);
     await log(user, "deleted admin", "team", id, target.name, { before: { name: target.name, email: target.email, role: target.role } });
     return `${target.name}'s admin access was removed.`;
@@ -524,9 +534,8 @@ export async function setFinanceAccess(_prev: ActionState, fd: FormData): Promis
     const target = await db.get("users", id);
     if (!target) throw new Error("Admin not found.");
     if (access && !FINANCE_ACCESS.some((f) => f.id === access)) throw new Error("Choose a finance access level.");
-    if (access === "approve" && target.role !== "super_admin" && target.role !== "general_secretary") {
-      throw new Error("Only the Governing Body (President and General Secretary) can approve finance.");
-    }
+    if (access === "approve" && !FINANCE_APPROVERS.includes(target.role)) throw new Error("Only the President (or General Secretary) can be given finance approval.");
+    if (target.role === "sysadmin" && access && access !== "none") throw new Error("The Website Administrator has no finance access.");
     if (target.id === user.id) throw new Error("You can't change your own finance access.");
     await db.update("users", id, { finance: access });
     const label = access ? FINANCE_ACCESS.find((f) => f.id === access)!.label : "Default for their role";
