@@ -5,7 +5,7 @@ import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 import type { Partner } from "@/lib/types";
 
 export const metadata = { title: "Partners" };
@@ -31,18 +31,21 @@ function PartnerFields({ p }: { p?: Partner }) {
 
 export default async function AdminPartnersPage() {
   const user = await requireUser();
-  if (!can(user.role, "partners.manage")) redirect("/admin");
+  if (!canView(user.role, "partners.manage")) redirect("/admin");
+  const manage = can(user.role, "partners.manage");
   const partners = (await db.all("partners")).sort((a, b) => a.sort - b.sort);
   return (
     <>
       <PageHeader title="Partners" description="Partners shown on the home page, footer and Partners page." />
-      <div className="mb-8">
-        <Disclosure summary="Add a partner">
-          <AdminForm action={savePartner} submitLabel="Add partner" resetOnSuccess>
-            <PartnerFields />
-          </AdminForm>
-        </Disclosure>
-      </div>
+      {manage && (
+        <div className="mb-8">
+          <Disclosure summary="Add a partner">
+            <AdminForm action={savePartner} submitLabel="Add partner" resetOnSuccess>
+              <PartnerFields />
+            </AdminForm>
+          </Disclosure>
+        </div>
+      )}
       <ul className="space-y-4">
         {partners.map((p) => (
           <li key={p.id} className="rounded-2xl border border-line bg-white p-5">
@@ -55,15 +58,17 @@ export default async function AdminPartnersPage() {
                 <p className="font-display text-xl text-teal">{p.name}</p>
                 <a href={p.url} target="_blank" className="text-sm text-muted underline">{p.url}</a>
               </div>
-              <ActionButton variant="danger" confirm={`Remove ${p.name} from partners?`} action={deletePartner.bind(null, p.id)}>Remove</ActionButton>
+              {manage && <ActionButton variant="danger" confirm={`Remove ${p.name} from partners?`} action={deletePartner.bind(null, p.id)}>Remove</ActionButton>}
             </div>
-            <div className="mt-4">
-              <Disclosure summary="Edit">
-                <AdminForm action={savePartner}>
-                  <PartnerFields p={p} />
-                </AdminForm>
-              </Disclosure>
-            </div>
+            {manage && (
+              <div className="mt-4">
+                <Disclosure summary="Edit">
+                  <AdminForm action={savePartner}>
+                    <PartnerFields p={p} />
+                  </AdminForm>
+                </Disclosure>
+              </div>
+            )}
           </li>
         ))}
       </ul>

@@ -5,7 +5,7 @@ import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { Badge, Empty, Field, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 import { TEAM_SECTIONS, type TeamMember } from "@/lib/types";
 
 export const metadata = { title: "Our Team" };
@@ -38,7 +38,8 @@ function PersonFields({ p }: { p?: TeamMember }) {
 
 export default async function PeoplePage() {
   const user = await requireUser();
-  if (!can(user.role, "people.manage")) redirect("/admin");
+  if (!canView(user.role, "people.manage")) redirect("/admin");
+  const manage = can(user.role, "people.manage");
   const team = (await db.all("team")).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
 
   return (
@@ -48,13 +49,15 @@ export default async function PeoplePage() {
         Profile pictures can come straight from Google Drive. The photo must be shared as “Anyone with the link”, otherwise visitors will see initials
         instead.
       </Notice>
-      <div className="mb-8">
-        <Disclosure summary="Add a person" defaultOpen={team.length === 0}>
-          <AdminForm action={saveTeamMember} submitLabel="Add to Our Team" resetOnSuccess>
-            <PersonFields />
-          </AdminForm>
-        </Disclosure>
-      </div>
+      {manage && (
+        <div className="mb-8">
+          <Disclosure summary="Add a person" defaultOpen={team.length === 0}>
+            <AdminForm action={saveTeamMember} submitLabel="Add to Our Team" resetOnSuccess>
+              <PersonFields />
+            </AdminForm>
+          </Disclosure>
+        </div>
+      )}
 
       {team.length === 0 ? (
         <Empty>No one added yet.</Empty>
@@ -78,15 +81,17 @@ export default async function PeoplePage() {
                         {p.additional_charge && <p className="text-xs text-muted">Additional charge: {p.additional_charge}</p>}
                       </div>
                       {!p.photo_url && <Badge tone="amber">No photo</Badge>}
-                      <ActionButton variant="danger" confirm={`Remove ${p.name} from Our Team?`} action={deleteTeamMember.bind(null, p.id)}>Remove</ActionButton>
+                      {manage && <ActionButton variant="danger" confirm={`Remove ${p.name} from Our Team?`} action={deleteTeamMember.bind(null, p.id)}>Remove</ActionButton>}
                     </div>
-                    <div className="mt-4">
-                      <Disclosure summary="Edit">
-                        <AdminForm action={saveTeamMember}>
-                          <PersonFields p={p} />
-                        </AdminForm>
-                      </Disclosure>
-                    </div>
+                    {manage && (
+                      <div className="mt-4">
+                        <Disclosure summary="Edit">
+                          <AdminForm action={saveTeamMember}>
+                            <PersonFields p={p} />
+                          </AdminForm>
+                        </Disclosure>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

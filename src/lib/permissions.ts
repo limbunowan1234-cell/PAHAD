@@ -43,8 +43,8 @@ export const ROLES: RoleInfo[] = [
     summary: "Projects within their Programme: add, edit, archive and mark complete." },
   { id: "editor", code: "L6", label: "Member of General Assembly", tier: "General Assembly", level: 6,
     summary: "Uploads content for review and adds members." },
-  { id: "sysadmin", code: "SYS", label: "Website Administrator", tier: "Website Administration", level: 1,
-    summary: "Web admin with full L1 access: every permission in the panel, including finance approval, voting, videos, featured content and appointments." },
+  { id: "sysadmin", code: "SYS", label: "Website Administrator", tier: "Executive Body", level: 9,
+    summary: "Builds and maintains the website. Part of the Executive Body: sees every part of the panel, including finance and voting, and votes in polls it is eligible for, but cannot approve, publish or change anything (except page banner photos). All decisions are made by the President." },
 ];
 
 const P: Role = "super_admin";
@@ -133,9 +133,15 @@ export type Permission = keyof typeof PERMISSIONS;
 
 export function can(role: Role | null | undefined, permission: Permission): boolean {
   if (!role) return false;
-  if (role === "sysadmin") return true; // SYS Website Administrator: full L1 access to everything
-  // (the permanent owner account is still protected: it can't be removed, demoted or deactivated)
   return (PERMISSIONS[permission] as readonly Role[]).includes(role);
+}
+
+/**
+ * Can this person OPEN a page? The SYS Website Administrator can see every page read-only while
+ * building the website. Changing anything still needs can(), which every server action checks.
+ */
+export function canView(role: Role | null | undefined, permission: Permission): boolean {
+  return role === "sysadmin" || can(role, permission);
 }
 
 export function roleInfo(role: Role): RoleInfo {
@@ -232,12 +238,12 @@ export const FINANCE_ACCESS: { id: FinanceAccess; label: string }[] = [
   { id: "approve", label: "Approve entries" },
 ];
 /** Roles that may ever be given finance approval. */
-export const FINANCE_APPROVERS: Role[] = [P, GS, SYS];
+export const FINANCE_APPROVERS: Role[] = [P, GS];
 
 const FINANCE_DEFAULT: Partial<Record<Role, FinanceAccess>> = { super_admin: "approve", treasurer: "record", general_secretary: "view", admin: "view" };
 
 export function financeAccess(user: Pick<PublicUser, "role" | "finance">): FinanceAccess {
-  if (user.role === "sysadmin") return "approve"; // full L1 access
+  if (user.role === "sysadmin") return "view"; // Website Administrator: read-only reports, never records or approves
   const explicit = user.finance as FinanceAccess;
   if (explicit === "approve" && !FINANCE_APPROVERS.includes(user.role)) return "view";
   return explicit && FINANCE_ACCESS.some((f) => f.id === explicit) ? explicit : FINANCE_DEFAULT[user.role] ?? "none";

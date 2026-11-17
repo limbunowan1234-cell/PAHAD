@@ -8,7 +8,7 @@ import { Badge, Card, Notice, PageHeader } from "@/components/admin/ui";
 import { PollResults } from "@/components/PollResults";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 import { CATEGORY, canSeeResults, formatIst, phaseOf, PHASE_LABEL, tally, VISIBILITY, voterKey } from "@/lib/polls";
 
 export const metadata = { title: "Poll" };
@@ -19,8 +19,10 @@ export default async function PollPage({ params }: PageProps<"/admin/voting/[id]
   const poll = await db.get("polls", id);
   if (!poll) notFound();
   const manager = can(user.role, "polls.manage");
+  // SYS Website Administrator sees what administrators see, without any controls.
+  const viewer = canView(user.role, "polls.manage");
   const eligible = Boolean(await db.get("poll_voters", voterKey(id, user.id)));
-  if (!manager && !(poll.status !== "draft" && canSeeResults(poll, { manager, eligible }))) redirect("/admin/voting");
+  if (!viewer && !(poll.status !== "draft" && canSeeResults(poll, { manager, eligible }))) redirect("/admin/voting");
 
   const [voters, receipts, ballots] = await Promise.all([db.findBy("poll_voters", "poll_id", id), db.findBy("poll_receipts", "poll_id", id), db.findBy("ballots", "poll_id", id)]);
   const t = tally(poll, voters, receipts, ballots);
@@ -45,6 +47,7 @@ export default async function PollPage({ params }: PageProps<"/admin/voting/[id]
       />
       {poll.description && <p className="-mt-2 mb-6 whitespace-pre-line text-muted">{poll.description}</p>}
 
+      {viewer && !manager && <Notice>View only. Polls are managed by the President and General Secretary.</Notice>}
       {manager && (
         <Card>
           <div className="flex flex-wrap items-center gap-2">
@@ -88,7 +91,7 @@ export default async function PollPage({ params }: PageProps<"/admin/voting/[id]
         <h2 id="results" className="font-display text-2xl text-teal">{final ? "Final results" : "Live results"}</h2>
         {!final && <p className="text-sm text-muted">Visible only to the President and authorised administrators while voting is open.</p>}
         <div className="mt-4"><PollResults t={t} final={final} /></div>
-        {manager && (
+        {viewer && (
           t.consistent ? (
             <p className="mt-4 flex items-center gap-2 text-xs text-muted"><ShieldCheck className="h-4 w-4 text-teal" aria-hidden /> Integrity check: {t.ballots} anonymous ballots match {t.cast} “has voted” records.</p>
           ) : (
@@ -97,7 +100,7 @@ export default async function PollPage({ params }: PageProps<"/admin/voting/[id]
         )}
       </section>
 
-      {manager && (
+      {viewer && (
         <section className="mt-8 grid gap-6 lg:grid-cols-2">
           <Card title={`Not voted yet (${t.notVoted.length})`}>
             {t.notVoted.length === 0 ? (
@@ -107,7 +110,7 @@ export default async function PollPage({ params }: PageProps<"/admin/voting/[id]
             )}
             <p className="mt-3 text-xs text-muted">Shows who has not voted, never how anyone voted.</p>
           </Card>
-          {!final && !poll.archived && (
+          {manager && !final && !poll.archived && (
             <Disclosure summary={t.cast > 0 ? "Change closing time (options and voters are locked)" : "Edit poll"}>
               <AdminForm action={savePoll}>
                 <PollFields poll={poll} voterIds={voters.map((v) => v.user_id)} locked={t.cast > 0} />
@@ -116,7 +119,7 @@ export default async function PollPage({ params }: PageProps<"/admin/voting/[id]
           )}
         </section>
       )}
-      {!manager && <Notice>Individual votes are secret. These are the combined results.</Notice>}
+      {!viewer && <Notice>Individual votes are secret. These are the combined results.</Notice>}
     </>
   );
 }

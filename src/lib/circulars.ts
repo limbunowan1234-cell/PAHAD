@@ -7,8 +7,8 @@ export const AUDIENCE: Record<CircularAudience, string> = {
   executive: "Executive Body (L2)",
   all: "Everyone",
 };
-const GB: Role[] = ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member", "sysadmin"];
-const EXEC: Role[] = ["admin", "executive_secretary", "record_officer"];
+const GB: Role[] = ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member"];
+const EXEC: Role[] = ["admin", "executive_secretary", "record_officer", "sysadmin"];
 const RECORD_KEEPERS: Role[] = ["super_admin", "general_secretary", "joint_secretary", "record_officer", "sysadmin"];
 
 /** Record keepers see every circular; others see those addressed to them (and to their area). */

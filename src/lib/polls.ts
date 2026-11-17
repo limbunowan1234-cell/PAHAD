@@ -1,14 +1,14 @@
 import type { Ballot, Poll, PollCategory, PollOption, PollReceipt, PollResultsVisibility, PollVoter, PublicUser, Role } from "./types";
 
 export const CATEGORY: Record<PollCategory, { short: string; label: string; hint: string }> = {
-  gb: { short: "GB", label: "Governing Body", hint: "L1: President, General Secretary, Joint Secretary, Treasury, Additional Members of GB and Website Administrators" },
-  eb: { short: "EB", label: "Executive Body", hint: "L2: Chief Executive Director, Executive Secretary and Record Officer" },
+  gb: { short: "GB", label: "Governing Body", hint: "L1: President, General Secretary, Joint Secretary, Treasury and Additional Members of GB" },
+  eb: { short: "EB", label: "Executive Body", hint: "L2: Chief Executive Director, Executive Secretary, Record Officer and Website Administrator" },
   ga: { short: "GA", label: "General Assembly", hint: "All active member accounts" },
 };
 
 const DEFAULT_ROLES: Record<PollCategory, Role[] | "all"> = {
-  gb: ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member", "sysadmin"],
-  eb: ["admin", "executive_secretary", "record_officer"],
+  gb: ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member"],
+  eb: ["admin", "executive_secretary", "record_officer", "sysadmin"], // SYS Website Administrator is part of the Executive Body
   ga: "all",
 };
 
