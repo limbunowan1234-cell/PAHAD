@@ -67,7 +67,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
         {(!usingPostgres || !usingCloudStorage) && (
           <div className="border-b border-cream bg-cream/60 px-4 py-2 text-center text-xs text-teal-900 sm:px-8">
             {!usingPostgres && "Local mode: data is saved in a file on this computer. "}
-            {!usingCloudStorage && "Uploads are stored locally until cloud file storage (Vercel Blob or Cloudflare R2) is connected."}
+            {!usingCloudStorage && "Uploads are stored locally until cloud file storage (Google Drive, Vercel Blob or Cloudflare R2) is connected."}
           </div>
         )}
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8 lg:py-10">{children}</main>

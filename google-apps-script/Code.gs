@@ -1,39 +1,73 @@
 /**
  * PAHAD website → Google Sheets / Drive bridge.
  *
- * Install this in the organisation account (pahad.org@gmail.com) so the Sheet and
- * every receipt file are owned by PAHAD, not by any one person. See README.md.
+ * Install this in the organisation account (pahad.org@gmail.com) so every Sheet
+ * and file is owned by PAHAD, not by any one person. See README.md.
  *
+ * Two spreadsheets are created by setup():
+ *  - "PAHAD Finance Records"  (private: ledger, approvals, access changes, exports)
+ *  - "PAHAD Website Records"  (membership applications and website messages)
  * The website only ever APPENDS rows. Existing rows are never changed or deleted.
  */
 
-var SHEET_NAME = 'PAHAD Finance Records';
-var TABS = {
-  'Ledger': ['Entry ID', 'Date', 'Type', 'Amount (Rs)', 'Description', 'Submitted by', 'Status', 'Receipt', 'Recorded by', 'Recorded at'],
-  'Approvals': ['Entry ID', 'Decision', 'By', 'Role', 'When', 'Note'],
-  'Access changes': ['When', 'Changed by', 'Their role', 'For', 'Their level', 'From', 'To'],
-  'Exports': ['When', 'Exported by', 'Role', 'What', 'Approved by'],
+var SHEETS = {
+  finance: {
+    name: 'PAHAD Finance Records',
+    tabs: {
+      'Ledger': ['Entry ID', 'Date', 'Type', 'Amount (Rs)', 'Description', 'Submitted by', 'Status', 'Receipt', 'Recorded by', 'Recorded at'],
+      'Approvals': ['Entry ID', 'Decision', 'By', 'Role', 'When', 'Note'],
+      'Access changes': ['When', 'Changed by', 'Their role', 'For', 'Their level', 'From', 'To'],
+      'Exports': ['When', 'Exported by', 'Role', 'What', 'Approved by'],
+    },
+  },
+  records: {
+    name: 'PAHAD Website Records',
+    tabs: {
+      'Membership applications': ['Received', 'Name', 'Email', 'Phone', 'Town / area', 'Address', 'Occupation', 'Category', 'Interests', 'Why join', 'GP / Ward'],
+      'Messages': ['Received', 'Type', 'Name', 'Email', 'Phone', 'Organisation', 'Message'],
+    },
+  },
 };
 
-/** Run this once from the editor (Run ▶ setup). It creates the Sheet and prints the secret. */
+/** Run this once from the editor (Run ▶ setup). It creates the Sheets and prints the secret. */
 function setup() {
   var props = PropertiesService.getScriptProperties();
-  var id = props.getProperty('SHEET_ID');
-  var ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.create(SHEET_NAME);
-  props.setProperty('SHEET_ID', ss.getId());
-  Object.keys(TABS).forEach(function (name) {
-    var sh = ss.getSheetByName(name) || ss.insertSheet(name);
-    if (sh.getLastRow() === 0) {
-      sh.appendRow(TABS[name]);
-      sh.setFrozenRows(1);
-      sh.getRange(1, 1, 1, TABS[name].length).setFontWeight('bold');
-    }
+  Object.keys(SHEETS).forEach(function (key) {
+    var def = SHEETS[key];
+    var prop = key === 'finance' ? 'SHEET_ID' : 'RECORDS_SHEET_ID';
+    var id = props.getProperty(prop);
+    var ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.create(def.name);
+    props.setProperty(prop, ss.getId());
+    Object.keys(def.tabs).forEach(function (name) {
+      var sh = ss.getSheetByName(name) || ss.insertSheet(name);
+      if (sh.getLastRow() === 0) {
+        sh.appendRow(def.tabs[name]);
+        sh.setFrozenRows(1);
+        sh.getRange(1, 1, 1, def.tabs[name].length).setFontWeight('bold');
+      }
+    });
+    var first = ss.getSheetByName('Sheet1');
+    if (first && ss.getSheets().length > 1) ss.deleteSheet(first);
+    Logger.log(def.name + ': ' + ss.getUrl());
   });
-  var first = ss.getSheetByName('Sheet1');
-  if (first && ss.getSheets().length > 1) ss.deleteSheet(first);
   if (!props.getProperty('SECRET')) props.setProperty('SECRET', Utilities.getUuid() + Utilities.getUuid().slice(0, 8));
-  Logger.log('Sheet: ' + ss.getUrl());
   Logger.log('GOOGLE_SCRIPT_SECRET = ' + props.getProperty('SECRET'));
+}
+
+function sheetFor(tab) {
+  var props = PropertiesService.getScriptProperties();
+  if (SHEETS.finance.tabs.hasOwnProperty(tab)) return SpreadsheetApp.openById(props.getProperty('SHEET_ID')).getSheetByName(tab);
+  if (SHEETS.records.tabs.hasOwnProperty(tab)) return SpreadsheetApp.openById(props.getProperty('RECORDS_SHEET_ID')).getSheetByName(tab);
+  return null;
+}
+
+function folderFor(path) {
+  var folder = DriveApp.getRootFolder();
+  (path || []).forEach(function (name) {
+    var it = folder.getFoldersByName(String(name));
+    folder = it.hasNext() ? it.next() : folder.createFolder(String(name));
+  });
+  return folder;
 }
 
 function doPost(e) {
@@ -50,19 +84,17 @@ function doPost(e) {
   lock.waitLock(20000);
   try {
     if (body.action === 'append') {
-      if (!TABS.hasOwnProperty(body.sheet)) return json({ ok: false, error: 'Unknown tab' });
-      var ss = SpreadsheetApp.openById(props.getProperty('SHEET_ID'));
-      ss.getSheetByName(body.sheet).appendRow(body.row);
+      var sh = sheetFor(body.sheet);
+      if (!sh) return json({ ok: false, error: 'Unknown tab' });
+      sh.appendRow(body.row);
       return json({ ok: true });
     }
     if (body.action === 'upload') {
-      var folder = DriveApp.getRootFolder();
-      (body.path || []).forEach(function (name) {
-        var it = folder.getFoldersByName(String(name));
-        folder = it.hasNext() ? it.next() : folder.createFolder(String(name));
-      });
       var blob = Utilities.newBlob(Utilities.base64Decode(body.base64), body.mimeType, body.name);
-      var file = folder.createFile(blob); // private: only people the organisation shares the folder with can open it
+      var file = folderFor(body.path).createFile(blob);
+      // Public website files (photos, published PDFs) can be viewed by anyone with the link.
+      // Finance receipts are uploaded with public:false and stay private to the organisation.
+      if (body.public === true) file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       return json({ ok: true, id: file.getId(), url: file.getUrl() });
     }
     if (body.action === 'email') {
@@ -72,6 +104,7 @@ function doPost(e) {
       MailApp.sendEmail({ to: to, subject: String(body.subject || '').slice(0, 200), body: String(body.body || '').slice(0, 5000), name: 'PAHAD' });
       return json({ ok: true });
     }
+    if (body.action === 'ping') return json({ ok: true });
     return json({ ok: false, error: 'Unknown action' });
   } catch (err) {
     return json({ ok: false, error: String(err) });

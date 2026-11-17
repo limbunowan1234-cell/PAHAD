@@ -4,20 +4,23 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
 import { AwsClient } from "aws4fetch";
+import { uploadToDrive, uploadsToDrive } from "./google";
 
 /**
  * Where uploads go, in order of preference:
- *  1. Cloudflare R2, when the R2_* variables are set.
- *  2. Vercel Blob, when a Blob store is connected to the project
- *     (Vercel adds BLOB_READ_WRITE_TOKEN and/or BLOB_STORE_ID automatically).
- *  3. /public/uploads, for local development only.
+ *  1. The organisation's Google Drive (pahad.org@gmail.com), when the Apps Script
+ *     bridge is connected (GOOGLE_SCRIPT_URL/SECRET) and UPLOADS_TO_DRIVE is not "0".
+ *  2. Cloudflare R2, when the R2_* variables are set.
+ *  3. Vercel Blob, when a Blob store is connected to the project.
+ *  4. /public/uploads, for local development only.
+ * A later option is used automatically if an earlier one fails.
  */
 export const usingR2 = Boolean(
   process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_BUCKET && process.env.R2_PUBLIC_URL,
 );
 export const usingBlob = !usingR2 && Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 /** True when uploads are stored somewhere permanent (not the local disk). */
-export const usingCloudStorage = usingR2 || usingBlob;
+export const usingCloudStorage = usingR2 || usingBlob || uploadsToDrive;
 
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // stays under Vercel's 4.5 MB request limit
 const ALLOWED: Record<string, string> = {
@@ -32,7 +35,16 @@ export async function storeUpload(file: File, folder: "images" | "documents"): P
   const ext = ALLOWED[file.type];
   if (!ext) throw new Error("Only JPG, PNG, WebP, GIF images or PDF documents can be uploaded.");
   if (file.size > MAX_UPLOAD_BYTES) throw new Error("Files must be 4 MB or smaller.");
-  const key = `${folder}/${new Date().toISOString().slice(0, 7)}/${randomUUID()}.${ext}`;
+  const month = new Date().toISOString().slice(0, 7);
+  const key = `${folder}/${month}/${randomUUID()}.${ext}`;
+
+  // 1. The organisation's Google Drive (pahad.org@gmail.com), when connected.
+  if (uploadsToDrive) {
+    const safeName = file.name.replace(/[^\w.\- ]+/g, "").slice(0, 80) || `upload.${ext}`;
+    const saved = await uploadToDrive(file, ["PAHAD Website Uploads", folder === "images" ? "Photos" : "Documents", month], `${month} ${safeName}`, true);
+    if (saved) return folder === "images" ? `https://lh3.googleusercontent.com/d/${saved.id}=w2000` : `https://drive.google.com/file/d/${saved.id}/view`;
+    // If Google is unreachable, fall through to the next storage so the upload is not lost.
+  }
   const bytes = Buffer.from(await file.arrayBuffer());
 
   if (usingR2) {

@@ -43,12 +43,17 @@ export async function appendToSheet(sheet: string, row: (string | number)[]): Pr
   return false;
 }
 
-/** Save a file (e.g. a receipt) into a Drive folder path. Returns the Drive link, or null if not connected. */
-export async function uploadToDrive(file: File, path: string[], name: string): Promise<string | null> {
+/**
+ * Save a file into a Drive folder path of the organisation account.
+ * Private by default (finance receipts); `isPublic` makes it viewable by anyone with
+ * the link, for photos and documents shown on the website.
+ * Returns { id, url } or null if Google is not connected or the upload failed.
+ */
+export async function uploadToDrive(file: File, path: string[], name: string, isPublic = false): Promise<{ id: string; url: string } | null> {
   if (!googleConfigured) return null;
   const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-  const res = await callScript("upload", { path, name, mimeType: file.type, base64 });
-  return res.ok && typeof res.url === "string" ? res.url : null;
+  const res = await callScript("upload", { path, name, mimeType: file.type, base64, public: isPublic });
+  return res.ok && typeof res.url === "string" && typeof res.id === "string" ? { id: res.id, url: res.url } : null;
 }
 
 /**
@@ -60,6 +65,9 @@ export async function sendEmail(to: string, subject: string, body: string): Prom
   const res = await callScript("email", { to, subject, body });
   return res.ok;
 }
+
+/** Website uploads go to Drive unless UPLOADS_TO_DRIVE=0. */
+export const uploadsToDrive = googleConfigured && process.env.UPLOADS_TO_DRIVE !== "0";
 
 /** Retry queued writes. Returns how many are still waiting. */
 export async function flushOutbox(limit = 25): Promise<number> {

@@ -1,6 +1,7 @@
 "use server";
 
 import { db, newId } from "@/lib/db";
+import { appendToSheet, googleConfigured } from "@/lib/google";
 import type { SubmissionKind } from "@/lib/types";
 
 export type FormState = { ok: boolean; message: string; errors?: Record<string, string> } | null;
@@ -25,6 +26,9 @@ export async function submitInquiry(_prev: FormState, fd: FormData): Promise<For
   if (message.length < 10) errors.message = "Please write a little more (at least 10 characters).";
   if (Object.keys(errors).length) return { ok: false, message: "Please check the highlighted fields.", errors };
 
+  if (googleConfigured) {
+    await appendToSheet("Messages", [new Date().toISOString(), kind, name, email, field(fd, "phone", 30), field(fd, "organisation", 160), message]);
+  }
   await db.insert("submissions", {
     id: newId(),
     kind,
@@ -58,6 +62,12 @@ export async function applyForMembership(_prev: FormState, fd: FormData): Promis
     return { ok: true, message: "We already have an application or membership with this email. The team will be in touch." };
   }
 
+  if (googleConfigured) {
+    await appendToSheet("Membership applications", [
+      new Date().toISOString(), name, email.toLowerCase(), phone, area, field(fd, "address", 300), field(fd, "occupation", 160),
+      field(fd, "category", 60) || "General", fd.getAll("interests").map(String).join(", ").slice(0, 400), field(fd, "motivation", 2000), "",
+    ]);
+  }
   await db.insert("members", {
     id: newId(),
     member_no: "",

@@ -76,7 +76,7 @@ export async function submitFinanceEntry(_prev: ActionState, fd: FormData): Prom
     const ext = receipt.type === "application/pdf" ? "pdf" : receipt.type.split("/")[1];
     const [y, m] = entry_date.split("-");
     const receipt_url =
-      (await uploadToDrive(receipt, ["PAHAD Finance", y, m], `${entry_no} ${entry_date} Rs${amount}.${ext}`)) ??
+      (await uploadToDrive(receipt, ["PAHAD Finance", y, m], `${entry_no} ${entry_date} Rs${amount}.${ext}`))?.url ??
       (await storeUpload(receipt, "documents"));
 
     const entry: FinanceEntry = {

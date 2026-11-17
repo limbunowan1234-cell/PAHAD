@@ -6,6 +6,7 @@ import { Card, Empty, Field, PageHeader, Notice } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { can, canView } from "@/lib/permissions";
+import { uploadsToDrive } from "@/lib/google";
 
 export const metadata = { title: "Gallery" };
 
@@ -19,6 +20,11 @@ export default async function AdminGalleryPage() {
   return (
     <>
       <PageHeader title="Gallery" description="Photos shown on the public Gallery page. Only upload photos you have permission to share." />
+      <p className="mb-4 text-sm text-muted">
+        {uploadsToDrive
+          ? "Uploaded photos are saved to PAHAD’s Google Drive (pahad.org@gmail.com → PAHAD Website Uploads)."
+          : "Uploaded photos are saved to the website’s file storage. Once Google Drive is connected they will be saved there instead."}
+      </p>
       {manage ? (
       <Card title="Add photos" className="mb-8">
         <AdminForm action={uploadMedia} submitLabel="Add photos" resetOnSuccess>
