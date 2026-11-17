@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { GridSkeleton, PostGrid } from "@/components/site/posts";
+import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts";
 import { PageHero, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
 
@@ -46,6 +46,9 @@ export default function KnowledgePage() {
                 emptyTitle="Resources are being prepared"
                 emptyText="Verified reports, publications and learning resources will be added as they are prepared and approved."
               />
+            </Suspense>
+            <Suspense fallback={null}>
+              <MembersOnlyGrid type="resource" />
             </Suspense>
           </div>
           <div className="mt-12 rounded-[var(--radius-card)] bg-teal p-8 text-white sm:flex sm:items-center sm:justify-between">

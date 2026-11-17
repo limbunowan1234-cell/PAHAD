@@ -3,6 +3,9 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
 import type { Post, PostType } from "./types";
 
+/** Members Only posts never leave the server for signed-out visitors: every public list filters them out here. */
+export const isPublicPost = (p: Pick<Post, "visibility">) => p.visibility !== "members";
+
 // Public, cached reads. Admin actions call updateTag(...) so changes show at once.
 
 export async function getPublishedPosts(type?: PostType, limit?: number): Promise<Post[]> {
@@ -11,7 +14,7 @@ export async function getPublishedPosts(type?: PostType, limit?: number): Promis
   cacheTag("posts");
   const all = await db.all("posts");
   const rows = all
-    .filter((p) => p.status === "published" && (!type || p.type === type))
+    .filter((p) => p.status === "published" && isPublicPost(p) && (!type || p.type === type))
     .sort((a, b) => (b.published_at || b.created_at).localeCompare(a.published_at || a.created_at));
   return limit ? rows.slice(0, limit) : rows;
 }
@@ -20,13 +23,24 @@ export async function getUpcomingEvents(limit?: number): Promise<{ today: Post[]
   "use cache";
   cacheLife("minutes");
   cacheTag("posts");
-  const events = (await db.all("posts")).filter((p) => p.type === "event" && p.status === "published");
+  const events = (await db.all("posts")).filter((p) => p.type === "event" && p.status === "published" && isPublicPost(p));
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // YYYY-MM-DD in India
   const upcoming = events.filter((e) => (e.event_date || "") >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
   const past = events.filter((e) => (e.event_date || "") < today).sort((a, b) => b.event_date.localeCompare(a.event_date));
   return { today: upcoming.filter((e) => e.event_date === today), upcoming: limit ? upcoming.slice(0, limit) : upcoming, past };
 }
 
+/** Published Members Only posts. Only call this after checking the visitor is signed in. */
+export async function getMembersOnlyPosts(type?: PostType): Promise<Post[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("posts");
+  return (await db.all("posts"))
+    .filter((p) => p.status === "published" && !isPublicPost(p) && (!type || p.type === type))
+    .sort((a, b) => (b.published_at || b.created_at).localeCompare(a.published_at || a.created_at));
+}
+
+/** A published post of any visibility. Callers must gate Members Only content (see PostDetail). */
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   "use cache";
   cacheLife("minutes");

@@ -11,7 +11,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
     cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text", directorate: "text", unit: "text",
-    status: "text", author_id: "text", author_name: "text", created_at: "text",
+    status: "text", visibility: "text", author_id: "text", author_name: "text", created_at: "text",
     updated_at: "text", published_at: "text",
   },
   members: {

@@ -56,6 +56,8 @@ export type PublicUser = Omit<User, "password_hash">;
 
 export type PostType = "news" | "event" | "programme" | "resource" | "document";
 export type PostStatus = "draft" | "pending" | "published";
+/** Who can read a published post. "" (older posts) counts as public. */
+export type PostVisibility = "public" | "members";
 
 export type Post = {
   id: string;
@@ -76,6 +78,8 @@ export type Post = {
   /** Department or Programme the item belongs to (optional). */
   unit: string;
   status: PostStatus;
+  /** Public, or Members Only (signed-in accounts). */
+  visibility: PostVisibility | "";
   author_id: string;
   author_name: string;
   created_at: string;

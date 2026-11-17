@@ -43,7 +43,12 @@ export async function login(_prev: ActionState, fd: FormData): Promise<ActionSta
   failures.delete(email);
   await db.update("users", user.id, { last_login: now() });
   await setSessionCookie(user.id);
-  redirect("/admin");
+  redirect(safeNextPath(str(fd, "next", 300)));
+}
+
+/** Where to go after signing in: a path on this site only (never another domain), else the dashboard. */
+function safeNextPath(next: string) {
+  return /^\/(?![\/\\])[\w\-./?=&%#]*$/.test(next) ? next : "/admin";
 }
 
 export async function logout() {
@@ -86,8 +91,11 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     const file_url = (await fileFrom(fd, "attachment", "documents")) ?? (fileLink ? toFileUrl(fileLink) : str(fd, "file_url", 500));
     const form_url = safeUrl(str(fd, "form_url", 500));
 
+    // Privacy: Public by default. Documents are plain file links on /transparency, so they are always public.
+    const visibility = type !== "document" && str(fd, "visibility", 10) === "members" ? "members" : "public";
+
     const data: Partial<Post> = {
-      type, title, slug, cover, file_url, form_url, status, directorate, unit,
+      type, title, slug, cover, file_url, form_url, status, visibility, directorate, unit,
       excerpt: str(fd, "excerpt", 400),
       body: str(fd, "body", 50_000),
       category: str(fd, "category", 60),
@@ -100,14 +108,14 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
     if (existing) {
       await db.update("posts", existing.id, data);
       await log(user, "updated", "content", existing.id, `${title} (${status})`, {
-        before: { title: existing.title, status: existing.status, excerpt: existing.excerpt },
-        after: { title, status, excerpt: data.excerpt },
+        before: { title: existing.title, status: existing.status, visibility: existing.visibility || "public", excerpt: existing.excerpt },
+        after: { title, status, visibility, excerpt: data.excerpt },
       });
       await notifyAuthor(user, existing, "edited");
     } else {
       const row = { ...data, id: newId(), author_id: user.id, author_name: user.name, created_at: now(), published_at: data.published_at ?? "" } as Post;
       await db.insert("posts", row);
-      await log(user, "created", "content", row.id, `${title} (${status})`);
+      await log(user, "created", "content", row.id, `${title} (${status}${visibility === "members" ? ", members only" : ""})`);
     }
     updateTag("posts");
     return status === "pending" ? "Saved and sent for review. It will appear on the website once it is approved." : status === "published" ? "Published." : "Draft saved.";

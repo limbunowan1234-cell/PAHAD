@@ -1,14 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { login, type ActionState } from "../actions";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState<ActionState, FormData>(login, null);
+  const next = useSearchParams().get("next") ?? "";
   return (
     <form method="post" onSubmit={keepValuesOnSubmit(action)} className="mt-8 space-y-4">
+      <input type="hidden" name="next" value={next} />
       <label className="block">
         <span className="label">Email</span>
         <input name="email" type="email" required autoComplete="username" className="field" />

@@ -94,7 +94,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted">{POST_TYPE_LABEL[p.type]}</td>
-                    <td className="px-4 py-3"><Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge></td>
+                    <td className="px-4 py-3"><Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>{p.visibility === "members" && <span className="ml-1.5"><Badge>Members only</Badge></span>}</td>
                     <td className="px-4 py-3 text-muted">
                       {p.author_name}
                       {(p.unit || p.directorate) && <span className="block text-xs">{s.byId.get(p.unit || p.directorate)?.name}</span>}

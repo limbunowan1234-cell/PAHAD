@@ -60,6 +60,16 @@ export function PostEditor({ post, canPublish, units }: { post?: Post; canPublis
               {canPublish && <option value="published">Published</option>}
             </select>
           </label>
+          {type !== "document" && (
+            <label className="block">
+              <span className="label">Privacy</span>
+              <select name="visibility" defaultValue={post?.visibility === "members" ? "members" : "public"} className="field">
+                <option value="public">Public: anyone can read it</option>
+                <option value="members">Members only: signed-in members</option>
+              </select>
+              <span className="mt-1 block text-xs text-muted">Members-only posts are hidden from search engines, search results and public lists.</span>
+            </label>
+          )}
           <div className="[&>div]:!grid-cols-1">
             <ScopePicker units={units} mode="record" showGeo={false} value={post} />
           </div>

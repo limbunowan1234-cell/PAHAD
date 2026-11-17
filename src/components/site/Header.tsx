@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Form from "next/form";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, LogIn, Menu, Search, X } from "lucide-react";
 import { nav, site } from "@/lib/site";
 import { InstallAppButton } from "./InstallApp";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,14 @@ export function HeaderView({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Close the menu and search panel after any navigation (including a search being submitted).
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    setOpen(false);
+    setSearchOpen(false);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -40,23 +49,23 @@ export function HeaderView({ pathname }: { pathname: string }) {
         scrolled ? "border-line shadow-[0_6px_24px_-12px_rgb(15_58_67/0.25)]" : "border-transparent",
       )}
     >
-      <div className="container-page flex h-[72px] items-center justify-between gap-4">
+      <div className="container-page flex h-[72px] items-center justify-between gap-3 xl:gap-4">
         <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="PAHAD home" onClick={() => setOpen(false)}>
           <Image src="/images/emblem.png" alt="" width={48} height={48} className="h-12 w-12" loading="eager" />
           <span className="leading-tight">
             <span className="block font-display text-xl font-semibold tracking-wide text-teal">PAHAD</span>
-            <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] text-muted sm:block">People · Knowledge · Action</span>
+            <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] text-muted sm:block lg:hidden xl:block">People · Knowledge · Action</span>
           </span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex xl:gap-1">
           {nav.map((group) =>
             group.items ? (
               <div key={group.label} className="group relative">
                 <Link
                   href={group.href}
                   className={cn(
-                    "flex items-center gap-1 rounded-full px-3.5 py-2 text-[15px] font-medium transition-colors hover:bg-sand hover:text-teal",
+                    "flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-2 text-sm xl:px-3.5 xl:text-[15px] font-medium transition-colors hover:bg-sand hover:text-teal",
                     isActive(group.href, group.items) ? "text-teal" : "text-ink",
                   )}
                 >
@@ -79,7 +88,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
                 key={group.label}
                 href={group.href}
                 className={cn(
-                  "rounded-full px-3.5 py-2 text-[15px] font-medium transition-colors hover:bg-sand hover:text-teal",
+                  "whitespace-nowrap rounded-full px-2 py-2 text-sm xl:px-3.5 xl:text-[15px] font-medium transition-colors hover:bg-sand hover:text-teal",
                   isActive(group.href) ? "text-teal" : "text-ink",
                 )}
               >
@@ -91,21 +100,39 @@ export function HeaderView({ pathname }: { pathname: string }) {
 
         <div className="flex items-center gap-2">
           <LiveEventsButton onClick={() => setOpen(false)} active={pathname.startsWith("/events")} />
-          <Link href="/membership" className="btn btn-primary hidden !py-2.5 sm:inline-flex">
+          <Link href="/membership" className="btn btn-primary hidden whitespace-nowrap !py-2.5 sm:inline-flex lg:!px-4 lg:text-sm xl:!px-[1.4rem] xl:text-[0.95rem]">
             Become a member
           </Link>
+          <button
+            type="button"
+            className="hidden h-11 w-11 items-center justify-center rounded-full text-teal hover:bg-sand sm:inline-flex"
+            aria-expanded={searchOpen}
+            aria-controls="site-search"
+            aria-label={searchOpen ? "Close search" : "Search the website"}
+            onClick={() => {
+              setSearchOpen((v) => !v);
+              setOpen(false);
+            }}
+          >
+            {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </button>
           <button
             type="button"
             className="inline-flex h-11 w-11 items-center justify-center rounded-full text-teal hover:bg-sand lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-menu"
             aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              setOpen((v) => !v);
+              setSearchOpen(false);
+            }}
           >
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
+
+      {searchOpen && <SearchPanel onClose={() => setSearchOpen(false)} />}
 
       {open && (
         // The header's backdrop-blur makes it the containing block for positioned
@@ -116,6 +143,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
           className="absolute inset-x-0 top-full h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain border-t border-line bg-white lg:hidden"
         >
           <nav aria-label="Mobile" className="container-page py-4">
+            <SearchForm id="mobile-search" className="mb-2" />
             {nav.map((group) => (
               <div key={group.label} className="border-b border-line">
                 {group.items ? (
@@ -146,7 +174,14 @@ export function HeaderView({ pathname }: { pathname: string }) {
                 )}
               </div>
             ))}
-            <Link href="/membership" onClick={() => setOpen(false)} className="btn btn-primary mt-6 w-full">
+            <Link
+              href="/admin/login"
+              onClick={() => setOpen(false)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border-[1.5px] border-teal py-3 font-semibold text-teal hover:bg-sand"
+            >
+              <LogIn className="h-5 w-5" aria-hidden /> Dashboard Login
+            </Link>
+            <Link href="/membership" onClick={() => setOpen(false)} className="btn btn-primary mt-3 w-full">
               Become a member
             </Link>
             <InstallAppButton className="btn btn-outline mt-3 w-full text-teal" />
@@ -163,6 +198,53 @@ export function HeaderView({ pathname }: { pathname: string }) {
   );
 }
 
+/** GET form to /search: a client-side navigation once loaded, and a normal form before JavaScript loads. */
+function SearchForm({ id, className, autoFocus }: { id: string; className?: string; autoFocus?: boolean }) {
+  return (
+    <Form action="/search" role="search" className={cn("relative", className)}>
+      <label htmlFor={id} className="sr-only">Search the website</label>
+      <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" aria-hidden />
+      <input
+        id={id}
+        name="q"
+        type="search"
+        required
+        autoFocus={autoFocus}
+        placeholder="Search the website…"
+        className="w-full rounded-full border border-line bg-sand py-3 pl-12 pr-24 text-ink placeholder:text-muted focus:border-teal focus:bg-white focus:outline-none"
+      />
+      <button className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal-900">
+        Search
+      </button>
+    </Form>
+  );
+}
+
+/** Desktop search box that drops down under the header. Escape or a click outside closes it. */
+function SearchPanel({ onClose }: { onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Element;
+      if (ref.current && !ref.current.contains(t) && !t.closest?.('[aria-controls="site-search"]')) onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
+  }, [onClose]);
+  return (
+    <div id="site-search" ref={ref} className="absolute inset-x-0 top-full border-y border-line bg-white shadow-xl">
+      <div className="container-page max-w-3xl py-5">
+        <SearchForm id="desktop-search" autoFocus />
+      </div>
+    </div>
+  );
+}
+
 function LiveEventsButton({ onClick, active }: { onClick: () => void; active: boolean }) {
   return (
     <Link
@@ -170,7 +252,7 @@ function LiveEventsButton({ onClick, active }: { onClick: () => void; active: bo
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "btn !gap-2 !px-3.5 !py-2 text-sm sm:!px-4 sm:!py-2.5 sm:text-[15px]",
+        "btn whitespace-nowrap !gap-2 !px-3.5 !py-2 text-sm sm:!px-4 sm:!py-2.5 sm:text-[15px] lg:!px-3 lg:text-sm xl:!px-4 xl:text-[15px]",
         active ? "bg-coral text-ink" : "border-[1.5px] border-coral text-coral-700 hover:bg-coral hover:text-ink",
       )}
     >
