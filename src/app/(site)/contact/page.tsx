@@ -5,11 +5,14 @@ import { site } from "@/lib/site";
 import { InquiryForm } from "@/components/site/forms";
 import { SocialIcon } from "@/components/site/SocialIcon";
 import { PageHero } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Contact",
-  description: "General enquiries, collaboration proposals, ideas, media requests or questions about participation.",
-};
+  description:
+    "General enquiries, collaboration proposals, ideas, media requests or questions about participation.",
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (

@@ -3,11 +3,14 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { GridSkeleton, PostGrid } from "@/components/site/posts";
 import { PageHero } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "News & Stories",
-  description: "PAHAD announcements, programme updates and community stories.",
-};
+  description:
+    "PAHAD announcements, programme updates and community stories.",
+  path: "/news",
+});
 
 export default function NewsPage() {
   return (

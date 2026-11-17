@@ -4,11 +4,14 @@ import { FileText } from "lucide-react";
 import { getPublishedPosts } from "@/lib/data";
 import { formatDate } from "@/lib/utils";
 import { EmptyState, PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Transparency & Documents",
-  description: "PAHAD's constitution, policies and reports, published as they are formally approved.",
-};
+  description:
+    "PAHAD's constitution, policies and reports, published as they are formally approved.",
+  path: "/transparency",
+});
 
 const commitments = [
   ["Institutional information", "Basic information about PAHAD's purpose, governance and programmes is kept clear and accessible."],

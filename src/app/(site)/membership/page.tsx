@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { MembershipForm } from "@/components/site/forms";
 import { PageHero } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Membership",
-  description: "Be part of a shared purpose. Apply to become a member of PAHAD.",
-};
+  description:
+    "Be part of a shared purpose. Apply to become a member of PAHAD.",
+  path: "/membership",
+});
 
 const steps = [
   ["Apply", "Complete the application with accurate information."],

@@ -5,11 +5,14 @@ import { TEAM_SECTIONS } from "@/lib/types";
 import { TeamCard } from "@/components/site/TeamCard";
 import { GridSkeleton } from "@/components/site/posts";
 import { CtaBand, EmptyState, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Our Team",
-  description: "The people of PAHAD: Governing Body, Executive Body, Secretariat, Directorates, Departments and Geographical Units.",
-};
+  description:
+    "The people of PAHAD: Governing Body, Executive Body, Secretariat, Directorates, Departments and Geographical Units.",
+  path: "/team",
+});
 
 const SECTION_INTRO: Record<(typeof TEAM_SECTIONS)[number], string> = {
   "Governing Body": "Institutional governance, oversight and strategic direction, elected by the General Assembly.",

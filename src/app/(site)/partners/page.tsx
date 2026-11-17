@@ -5,11 +5,14 @@ import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { getPartners } from "@/lib/data";
 import { PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Partners",
-  description: "PAHAD's media and news partners, Gorkha TV and Khabar Darjeeling, and how organisations can collaborate with PAHAD.",
-};
+  description:
+    "PAHAD's media and news partners, Gorkha TV and Khabar Darjeeling, and how organisations can collaborate with PAHAD.",
+  path: "/partners",
+});
 
 async function PartnerList() {
   const partners = await getPartners();

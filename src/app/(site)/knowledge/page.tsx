@@ -3,11 +3,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { GridSkeleton, PostGrid } from "@/components/site/posts";
 import { PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Knowledge & Research",
-  description: "Local knowledge, shared learning and collective action: PAHAD's research, documentation and knowledge resources.",
-};
+  description:
+    "Local knowledge, shared learning and collective action: PAHAD's research, documentation and knowledge resources.",
+  path: "/knowledge",
+});
 
 const pillars = [
   ["Local knowledge", "Community experience and place-based understanding are valuable resources for identifying priorities and shaping action."],

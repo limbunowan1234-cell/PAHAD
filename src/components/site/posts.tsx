@@ -1,12 +1,77 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ArrowLeft, CalendarDays, ClipboardList, Download, MapPin } from "lucide-react";
 import { googleFormEmbedUrl } from "@/lib/drive";
 import { getPostBySlug, getPublishedPosts } from "@/lib/data";
-import type { PostType } from "@/lib/types";
+import { pageMetadata } from "@/lib/seo";
+import type { Post, PostType } from "@/lib/types";
 import { formatDate, POST_TYPE_LABEL, POST_TYPE_PATH } from "@/lib/utils";
+import { absoluteUrl, JsonLd, organizationId } from "./JsonLd";
 import { EmptyState, PostCard } from "./ui";
+
+/** A search-friendly summary: the excerpt, or the start of the body without formatting marks. */
+function summary(post: Post, max = 160) {
+  const text = (post.excerpt || post.body)
+    .replace(/^#+\s|^-\s/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > max ? `${text.slice(0, max - 1).replace(/\s+\S*$/, "")}…` : text;
+}
+
+/** Title, description, canonical URL and share card for a post's detail page. */
+export async function postMetadata(params: Promise<{ slug: string }>, type: PostType): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post || post.type !== type) return { title: "Not found", robots: { index: false } };
+  return pageMetadata({
+    title: post.title,
+    description: summary(post),
+    path: `${POST_TYPE_PATH[type]}/${post.slug}`,
+    images: post.cover ? [{ url: post.cover, alt: post.title }] : undefined,
+    openGraph:
+      type === "event"
+        ? undefined
+        : {
+            type: "article",
+            publishedTime: post.published_at || post.created_at,
+            modifiedTime: post.updated_at || undefined,
+            section: post.category || POST_TYPE_LABEL[type],
+          },
+  });
+}
+
+function postJsonLd(post: Post, type: PostType) {
+  const url = absoluteUrl(`${POST_TYPE_PATH[type]}/${post.slug}`);
+  const image = post.cover ? [absoluteUrl(post.cover)] : undefined;
+  if (type === "event") {
+    return {
+      "@type": "Event",
+      name: post.title,
+      description: summary(post, 300),
+      url,
+      image,
+      startDate: post.event_date || undefined,
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      eventStatus: "https://schema.org/EventScheduled",
+      location: post.location ? { "@type": "Place", name: post.location, address: post.location } : undefined,
+      organizer: { "@id": organizationId },
+    };
+  }
+  return {
+    "@type": type === "news" ? "NewsArticle" : "Article",
+    headline: post.title,
+    description: summary(post, 300),
+    url,
+    mainEntityOfPage: url,
+    image,
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at || post.published_at || post.created_at,
+    author: post.author_name ? { "@type": "Person", name: post.author_name } : { "@id": organizationId },
+    publisher: { "@id": organizationId },
+  };
+}
 
 /** Renders plain-text bodies safely: blank lines = paragraphs, "## " = heading, "- " = bullet. */
 export function RichText({ text }: { text: string }) {
@@ -59,6 +124,7 @@ export async function PostDetail({ params, type }: { params: Promise<{ slug: str
   const back = POST_TYPE_PATH[type];
   return (
     <article>
+      <JsonLd data={postJsonLd(post, type)} />
       <header className="bg-teal-900 text-white">
         <div className="container-page max-w-4xl py-16 sm:py-20">
           <Link href={back} className="inline-flex items-center gap-2 text-sm text-cream hover:underline">

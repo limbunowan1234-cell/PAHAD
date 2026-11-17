@@ -3,11 +3,14 @@ import Image from "next/image";
 import { Check } from "lucide-react";
 import { workAreas } from "@/lib/content";
 import { CtaBand, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Our Work",
-  description: "People-led action across human development, livelihoods, community development, research and Himalayan sustainability and heritage.",
-};
+  description:
+    "People-led action across human development, livelihoods, community development, research and Himalayan sustainability and heritage.",
+  path: "/our-work",
+});
 
 export default function OurWorkPage() {
   return (

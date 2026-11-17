@@ -4,11 +4,14 @@ import { getMedia } from "@/lib/data";
 import { GalleryGrid } from "@/components/site/GalleryGrid";
 import { GridSkeleton } from "@/components/site/posts";
 import { PageHero } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Gallery",
-  description: "Photographs from PAHAD's journey, including the DSSCOLONY archive from PAHAD's shared history.",
-};
+  description:
+    "Photographs from PAHAD's journey, including the DSSCOLONY archive from PAHAD's shared history.",
+  path: "/gallery",
+});
 
 async function Gallery() {
   const media = await getMedia();

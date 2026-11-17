@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { principles, values } from "@/lib/content";
 import { CtaBand, PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Values & Principles",
-  description: "The values that guide PAHAD and the working principles that shape its decisions, programmes and partnerships.",
-};
+  description:
+    "The values that guide PAHAD and the working principles that shape its decisions, programmes and partnerships.",
+  path: "/values",
+});
 
 export default function ValuesPage() {
   return (

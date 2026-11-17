@@ -3,11 +3,14 @@ import { Suspense } from "react";
 import { BookOpen, Briefcase, Megaphone, Search } from "lucide-react";
 import { GridSkeleton, PostGrid } from "@/components/site/posts";
 import { CtaBand, PageHero, SectionHeading } from "@/components/site/ui";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Programmes",
-  description: "PAHAD programmes connect community needs, local knowledge, partnerships and achievable action.",
-};
+  description:
+    "PAHAD programmes connect community needs, local knowledge, partnerships and achievable action.",
+  path: "/programmes",
+});
 
 const streams = [
   { icon: BookOpen, title: "Community learning", text: "Learning activities, discussions and workshops that strengthen knowledge and participation." },
