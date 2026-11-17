@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { MembershipForm } from "@/components/site/forms";
 import { PageHero } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Membership",
@@ -56,6 +57,7 @@ export default function MembershipPage() {
           <MembershipForm />
         </div>
       </section>
+      <PageFeatures page="membership" />
     </>
   );
 }

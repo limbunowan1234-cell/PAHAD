@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createAdmin, deleteAdmin, setFinanceAccess, updateAdmin } from "../../actions";
+import { setVideoPermission } from "../../video-actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { ScopePicker } from "@/components/admin/ScopePicker";
 import { Badge, Card, Field, Notice, PageHeader } from "@/components/admin/ui";
@@ -55,6 +56,7 @@ export default async function TeamPage() {
   if (!can(user.role, "team.view")) redirect("/admin");
   const manage = can(user.role, "team.manage");
   const financeManage = can(user.role, "finance.access.manage");
+  const videoPermission = can(user.role, "videos.permission");
   const s = await loadStructure();
   const pickable = s.units.filter((u) => u.kind !== "designation" && u.kind !== "project");
   const designations = s.units.filter((u) => u.kind === "designation" && u.active).map((u) => u.name);
@@ -142,10 +144,16 @@ export default async function TeamPage() {
                     <Badge tone={u.owner || role.level === 1 ? "teal" : role.id === "sysadmin" ? "grey" : role.level <= 3 ? "green" : "amber"}>{roleTitle(u)}</Badge>
                     {!u.active && <Badge tone="red">Deactivated</Badge>}
                     {fin !== "none" && <Badge>Finance: {fin}</Badge>}
+                    {u.can_submit_videos && !can(u.role, "videos.manage") && <Badge tone="green">YouTube submission: ON</Badge>}
                   </div>
                   <p className="text-sm text-muted">{[u.email, u.designation, where].filter(Boolean).join(" · ")}</p>
                   <p className="text-xs text-muted">Last sign-in: {u.last_login ? formatDate(u.last_login, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "never"}</p>
                 </div>
+                {videoPermission && !can(u.role, "videos.manage") && u.active && (
+                  <ActionButton variant={u.can_submit_videos ? "ghost" : "primary"} action={setVideoPermission.bind(null, u.id, !u.can_submit_videos)}>
+                    {u.can_submit_videos ? "YouTube submission: turn OFF" : "YouTube submission: turn ON"}
+                  </ActionButton>
+                )}
                 {manage && u.id !== user.id && !u.owner && (
                   <ActionButton variant="danger" confirm={`Remove ${u.name}'s admin access permanently?`} action={deleteAdmin.bind(null, u.id)}>Remove access</ActionButton>
                 )}

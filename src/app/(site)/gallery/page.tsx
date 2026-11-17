@@ -5,6 +5,7 @@ import { GalleryGrid } from "@/components/site/GalleryGrid";
 import { GridSkeleton } from "@/components/site/posts";
 import { PageHero } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Gallery",
@@ -32,6 +33,7 @@ export default function GalleryPage() {
           <Gallery />
         </Suspense>
       </section>
+      <PageFeatures page="gallery" />
     </>
   );
 }

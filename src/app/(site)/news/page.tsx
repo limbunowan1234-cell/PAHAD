@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts";
 import { PageHero } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "News & Stories",
@@ -50,6 +51,7 @@ export default function NewsPage() {
           </a>
         </div>
       </section>
+      <PageFeatures page="news" />
     </>
   );
 }

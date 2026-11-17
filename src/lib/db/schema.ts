@@ -6,7 +6,7 @@ type ColType = "text" | "bool" | "int";
 export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   users: {
     id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text", unit: "text", geo: "text",
-    owner: "bool", finance: "text", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
+    owner: "bool", finance: "text", can_submit_videos: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
@@ -67,6 +67,14 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     status: "text", decided_by_name: "text", created_at: "text",
   },
   outbox: { id: "text", action: "text", payload: "text", attempts: "int", last_error: "text", created_at: "text" },
+  videos: {
+    id: "text", youtube_id: "text", title: "text", description: "text", pages: "text", status: "text", visible: "bool", sort: "int",
+    submitted_by: "text", submitted_by_name: "text", reviewed_by_name: "text", review_note: "text", created_at: "text", updated_at: "text",
+  },
+  featured: {
+    id: "text", kind: "text", ref_id: "text", title: "text", text: "text", link: "text", image: "text", pages: "text",
+    active: "bool", sort: "int", starts_on: "text", ends_on: "text", created_by_name: "text", created_at: "text", updated_at: "text",
+  },
 };
 
 const SQL_TYPE: Record<ColType, string> = { text: "TEXT NOT NULL DEFAULT ''", bool: "BOOLEAN NOT NULL DEFAULT false", int: "INTEGER NOT NULL DEFAULT 0" };
@@ -94,6 +102,7 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS activity_created_idx ON activity (created_at)",
     "CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id)",
     "CREATE INDEX IF NOT EXISTS finance_status_idx ON finance (status)",
+    "CREATE INDEX IF NOT EXISTS videos_status_idx ON videos (status)",
   );
   return statements;
 }

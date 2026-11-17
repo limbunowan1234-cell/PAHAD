@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react";
 import { getPartners } from "@/lib/data";
 import { PageHero, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Partners",
@@ -68,6 +69,7 @@ export default function PartnersPage() {
           </div>
         </div>
       </section>
+      <PageFeatures page="partners" />
     </>
   );
 }

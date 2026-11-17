@@ -116,6 +116,12 @@ export const PERMISSIONS = {
   "circulars.issue": [P, GS, JS],
   "circulars.view": [...EXEC, SYS],
   "portal.invite": [P, GS], // give verified members an L6 portal account
+
+  // YouTube videos and featured content: managed by the President only.
+  // Members submit videos only when the President has switched on users.can_submit_videos.
+  "videos.manage": [P], // add, approve, reject, edit, delete, publish, pages and ON/OFF
+  "videos.permission": [P], // grant or revoke YouTube Embed Submission Permission
+  "featured.manage": [P],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

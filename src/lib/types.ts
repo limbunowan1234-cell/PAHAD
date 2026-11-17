@@ -47,6 +47,8 @@ export type User = {
   owner: boolean;
   /** Finance access set by the Governing Body; empty = default for the role. */
   finance: string;
+  /** YouTube Embed Submission Permission, granted or revoked by the President only. */
+  can_submit_videos: boolean;
   active: boolean;
   password_hash: string;
   created_at: string;
@@ -225,6 +227,55 @@ export const TEAM_SECTIONS = [
 ] as const;
 export type TeamSection = (typeof TEAM_SECTIONS)[number];
 
+/** Website pages that can show videos and featured content (see lib/placements.ts). */
+export type PageKey =
+  | "home" | "about" | "our-work" | "programmes" | "knowledge" | "news" | "events" | "gallery" | "get-involved" | "membership" | "partners";
+
+export type VideoStatus = "pending" | "approved" | "rejected";
+/** A YouTube video shown through an embed. Video files are never uploaded. */
+export type Video = {
+  id: string;
+  /** 11-character YouTube video id, validated on save. */
+  youtube_id: string;
+  title: string;
+  description: string;
+  /** Comma-separated PageKeys where the video appears. */
+  pages: string;
+  status: VideoStatus;
+  /** Central ON/OFF switch: off hides it from every page without deleting it. */
+  visible: boolean;
+  sort: number;
+  submitted_by: string;
+  submitted_by_name: string;
+  reviewed_by_name: string;
+  review_note: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FeaturedKind = "post" | "video" | "person" | "announcement";
+/** A highlighted item, placed on pages from Admin → Featured. */
+export type Featured = {
+  id: string;
+  kind: FeaturedKind;
+  /** Post, video or team member id (empty for announcements). */
+  ref_id: string;
+  /** Announcement text, or an override for the linked item's title / summary. */
+  title: string;
+  text: string;
+  link: string;
+  image: string;
+  pages: string;
+  active: boolean;
+  sort: number;
+  /** Optional YYYY-MM-DD window (inclusive, India time). */
+  starts_on: string;
+  ends_on: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type TeamMember = {
   id: string;
   name: string;
@@ -339,5 +390,7 @@ export type Tables = {
   finance: FinanceEntry;
   finance_requests: FinanceRequest;
   outbox: OutboxItem;
+  videos: Video;
+  featured: Featured;
 };
 export type TableName = keyof Tables;

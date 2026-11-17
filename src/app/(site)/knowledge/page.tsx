@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts";
 import { PageHero, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Knowledge & Research",
@@ -60,6 +61,7 @@ export default function KnowledgePage() {
           </div>
         </div>
       </section>
+      <PageFeatures page="knowledge" />
     </>
   );
 }

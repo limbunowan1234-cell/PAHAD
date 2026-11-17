@@ -1,7 +1,13 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
-import type { Post, PostType } from "./types";
+import { onPage, todayInIndia } from "./placements";
+import type { FeaturedKind, PageKey, Post, PostType, Video } from "./types";
+import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
+import { youTubeThumb, youTubeWatchUrl } from "./youtube";
+
+/** settings row: "off" turns the whole Featured section off; anything else is on. */
+export const FEATURED_SWITCH = "featured:enabled";
 
 /** Members Only posts never leave the server for signed-out visitors: every public list filters them out here. */
 export const isPublicPost = (p: Pick<Post, "visibility">) => p.visibility !== "members";
@@ -84,4 +90,69 @@ export async function getMedia() {
   cacheLife("minutes");
   cacheTag("media");
   return db.all("media");
+}
+
+// ------------------------------------------------------------------ videos and featured content
+/** Approved videos switched ON for a page. Admin changes call updateTag("videos"). */
+export async function getPageVideos(page: PageKey): Promise<Video[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("videos");
+  return (await db.all("videos"))
+    .filter((v) => v.status === "approved" && v.visible && onPage(v.pages, page))
+    .sort((a, b) => a.sort - b.sort || b.created_at.localeCompare(a.created_at));
+}
+
+/** All approved, visible videos (for search). */
+export async function getPublishedVideos(): Promise<Video[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("videos");
+  return (await db.all("videos")).filter((v) => v.status === "approved" && v.visible);
+}
+
+export type FeaturedCard = { id: string; kind: FeaturedKind; label: string; title: string; text: string; image: string; href: string; external: boolean; youtubeId: string };
+
+/**
+ * Featured items for a page, resolved to cards. Only approved / published content is used.
+ * Members Only posts come back in `members` and must only be rendered inside <MembersOnly>.
+ */
+export async function getPageFeatured(page: PageKey): Promise<{ public: FeaturedCard[]; members: FeaturedCard[] }> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("featured");
+  cacheTag("posts");
+  cacheTag("videos");
+  cacheTag("team");
+  cacheTag("settings");
+  const empty = { public: [], members: [] };
+  if ((await db.get("settings", FEATURED_SWITCH))?.value === "off") return empty;
+  const today = todayInIndia();
+  const items = (await db.all("featured"))
+    .filter((f) => f.active && onPage(f.pages, page) && (!f.starts_on || f.starts_on <= today) && (!f.ends_on || f.ends_on >= today))
+    .sort((a, b) => a.sort - b.sort || a.created_at.localeCompare(b.created_at));
+  if (items.length === 0) return empty;
+
+  const [posts, videos, team] = await Promise.all([db.all("posts"), db.all("videos"), db.all("team")]);
+  const out = { public: [] as FeaturedCard[], members: [] as FeaturedCard[] };
+  for (const f of items) {
+    const base = { id: f.id, kind: f.kind, external: false, youtubeId: "" };
+    if (f.kind === "post") {
+      const p = posts.find((x) => x.id === f.ref_id && x.status === "published");
+      if (!p || p.type === "document") continue;
+      const card = { ...base, label: POST_TYPE_LABEL[p.type], title: f.title || p.title, text: f.text || p.excerpt, image: p.cover, href: `${POST_TYPE_PATH[p.type]}/${p.slug}` };
+      (isPublicPost(p) ? out.public : out.members).push(card);
+    } else if (f.kind === "video") {
+      const v = videos.find((x) => x.id === f.ref_id && x.status === "approved" && x.visible);
+      if (!v) continue;
+      out.public.push({ ...base, label: "Video", title: f.title || v.title, text: f.text || v.description, image: youTubeThumb(v.youtube_id), href: youTubeWatchUrl(v.youtube_id), external: true, youtubeId: v.youtube_id });
+    } else if (f.kind === "person") {
+      const t = team.find((x) => x.id === f.ref_id);
+      if (!t) continue;
+      out.public.push({ ...base, label: t.designation || "Our team", title: f.title || t.name, text: f.text || [t.section, t.department].filter(Boolean).join(" · "), image: t.photo_url, href: f.link || "/team" });
+    } else {
+      out.public.push({ ...base, label: "Announcement", title: f.title, text: f.text, image: f.image, href: f.link, external: /^https?:\/\//.test(f.link) });
+    }
+  }
+  return out;
 }

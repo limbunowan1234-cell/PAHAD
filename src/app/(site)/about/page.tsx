@@ -4,6 +4,7 @@ import { ecosystem, workAreas } from "@/lib/content";
 import { site } from "@/lib/site";
 import { CtaBand, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "About PAHAD",
@@ -143,6 +144,7 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <PageFeatures page="about" />
       <CtaBand title="Your knowledge matters. Your contribution matters." />
     </>
   );

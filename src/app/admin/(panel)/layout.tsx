@@ -17,6 +17,8 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "people", label: "Our Team", href: "/admin/people", perm: "people.manage" },
   { key: "heroes", label: "Page Images", href: "/admin/page-images", perm: "site.images" },
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
+  { key: "videos", label: "Videos", href: "/admin/videos", perm: "dashboard.view" }, // President, or members the President allowed
+  { key: "featured", label: "Featured", href: "/admin/featured", perm: "featured.manage" },
   { key: "finance", label: "Finance", href: "/admin/finance", perm: "dashboard.view" },
   { key: "meetings", label: "GB Meetings", href: "/admin/meetings", perm: "gbm.view" },
   { key: "circulars", label: "Circulars", href: "/admin/circulars", perm: "circulars.view" },
@@ -28,13 +30,14 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
 
 async function Shell({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [tasks, submissions, posts, members, notes, finance] = await Promise.all([
+  const [tasks, submissions, posts, members, notes, finance, videos] = await Promise.all([
     db.findBy("tasks", "assigned_to", user.id),
     can(user.role, "submissions.view") ? db.findBy("submissions", "status", "new") : Promise.resolve([]),
     can(user.role, "content.publish") ? db.findBy("posts", "status", "pending") : Promise.resolve([]),
     can(user.role, "members.approve") ? db.findBy("members", "status", "applicant") : Promise.resolve([]),
     db.findBy("notifications", "user_id", user.id),
     financeAccess(user) === "approve" ? db.findBy("finance", "status", "submitted") : Promise.resolve([]),
+    can(user.role, "videos.manage") ? db.findBy("videos", "status", "pending") : Promise.resolve([]),
   ]);
   const badges: Partial<Record<NavKey, number>> = {
     tasks: tasks.filter((t) => t.status !== "done").length,
@@ -43,8 +46,10 @@ async function Shell({ children }: { children: React.ReactNode }) {
     members: members.length,
     notifications: notes.filter((n) => !n.read).length,
     finance: finance.length,
+    videos: videos.length,
   };
-  const items = NAV.filter((n) => can(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none")).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
+  const showVideos = can(user.role, "videos.manage") || user.can_submit_videos;
+  const items = NAV.filter((n) => can(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
 
   return (
     <div className="lg:flex">
