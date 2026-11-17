@@ -43,9 +43,11 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
         title="Content"
         description="News, events, programmes, knowledge resources and official documents."
         actions={
-          <Link href="/admin/content/new" className="btn btn-primary !py-2.5">
-            <Plus className="h-4 w-4" aria-hidden /> New content
-          </Link>
+          can(user.role, "content.create") ? (
+            <Link href="/admin/content/new" className="btn btn-primary !py-2.5">
+              <Plus className="h-4 w-4" aria-hidden /> New content
+            </Link>
+          ) : undefined
         }
       />
       {saved && <Notice>{saved}</Notice>}

@@ -116,8 +116,65 @@ export type Task = {
   due_date: string;
   priority: "low" | "normal" | "high";
   status: TaskStatus;
+  /** Governing Body meeting this follow-up came from, if any. */
+  meeting_id: string;
   created_at: string;
   updated_at: string;
+};
+
+/** Governing Body meeting (GBM). The General Secretary drafts; the President approves. */
+export type DraftStatus = "draft" | "submitted" | "approved";
+export type Meeting = {
+  id: string;
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  venue: string;
+  status: "scheduled" | "held" | "cancelled";
+  agenda: string;
+  agenda_status: DraftStatus;
+  agenda_approved_by: string;
+  notice: string;
+  notice_issued_at: string;
+  minutes: string;
+  minutes_status: DraftStatus;
+  minutes_approved_by: string;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Vote = { by: string; name: string; vote: "for" | "against" | "abstain"; at: string };
+export type Resolution = {
+  id: string;
+  meeting_id: string;
+  number: string;
+  title: string;
+  body: string;
+  status: "proposed" | "ratified" | "rejected";
+  /** JSON array of Vote. */
+  votes: string;
+  decided_by_name: string;
+  decided_at: string;
+  created_by_name: string;
+  created_at: string;
+};
+
+export type CircularAudience = "general_assembly" | "governing_body" | "executive" | "all";
+export type Circular = {
+  id: string;
+  number: string;
+  title: string;
+  body: string;
+  audience: CircularAudience;
+  /** Optional geographical unit: only people inside it receive the circular. */
+  geo: string;
+  /** Meeting this notice is about, if any. */
+  meeting_id: string;
+  issued_by: string;
+  issued_by_name: string;
+  created_at: string;
 };
 
 export type SubmissionKind = "contact" | "idea" | "volunteer" | "collaborate" | "knowledge";
@@ -272,6 +329,9 @@ export type Tables = {
   activity: Activity;
   notifications: Notification;
   units: Unit;
+  meetings: Meeting;
+  resolutions: Resolution;
+  circulars: Circular;
   finance: FinanceEntry;
   finance_requests: FinanceRequest;
   outbox: OutboxItem;

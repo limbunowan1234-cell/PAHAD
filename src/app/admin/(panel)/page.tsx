@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { abilities, can, ROLES, roleTitle } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
+import { MemberPortal } from "@/components/admin/MemberPortal";
 
 export const metadata = { title: "Dashboard" };
 
@@ -46,6 +47,8 @@ export default async function Dashboard() {
           </>
         }
       />
+
+      {user.role === "editor" && <MemberPortal user={user} />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

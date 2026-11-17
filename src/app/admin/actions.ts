@@ -225,7 +225,7 @@ export async function createTask(_prev: ActionState, fd: FormData): Promise<Acti
     await db.insert("tasks", {
       id, title, description: str(fd, "description", 2000), assigned_to, assigned_by: user.id,
       due_date: str(fd, "due_date", 10), priority: (str(fd, "priority", 10) || "normal") as "normal",
-      status: "todo", created_at: now(), updated_at: now(),
+      status: "todo", meeting_id: "", created_at: now(), updated_at: now(),
     });
     await log(user, "assigned", "task", id, `${title} → ${assignee.name}`);
     await notify(assignee.id, `${user.name} assigned you a task: “${title}”.`, "/admin/tasks");
@@ -453,7 +453,7 @@ export async function createAdmin(_prev: ActionState, fd: FormData): Promise<Act
 
 /** Give an existing member an admin account, reusing their name and email. */
 export async function makeMemberAdmin(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  return guarded("team.manage", async (user) => {
+  return guarded("portal.invite", async (user) => {
     const m = await db.get("members", str(fd, "member_id", 60));
     if (!m) throw new Error("Member not found.");
     const s = await loadStructure();
@@ -462,7 +462,8 @@ export async function makeMemberAdmin(_prev: ActionState, fd: FormData): Promise
     return createAdminAccount(
       user,
       {
-        name: m.name, email: m.email, role: str(fd, "role", 30) as Role, designation: str(fd, "designation", 120),
+        // Only the President appoints admins; the General Secretary can give portal (L6) access.
+        name: m.name, email: m.email, role: can(user.role, "team.manage") ? (str(fd, "role", 30) as Role) : "editor", designation: str(fd, "designation", 120),
         scope: (() => {
           const picked = scopeFromForm(s, fd);
           return { directorate: picked.directorate || m.directorate, unit: picked.unit || m.unit, geo: picked.geo || m.geo };
@@ -535,7 +536,7 @@ export async function setFinanceAccess(_prev: ActionState, fd: FormData): Promis
     if (!target) throw new Error("Admin not found.");
     if (access && !FINANCE_ACCESS.some((f) => f.id === access)) throw new Error("Choose a finance access level.");
     if (access === "approve" && !FINANCE_APPROVERS.includes(target.role)) throw new Error("Only the President (or General Secretary) can be given finance approval.");
-    if (target.role === "sysadmin" && access && access !== "none") throw new Error("The Website Administrator has no finance access.");
+    if (target.role === "sysadmin" && access && access !== "none") throw new Error("The System account has no finance access.");
     if (target.id === user.id) throw new Error("You can't change your own finance access.");
     await db.update("users", id, { finance: access });
     const label = access ? FINANCE_ACCESS.find((f) => f.id === access)!.label : "Default for their role";

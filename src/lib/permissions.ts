@@ -43,8 +43,8 @@ export const ROLES: RoleInfo[] = [
     summary: "Projects within their Programme: add, edit, archive and mark complete." },
   { id: "editor", code: "L6", label: "Member of General Assembly", tier: "General Assembly", level: 6,
     summary: "Uploads content for review and adds members." },
-  { id: "sysadmin", code: "SYS", label: "Website Administrator", tier: "Technical Support", level: 9,
-    summary: "Technical support only: website appearance and fixes. No executive authority and no finance access." },
+  { id: "sysadmin", code: "SYS", label: "System", tier: "Technical Support", level: 9,
+    summary: "Technical custodian: read-only view of the whole panel, plus website appearance. No executive authority and no finance access." },
 ];
 
 const P: Role = "super_admin";
@@ -65,6 +65,7 @@ const EXEC = [P, GS, JS, TR, GB, C, ES, RO, MD, DH, PC, E]; // everyone with org
 export const PERMISSIONS = {
   "dashboard.view": [...EXEC, SYS],
 
+  "content.view": [...EXEC, SYS], // SYS: read-only
   "content.create": EXEC, // L6 / L1 E: always "Awaiting review"
   "content.publish": [P, GS, JS, C], // publish / approve anyone's content
   "content.publish_own": [ES, RO, MD, DH, PC], // own items, or within own unit for scoped roles
@@ -74,19 +75,19 @@ export const PERMISSIONS = {
   "media.upload": EXEC,
   "media.delete": [P, GS, C],
 
-  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E],
+  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E, SYS],
   "members.create": [P, GS, JS, C, ES, MD, DH, PC, E], // scoped roles: own unit
   "members.edit": [P, GS, JS, C, MD, DH],
   "members.approve": [P, GS, JS, C, MD, DH],
   "members.delete": [P, GS],
   "members.export": [P, GS, C, RO],
 
-  "tasks.view_own": EXEC,
-  "tasks.view_all": [P, GS, C, ES],
+  "tasks.view_own": [...EXEC, SYS],
+  "tasks.view_all": [P, GS, C, ES, SYS],
   "tasks.assign": [P, GS, JS, C, ES, MD, DH, PC], // scoped roles: own unit
   "tasks.delete": [P, GS, C],
 
-  "submissions.view": [P, GS, JS, C, ES],
+  "submissions.view": [P, GS, JS, C, ES, SYS],
   "submissions.manage": [P, GS, JS, C, ES],
   "submissions.delete": [P, GS],
 
@@ -95,15 +96,26 @@ export const PERMISSIONS = {
   "site.images": [P, SYS], // banner photos: website appearance
   "settings.manage": [P], // finance thresholds and rules
 
-  "structure.view": [P, GS, JS, C, ES, RO, MD, DH, PC], // General Secretary: read and draft proposals only
+  "structure.view": [P, GS, JS, C, ES, RO, MD, DH, PC, SYS], // General Secretary: read and draft proposals only
   "structure.manage": [P], // the whole structure, directorate toggles, designations, geo units
   "structure.manage_own": [MD, DH, PC], // departments / programmes / projects inside own unit
 
-  "team.view": [P, GS, C, RO],
+  "team.view": [P, GS, C, RO, SYS],
   "team.manage": [P], // create admins and change roles
   "finance.access.manage": [P], // grant, change or remove finance access
 
-  "activity.view": [P, GS, C, RO, TR, MD, DH], // scoped roles: own unit
+  "activity.view": [P, GS, C, RO, TR, MD, DH, SYS], // scoped roles: own unit
+
+  // Governing Body meetings (GBM)
+  "gbm.view": [P, GS, JS, TR, GB, ES, RO, SYS], // Executive Secretary / Record Officer: coordination and archives
+  "gbm.draft": [GS, JS], // prepare meetings, agendas, notices, minutes, resolutions, follow-ups
+  "gbm.approve": [P], // approve agendas and minutes, ratify resolutions
+  "gbm.vote": [P, GS, JS, TR, GB],
+
+  // Circulars and the General Assembly member portal
+  "circulars.issue": [P, GS, JS],
+  "circulars.view": [...EXEC, SYS],
+  "portal.invite": [P, GS], // give verified members an L6 portal account
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

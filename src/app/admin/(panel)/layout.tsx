@@ -9,7 +9,7 @@ import { usingCloudStorage } from "@/lib/storage";
 const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "dashboard", label: "Dashboard", href: "/admin", perm: "dashboard.view" },
   { key: "notifications", label: "Notifications", href: "/admin/notifications", perm: "dashboard.view" },
-  { key: "content", label: "Content", href: "/admin/content", perm: "content.create" },
+  { key: "content", label: "Content", href: "/admin/content", perm: "content.view" },
   { key: "members", label: "Members", href: "/admin/members", perm: "members.view" },
   { key: "tasks", label: "Tasks", href: "/admin/tasks", perm: "tasks.view_own" },
   { key: "submissions", label: "Messages", href: "/admin/submissions", perm: "submissions.view" },
@@ -18,6 +18,8 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "heroes", label: "Page Images", href: "/admin/page-images", perm: "site.images" },
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
   { key: "finance", label: "Finance", href: "/admin/finance", perm: "dashboard.view" },
+  { key: "meetings", label: "GB Meetings", href: "/admin/meetings", perm: "gbm.view" },
+  { key: "circulars", label: "Circulars", href: "/admin/circulars", perm: "circulars.view" },
   { key: "structure", label: "Structure", href: "/admin/structure", perm: "structure.view" },
   { key: "team", label: "Admin Team", href: "/admin/team", perm: "team.view" },
   { key: "activity", label: "Activity Log", href: "/admin/activity", perm: "activity.view" },

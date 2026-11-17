@@ -57,7 +57,8 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
   const allUnits = s.units.filter((u) => u.kind !== "designation" && u.kind !== "project");
   // Members who already have an admin account (matched by email).
   const admins = new Map((await db.all("users")).map((u) => [u.email.toLowerCase(), u]));
-  const canPromote = can(user.role, "team.manage");
+  const canPromote = can(user.role, "portal.invite");
+  const canAppoint = can(user.role, "team.manage");
   const myLevel = roleInfo(user.role).level;
   const rows = all.filter(
     (m) => (!status || m.status === status) && (!q || [m.name, m.email, m.phone, m.area, m.member_no].join(" ").toLowerCase().includes(q)),
@@ -152,7 +153,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
               </div>
               {canPromote && m.status === "active" && !(m.email && admins.has(m.email.toLowerCase())) && (
                 <div className="mt-4">
-                  <Disclosure summary="Make admin">
+                  <Disclosure summary={canAppoint ? "Make admin / give portal access" : "Give member portal access"}>
                     {m.email ? (
                       <AdminForm action={makeMemberAdmin} submitLabel={`Give ${m.name.split(" ")[0]} admin access`}>
                         <input type="hidden" name="member_id" value={m.id} />
@@ -160,7 +161,11 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                           {m.name} will sign in with <strong>{m.email}</strong>. Choose their access level and set a temporary password to share with them privately.
                         </p>
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <ScopePicker units={allUnits} roles={ROLES.filter((r) => r.level >= myLevel)} defaultRole="editor" value={m} />
+                          {canAppoint ? (
+                            <ScopePicker units={allUnits} roles={ROLES.filter((r) => r.level >= myLevel)} defaultRole="editor" value={m} />
+                          ) : (
+                            <p className="text-sm text-muted sm:col-span-2">They will get an L6 General Assembly portal account: their member card, circulars and events.</p>
+                          )}
                           <Field label="Title" hint="Only a label, e.g. Managing Director, Block Coordinator."><input name="designation" className="field" /></Field>
                           <Field label="Temporary password *" hint="At least 10 characters with letters and numbers.">
                             <input name="password" type="text" required minLength={10} autoComplete="new-password" className="field" />

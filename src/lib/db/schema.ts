@@ -21,7 +21,21 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   },
   tasks: {
     id: "text", title: "text", description: "text", assigned_to: "text", assigned_by: "text",
-    due_date: "text", priority: "text", status: "text", created_at: "text", updated_at: "text",
+    due_date: "text", priority: "text", status: "text", meeting_id: "text", created_at: "text", updated_at: "text",
+  },
+  meetings: {
+    id: "text", title: "text", meeting_date: "text", start_time: "text", venue: "text", status: "text",
+    agenda: "text", agenda_status: "text", agenda_approved_by: "text", notice: "text", notice_issued_at: "text",
+    minutes: "text", minutes_status: "text", minutes_approved_by: "text", created_by: "text", created_by_name: "text",
+    created_at: "text", updated_at: "text",
+  },
+  resolutions: {
+    id: "text", meeting_id: "text", number: "text", title: "text", body: "text", status: "text", votes: "text",
+    decided_by_name: "text", decided_at: "text", created_by_name: "text", created_at: "text",
+  },
+  circulars: {
+    id: "text", number: "text", title: "text", body: "text", audience: "text", geo: "text", meeting_id: "text",
+    issued_by: "text", issued_by_name: "text", created_at: "text",
   },
   submissions: {
     id: "text", kind: "text", name: "text", email: "text", phone: "text", organisation: "text",
