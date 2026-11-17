@@ -1,0 +1,18 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.pahad.app",
+      "sha256_cert_fingerprints": ["2E:79:9D:60:8A:77:A0:E8:DC:E7:4F:70:EA:13:92:13:09:2F:F3:B1:30:B1:6A:CD:5A:17:0E:CD:9B:E6:00:3A"]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.pahad.admin",
+      "sha256_cert_fingerprints": ["2E:79:9D:60:8A:77:A0:E8:DC:E7:4F:70:EA:13:92:13:09:2F:F3:B1:30:B1:6A:CD:5A:17:0E:CD:9B:E6:00:3A"]
+    }
+  }
+]

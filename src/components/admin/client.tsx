@@ -59,7 +59,7 @@ export function AdminNav({
     <div className="border-t border-white/15 pt-4">
       <p className="truncate text-sm font-semibold text-white">{user.name}</p>
       <p className="text-xs text-cream">{user.roleLabel}</p>
-      <InstallAppButton label="Install admin app" className="mt-3 text-sm text-cream hover:text-white" />
+      <InstallAppButton label="Install admin app" apk="/downloads/PAHAD-Admin.apk" apkClassName="text-cream" className="mt-3 text-sm text-cream hover:text-white" />
       <form action={logoutAction}>
         <button className="mt-3 flex items-center gap-2 text-sm text-white/80 hover:text-white">
           <LogOut className="h-4 w-4" aria-hidden /> Sign out

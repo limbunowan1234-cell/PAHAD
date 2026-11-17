@@ -88,7 +88,7 @@ export function Footer() {
               <SocialIcon name="WhatsApp" className="h-4 w-4" /> Follow the PAHAD WhatsApp channel
             </a>
           </div>
-          <InstallAppButton className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-semibold text-ink hover:bg-peach" />
+          <InstallAppButton apk="/downloads/PAHAD.apk" className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-semibold text-ink hover:bg-peach" />
         </div>
 
         <div className="grid gap-10 sm:grid-cols-3">

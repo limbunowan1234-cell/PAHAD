@@ -32,7 +32,7 @@ export default function LoginPage() {
           <Suspense fallback={<div className="mt-8 h-56" />}>
             <LoginForm />
           </Suspense>
-          <InstallAppButton label="Install admin app" className="mt-6 w-full rounded-full border border-line py-2.5 text-sm font-semibold text-teal hover:bg-sand" />
+          <InstallAppButton label="Install admin app" apk="/downloads/PAHAD-Admin.apk" apkClassName="text-center text-teal" className="mt-6 w-full rounded-full border border-line py-2.5 text-sm font-semibold text-teal hover:bg-sand" />
           <Link href="/" className="mt-6 block text-sm text-muted hover:text-teal">← Back to the website</Link>
         </div>
       </div>

@@ -33,7 +33,18 @@ function isStandalone() {
  * (iPhone/iPad Safari). Which app gets installed depends on the page's manifest:
  * the public site or the separate admin app.
  */
-export function InstallAppButton({ label = "Install the PAHAD app", className }: { label?: string; className?: string }) {
+export function InstallAppButton({
+  label = "Install the PAHAD app",
+  className,
+  apk,
+  apkClassName,
+}: {
+  label?: string;
+  className?: string;
+  /** Android app file (APK) to offer as a direct download. */
+  apk?: string;
+  apkClassName?: string;
+}) {
   const [ready, setReady] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [help, setHelp] = useState(false);
@@ -68,6 +79,11 @@ export function InstallAppButton({ label = "Install the PAHAD app", className }:
       <button type="button" onClick={install} className={cn("inline-flex items-center justify-center gap-2", className)} data-ready={ready || undefined}>
         <Download className="h-4 w-4" aria-hidden /> {label}
       </button>
+      {apk && (
+        <a href={apk} download className={cn("mt-2 block text-xs underline underline-offset-2 opacity-80 hover:opacity-100", apkClassName)}>
+          Or download the Android app (APK)
+        </a>
+      )}
       {help && (
         <div role="dialog" aria-modal="true" aria-labelledby="install-title" className="fixed inset-0 z-[80] flex items-end justify-center bg-teal-950/60 p-4 sm:items-center" onClick={() => setHelp(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -88,7 +104,14 @@ export function InstallAppButton({ label = "Install the PAHAD app", className }:
               </li>
               <li className="flex gap-3">
                 <span className="font-semibold text-teal">Android:</span>
-                <span>In Chrome tap the menu ⋮, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.</span>
+                <span>
+                  In Chrome tap the menu ⋮, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.
+                  {apk && (
+                    <>
+                      {" "}Or <a href={apk} download className="font-semibold text-teal underline">download the Android app</a>.
+                    </>
+                  )}
+                </span>
               </li>
               <li className="flex gap-3">
                 <span className="font-semibold text-teal">Computer:</span>
