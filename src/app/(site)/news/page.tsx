@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
-import { GridSkeleton, PostGrid } from "@/components/site/posts";
+import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts";
 import { PageHero } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
 
@@ -24,6 +24,9 @@ export default function NewsPage() {
       <section className="container-page py-16">
         <Suspense fallback={<GridSkeleton />}>
           <PostGrid type="news" emptyTitle="No news yet" emptyText="Announcements and stories will appear here." />
+        </Suspense>
+        <Suspense fallback={null}>
+          <MembersOnlyGrid type="news" />
         </Suspense>
       </section>
       <section className="container-page pb-20">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BookOpen, Briefcase, Megaphone, Search } from "lucide-react";
-import { GridSkeleton, PostGrid } from "@/components/site/posts";
+import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts";
 import { CtaBand, PageHero, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
 
@@ -52,6 +52,9 @@ export default function ProgrammesPage() {
                 emptyTitle="Programme details coming soon"
                 emptyText="Project descriptions, timelines, partners and participation details are published only once confirmed."
               />
+            </Suspense>
+            <Suspense fallback={null}>
+              <MembersOnlyGrid type="programme" />
             </Suspense>
           </div>
         </div>

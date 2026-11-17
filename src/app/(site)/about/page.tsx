@@ -88,7 +88,7 @@ export default function AboutPage() {
           <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {ecosystem.map((e, i) => (
               <li key={e.title} className="rounded-[var(--radius-card)] bg-white/10 p-6">
-                <span className="text-sm font-bold text-coral">0{i + 1}</span>
+                <span className="text-sm font-bold text-cream">0{i + 1}</span>
                 <h3 className="mt-2 text-2xl font-medium">{e.title}</h3>
                 <p className="mt-2 text-white/85">{e.text}</p>
               </li>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { getUpcomingEvents } from "@/lib/data";
 import { site } from "@/lib/site";
-import { GridSkeleton } from "@/components/site/posts";
+import { GridSkeleton, MembersOnlyGrid } from "@/components/site/posts";
 import { EmptyState, PageHero, PostCard, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
 
@@ -60,6 +60,9 @@ export default function EventsPage() {
       <section className="container-page py-16">
         <Suspense fallback={<GridSkeleton />}>
           <EventLists />
+        </Suspense>
+        <Suspense fallback={null}>
+          <MembersOnlyGrid type="event" />
         </Suspense>
         <p className="mt-10 rounded-2xl bg-sand p-5 text-sm text-muted">
           Check each event announcement for eligibility, venue, timing and registration instructions. Please do not rely on unconfirmed event information.

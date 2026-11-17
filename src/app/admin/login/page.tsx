@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
 import { InstallAppButton } from "@/components/site/InstallApp";
 
@@ -23,12 +24,14 @@ export default function LoginPage() {
             <Image src="/images/emblem.png" alt="" width={52} height={52} />
             <span>
               <span className="block font-display text-2xl font-semibold text-teal">PAHAD</span>
-              <span className="block text-xs uppercase tracking-[0.14em] text-muted">Admin sign in</span>
+              <span className="block text-xs uppercase tracking-[0.14em] text-muted">Dashboard sign in</span>
             </span>
           </Link>
           <h1 className="mt-10 text-3xl font-medium text-teal">Welcome back</h1>
-          <p className="mt-1 text-muted">Sign in with the account a Super Admin created for you.</p>
-          <LoginForm />
+          <p className="mt-1 text-muted">Members and the PAHAD team sign in here with the account PAHAD created for them.</p>
+          <Suspense fallback={<div className="mt-8 h-56" />}>
+            <LoginForm />
+          </Suspense>
           <InstallAppButton label="Install admin app" className="mt-6 w-full rounded-full border border-line py-2.5 text-sm font-semibold text-teal hover:bg-sand" />
           <Link href="/" className="mt-6 block text-sm text-muted hover:text-teal">← Back to the website</Link>
         </div>

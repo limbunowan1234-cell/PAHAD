@@ -26,7 +26,7 @@ export async function PageHero({
     <section className="relative isolate overflow-hidden bg-teal-900 text-white">
       {image && (
         <>
-          <Image src={image} alt="" fill priority sizes="100vw" className="-z-20 object-cover" />
+          <Image src={image} alt="" fill preload sizes="100vw" className="-z-20 object-cover" />
           {/* Phones: an even tint (text spans the full width). Wider screens: dark only
               behind the text on the left, so the photo stays visible on the right. */}
           <div className="absolute inset-0 -z-10 bg-teal-950/55 md:bg-transparent md:bg-gradient-to-r md:from-teal-950/90 md:via-teal-950/60 md:to-teal-950/5" />
