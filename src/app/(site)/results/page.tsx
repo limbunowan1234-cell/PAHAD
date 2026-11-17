@@ -22,7 +22,8 @@ export default function ResultsPage() {
           <p className="mt-4 max-w-2xl text-lg text-white/85">Results the President has authorised for publication after voting closed. Ballots are secret: only totals are shown.</p>
         </div>
       </section>
-      <section className="container-page max-w-4xl py-12">
+      <section className="container-page max-w-4xl py-12" aria-labelledby="published-results">
+        <h2 id="published-results" className="sr-only">Published results</h2>
         <Suspense fallback={<p className="text-muted" role="status">Loading results…</p>}>
           <ResultList />
         </Suspense>
