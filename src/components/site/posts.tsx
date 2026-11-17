@@ -20,6 +20,21 @@ function summary(post: Post, max = 160) {
   return text.length > max ? `${text.slice(0, max - 1).replace(/\s+\S*$/, "")}…` : text;
 }
 
+/**
+ * Posts to prerender at build time. Others are rendered on their first visit and then cached.
+ * Cache Components needs at least one entry, so a type with no posts yet returns a placeholder
+ * slug that renders the not-found page.
+ */
+export async function postStaticParams(type: PostType): Promise<{ slug: string }[]> {
+  try {
+    const slugs = (await getPublishedPosts(type)).map((p) => p.slug).filter(Boolean);
+    if (slugs.length) return slugs.map((slug) => ({ slug }));
+  } catch (error) {
+    console.error(`generateStaticParams(${type}): could not load posts`, error);
+  }
+  return [{ slug: "_none" }];
+}
+
 /** Title, description, canonical URL and share card for a post's detail page. */
 export async function postMetadata(params: Promise<{ slug: string }>, type: PostType): Promise<Metadata> {
   const { slug } = await params;
@@ -146,7 +161,7 @@ export async function PostDetail({ params, type }: { params: Promise<{ slug: str
       <div className="container-page max-w-4xl py-12">
         {post.cover && (
           <div className="relative -mt-4 mb-10 aspect-[16/9] overflow-hidden rounded-[var(--radius-card)]">
-            <Image src={post.cover} alt="" fill priority sizes="(min-width:1024px) 900px, 100vw" className="object-cover" />
+            <Image src={post.cover} alt="" fill preload sizes="(min-width:1024px) 900px, 100vw" className="object-cover" />
           </div>
         )}
         <div className="text-lg">

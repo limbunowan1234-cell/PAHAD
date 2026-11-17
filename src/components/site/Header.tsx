@@ -42,7 +42,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
     >
       <div className="container-page flex h-[72px] items-center justify-between gap-4">
         <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="PAHAD home" onClick={() => setOpen(false)}>
-          <Image src="/images/emblem.png" alt="" width={48} height={48} className="h-12 w-12" priority />
+          <Image src="/images/emblem.png" alt="" width={48} height={48} className="h-12 w-12" loading="eager" />
           <span className="leading-tight">
             <span className="block font-display text-xl font-semibold tracking-wide text-teal">PAHAD</span>
             <span className="hidden text-[11px] font-medium uppercase tracking-[0.14em] text-muted sm:block">People · Knowledge · Action</span>

@@ -7,7 +7,8 @@
  *   white on teal-700 (#34686B)    6.3:1  any text
  *   teal on cream (#FBD1B8)        6.7:1  any text
  *   ink on coral (#F99167)         9+:1   any text  (never white on coral)
- *   white on coral-700 (#B8501F)   4.6:1  any text
+ *   white on coral-700 (#A8461A)   5.9:1  any text
+ *   coral-700 on sage-100          5.0:1  any text (was #B8501F, 4.2:1, too low)
  */
 @theme {
   --color-teal-950: #0b2e35;
@@ -17,7 +18,7 @@
   --color-sage: #5b8e89;
   --color-sage-100: #e3eeec;
   --color-coral: #f99167;
-  --color-coral-700: #b8501f;
+  --color-coral-700: #a8461a;
   --color-peach: #f2a47b;
   --color-cream: #fbd1b8;
   --color-sand: #fdf5ee;

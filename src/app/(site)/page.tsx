@@ -44,7 +44,7 @@ async function Hero() {
         src={image}
         alt={image === HERO_PAGES.home.fallback ? "Kanchenjunga glowing at sunrise above Darjeeling town" : ""}
         fill
-        priority
+        preload
         sizes="100vw"
         className="-z-20 object-cover object-[50%_35%]"
       />
@@ -176,7 +176,7 @@ function GuidingIdea() {
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-cream text-teal">
                 <Icon className="h-6 w-6" aria-hidden />
               </span>
-              <span className="font-display text-4xl text-line">0{i + 1}</span>
+              <span className="font-display text-4xl text-sage">0{i + 1}</span>
             </div>
             <h3 className="mt-6 text-2xl font-medium text-teal">{title}</h3>
             <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-coral-700">{tag}</p>

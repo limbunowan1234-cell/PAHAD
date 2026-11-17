@@ -1,5 +1,9 @@
 import { Suspense } from "react";
-import { DetailSkeleton, PostDetail, postMetadata } from "@/components/site/posts";
+import { DetailSkeleton, PostDetail, postMetadata, postStaticParams } from "@/components/site/posts";
+
+export function generateStaticParams() {
+  return postStaticParams("news");
+}
 
 export function generateMetadata({ params }: PageProps<"/news/[slug]">) {
   return postMetadata(params, "news");
