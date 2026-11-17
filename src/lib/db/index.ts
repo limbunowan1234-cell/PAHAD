@@ -87,7 +87,7 @@ function postgresBackend(url: string): Backend {
       if (users === 0 && email && password) {
         await rawInsert("users", {
           id: randomUUID(), email: email.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", active: true,
+          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", can_submit_videos: false, active: true,
           password_hash: hashPassword(password), created_at: new Date().toISOString(), last_login: null,
         });
       }
@@ -151,12 +151,12 @@ function fileBackend(): Backend {
       ? process.env.SUPERADMIN_EMAIL && process.env.SUPERADMIN_PASSWORD
         ? [{
             id: randomUUID(), email: process.env.SUPERADMIN_EMAIL.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-            role: "super_admin" as const, designation: "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", active: true,
+            role: "super_admin" as const, designation: "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", can_submit_videos: false, active: true,
             password_hash: hashPassword(process.env.SUPERADMIN_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           }]
         : []
       : DEV_ACCOUNTS.map((a) => ({
-          id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", active: true,
+          id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", can_submit_videos: false, active: true,
           password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
         }));
     const admin = users.find((u) => u.role === "admin");
@@ -165,6 +165,7 @@ function fileBackend(): Backend {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
       notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [],
+      videos: [], featured: [],
     };
   }
   function load(): DbShape {
@@ -204,7 +205,7 @@ function fileBackend(): Backend {
         if (!data.users.some((u) => u.email === a.email)) {
           changed = true;
           data.users.push({
-            id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", active: true,
+            id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", can_submit_videos: false, active: true,
             password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           });
         } else if (a.owner && !data.users.find((u) => u.email === a.email)!.owner) {

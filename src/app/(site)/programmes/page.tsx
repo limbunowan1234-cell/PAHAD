@@ -4,6 +4,7 @@ import { BookOpen, Briefcase, Megaphone, Search } from "lucide-react";
 import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts";
 import { CtaBand, PageHero, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Programmes",
@@ -59,6 +60,7 @@ export default function ProgrammesPage() {
           </div>
         </div>
       </section>
+      <PageFeatures page="programmes" />
       <CtaBand />
     </>
   );

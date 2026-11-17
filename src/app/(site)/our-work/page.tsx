@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { workAreas } from "@/lib/content";
 import { CtaBand, PageHero, SectionHeading, TextLink } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Our Work",
@@ -71,6 +72,7 @@ export default function OurWorkPage() {
         </div>
       </section>
 
+      <PageFeatures page="our-work" />
       <CtaBand />
     </>
   );

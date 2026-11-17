@@ -6,6 +6,7 @@ import { site } from "@/lib/site";
 import { InquiryForm } from "@/components/site/forms";
 import { PageHero, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Get Involved",
@@ -76,6 +77,7 @@ export default function GetInvolvedPage() {
           </div>
         </div>
       </section>
+      <PageFeatures page="get-involved" />
     </>
   );
 }

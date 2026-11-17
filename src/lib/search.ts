@@ -1,7 +1,9 @@
 import "server-only";
-import { getMembersOnlyPosts, getPublishedPosts } from "./data";
+import { getMembersOnlyPosts, getPublishedPosts, getPublishedVideos } from "./data";
+import { PLACEMENT_PAGES, pageList } from "./placements";
 import type { Post } from "./types";
 import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
+import { youTubeWatchUrl } from "./youtube";
 
 export type SearchResult = {
   title: string;
@@ -83,11 +85,28 @@ function postResult(p: Post, words: string[], membersOnly: boolean): SearchResul
 export async function searchSite(query: string, { signedIn }: { signedIn: boolean }): Promise<SearchResult[]> {
   const words = norm(query).split(/\s+/).filter((w) => w.length > 1).slice(0, 8);
   if (words.length === 0) return [];
-  const [publicPosts, privatePosts] = await Promise.all([getPublishedPosts(), signedIn ? getMembersOnlyPosts() : Promise.resolve([])]);
+  const [publicPosts, privatePosts, videos] = await Promise.all([
+    getPublishedPosts(),
+    signedIn ? getMembersOnlyPosts() : Promise.resolve([]),
+    getPublishedVideos(),
+  ]);
   const results = [
     ...PAGES.map((pg) => ({ title: pg.title, href: pg.href, kind: "Page", snippet: pg.text, membersOnly: false, score: score(words, [[norm(pg.title), 6], [norm(pg.text), 2]]) })),
     ...publicPosts.map((p) => postResult(p, words, false)),
     ...privatePosts.map((p) => postResult(p, words, true)),
+    ...videos.map((v) => {
+      // Open the first page the video is on; a video not placed on any page opens on YouTube.
+      const page = PLACEMENT_PAGES.find((pg) => pg.key === pageList(v.pages)[0]);
+      return {
+        title: v.title,
+        href: page ? `${page.path}#videos-${page.key}` : youTubeWatchUrl(v.youtube_id),
+        external: !page,
+        kind: "Video",
+        snippet: v.description,
+        membersOnly: false,
+        score: score(words, [[norm(v.title), 6], [norm(v.description), 2]]),
+      };
+    }),
   ];
   return results
     .filter((r) => r.score > 0)

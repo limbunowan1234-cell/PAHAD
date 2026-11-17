@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
       // Google Drive images (share links are converted to this address)
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      // YouTube video thumbnails (the player itself loads from youtube-nocookie.com on click)
+      { protocol: "https", hostname: "i.ytimg.com" },
       ...(r2Host ? [{ protocol: "https" as const, hostname: r2Host }] : []),
     ],
   },

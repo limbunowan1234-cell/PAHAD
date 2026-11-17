@@ -9,6 +9,7 @@ import { HERO_PAGES, heroSettingId } from "@/lib/heroes";
 import { site } from "@/lib/site";
 import { pageMetadata } from "@/lib/seo";
 import { CtaBand, EmptyState, MountainLine, PostCard, SectionHeading, TextLink } from "@/components/site/ui";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = {
   ...pageMetadata({ title: `${site.name}: ${site.fullName}`, path: "/" }),
@@ -20,6 +21,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      <PageFeatures page="home" />
       <WhoWeAre />
       <WorkAreas />
       <GuidingIdea />

@@ -6,6 +6,7 @@ import { site } from "@/lib/site";
 import { GridSkeleton, MembersOnlyGrid } from "@/components/site/posts";
 import { EmptyState, PageHero, PostCard, SectionHeading } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
+import { PageFeatures } from "@/components/site/PageFeatures";
 
 export const metadata: Metadata = pageMetadata({
   title: "Live Events",
@@ -68,6 +69,7 @@ export default function EventsPage() {
           Check each event announcement for eligibility, venue, timing and registration instructions. Please do not rely on unconfirmed event information.
         </p>
       </section>
+      <PageFeatures page="events" />
     </>
   );
 }
