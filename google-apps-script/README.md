@@ -33,3 +33,19 @@ Until it is connected, the website keeps every record and queues the Google writ
 ## Changing the script later
 
 Edit the code, then **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**. The URL stays the same.
+
+## Password reset emails
+
+The same script also sends **"Forgot password?"** reset links from `pahad.org@gmail.com` (the `email` action in `Code.gs`).
+
+To turn it on for an existing deployment:
+
+1. Open the script, select all the code, and paste in the latest `Code.gs` from this folder. Save.
+2. **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy.**
+3. Google asks for one new permission, **"Send email as you"**. Sign in as `pahad.org@gmail.com` and allow it.
+
+The URL and secret stay the same, so nothing changes in Vercel.
+
+Until this is done, "Forgot password?" still works safely: instead of an email, the President gets a dashboard notification to reset the password from **Admin Team → Edit access**.
+
+Gmail allows about 100 emails a day from a free account, which is plenty for password resets.

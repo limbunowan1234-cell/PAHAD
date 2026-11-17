@@ -276,6 +276,12 @@ export type Featured = {
   updated_at: string;
 };
 
+/**
+ * One-time password reset link. `id` is the SHA-256 hash of the token in the emailed link,
+ * so the link itself is never stored. Valid for 30 minutes, once.
+ */
+export type PasswordReset = { id: string; user_id: string; expires_at: string; used: boolean; created_at: string };
+
 /** Voting categories: Governing Body (L1), Executive Body (L2) and General Assembly. */
 export type PollCategory = "gb" | "eb" | "ga";
 export type PollStatus = "draft" | "active" | "paused" | "closed";
@@ -432,5 +438,6 @@ export type Tables = {
   poll_voters: PollVoter;
   poll_receipts: PollReceipt;
   ballots: Ballot;
+  password_resets: PasswordReset;
 };
 export type TableName = keyof Tables;

@@ -51,6 +51,16 @@ export async function uploadToDrive(file: File, path: string[], name: string): P
   return res.ok && typeof res.url === "string" ? res.url : null;
 }
 
+/**
+ * Send a plain-text email from the organisation's Gmail (pahad.org@gmail.com).
+ * Not queued: used for time-limited messages such as password reset links.
+ * Needs the "email" action in google-apps-script/Code.gs (see the README).
+ */
+export async function sendEmail(to: string, subject: string, body: string): Promise<boolean> {
+  const res = await callScript("email", { to, subject, body });
+  return res.ok;
+}
+
 /** Retry queued writes. Returns how many are still waiting. */
 export async function flushOutbox(limit = 25): Promise<number> {
   const items = (await db.all("outbox")).sort((a, b) => a.created_at.localeCompare(b.created_at));

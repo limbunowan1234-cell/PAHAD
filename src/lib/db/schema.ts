@@ -79,6 +79,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   poll_voters: { id: "text", poll_id: "text", user_id: "text", user_name: "text", created_at: "text" },
   poll_receipts: { id: "text", poll_id: "text", user_id: "text", created_at: "text" },
   ballots: { id: "text", poll_id: "text", option_id: "text", created_at: "text" },
+  password_resets: { id: "text", user_id: "text", expires_at: "text", used: "bool", created_at: "text" },
   featured: {
     id: "text", kind: "text", ref_id: "text", title: "text", text: "text", link: "text", image: "text", pages: "text",
     active: "bool", sort: "int", starts_on: "text", ends_on: "text", created_by_name: "text", created_at: "text", updated_at: "text",
@@ -114,6 +115,7 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS poll_voters_poll_idx ON poll_voters (poll_id)",
     "CREATE INDEX IF NOT EXISTS poll_receipts_poll_idx ON poll_receipts (poll_id)",
     "CREATE INDEX IF NOT EXISTS ballots_poll_idx ON ballots (poll_id)",
+    "CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id)",
     // One vote per member per poll, enforced by the database (the receipt id is poll:user too).
     "CREATE UNIQUE INDEX IF NOT EXISTS poll_receipts_once_idx ON poll_receipts (poll_id, user_id)",
   );
