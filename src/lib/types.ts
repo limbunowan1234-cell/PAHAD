@@ -276,6 +276,42 @@ export type Featured = {
   updated_at: string;
 };
 
+/** Voting categories: Governing Body (L1), Executive Body (L2) and General Assembly. */
+export type PollCategory = "gb" | "eb" | "ga";
+export type PollStatus = "draft" | "active" | "paused" | "closed";
+/** Who may see results: dashboard only, eligible members after closing, or public (after authorisation). */
+export type PollResultsVisibility = "admin" | "after_close" | "public";
+export type PollOption = { id: string; label: string };
+export type Poll = {
+  id: string;
+  category: PollCategory;
+  title: string;
+  description: string;
+  /** JSON array of PollOption. Locked once anyone has voted. */
+  options: string;
+  /** ISO times. Voting is open only while status is active and now is between them. */
+  opens_at: string;
+  closes_at: string;
+  status: PollStatus;
+  results_visibility: PollResultsVisibility;
+  /** For "public": results show on the website only after this is switched on. */
+  public_authorized: boolean;
+  archived: boolean;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+};
+/** Voter-eligibility register. id = `${poll_id}:${user_id}`. */
+export type PollVoter = { id: string; poll_id: string; user_id: string; user_name: string; created_at: string };
+/**
+ * "Has voted" receipt. id = `${poll_id}:${user_id}`, so the database itself rejects a second vote.
+ * It records THAT someone voted, never their choice.
+ */
+export type PollReceipt = { id: string; poll_id: string; user_id: string; created_at: string };
+/** Anonymous ballot: the choice only, with no voter and no timestamp of its own. */
+export type Ballot = { id: string; poll_id: string; option_id: string; created_at: string };
+
 export type TeamMember = {
   id: string;
   name: string;
@@ -392,5 +428,9 @@ export type Tables = {
   outbox: OutboxItem;
   videos: Video;
   featured: Featured;
+  polls: Poll;
+  poll_voters: PollVoter;
+  poll_receipts: PollReceipt;
+  ballots: Ballot;
 };
 export type TableName = keyof Tables;

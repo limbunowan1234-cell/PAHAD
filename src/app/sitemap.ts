@@ -23,6 +23,7 @@ const pages: [path: string, priority: number, changeFrequency: Freq][] = [
   ["/our-story", 0.6, "yearly"],
   ["/governance", 0.6, "monthly"],
   ["/transparency", 0.6, "monthly"],
+  ["/results", 0.5, "monthly"],
   ["/gallery", 0.6, "weekly"],
   ["/partners", 0.6, "monthly"],
   ["/contact", 0.5, "yearly"],

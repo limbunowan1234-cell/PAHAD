@@ -165,7 +165,7 @@ function fileBackend(): Backend {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
       notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [],
-      videos: [], featured: [],
+      videos: [], featured: [], polls: [], poll_voters: [], poll_receipts: [], ballots: [],
     };
   }
   function load(): DbShape {
@@ -239,6 +239,10 @@ function fileBackend(): Backend {
     },
     async insert(table, row) {
       const data = load();
+      // Same rule as the Postgres primary key: an id can only be inserted once.
+      if ((data[table] as { id: string }[]).some((r) => r.id === (row as { id: string }).id)) {
+        throw new Error(`duplicate key value violates unique constraint "${table}_pkey"`);
+      }
       (data[table] as unknown[]).push(row);
       save(data);
       return row;

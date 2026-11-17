@@ -17,6 +17,7 @@ const columns = [
       ["Our Story", "/our-story"],
       ["Governance", "/governance"],
       ["Transparency", "/transparency"],
+      ["Voting results", "/results"],
     ],
   },
   {

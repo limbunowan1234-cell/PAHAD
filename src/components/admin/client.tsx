@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
-  Activity, Bell, Clapperboard, Sparkles, CheckSquare, FileText, Gavel, Handshake, IdCard, Image as ImageIcon, Images, Inbox, LayoutDashboard, Loader2, LogOut, Megaphone, Menu, Network, Wallet,
+  Activity, Bell, Clapperboard, Sparkles, Vote, CheckSquare, FileText, Gavel, Handshake, IdCard, Image as ImageIcon, Images, Inbox, LayoutDashboard, Loader2, LogOut, Megaphone, Menu, Network, Wallet,
   ShieldCheck, UserCircle, Users, X,
 } from "lucide-react";
 import type { ActionState } from "@/app/admin/actions";
@@ -14,7 +14,7 @@ import { InstallAppButton } from "@/components/site/InstallApp";
 import { cn } from "@/lib/utils";
 
 // ------------------------------------------------------------------ sidebar
-const ICONS = { dashboard: LayoutDashboard, notifications: Bell, finance: Wallet, content: FileText, members: Users, tasks: CheckSquare, submissions: Inbox, gallery: ImageIcon, heroes: Images, people: IdCard, structure: Network, meetings: Gavel, circulars: Megaphone, partners: Handshake, videos: Clapperboard, featured: Sparkles, team: ShieldCheck, activity: Activity, account: UserCircle };
+const ICONS = { dashboard: LayoutDashboard, notifications: Bell, finance: Wallet, content: FileText, members: Users, tasks: CheckSquare, submissions: Inbox, gallery: ImageIcon, heroes: Images, people: IdCard, structure: Network, meetings: Gavel, circulars: Megaphone, partners: Handshake, videos: Clapperboard, featured: Sparkles, voting: Vote, team: ShieldCheck, activity: Activity, account: UserCircle };
 export type NavKey = keyof typeof ICONS;
 
 export function AdminNav({

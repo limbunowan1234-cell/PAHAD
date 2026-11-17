@@ -71,6 +71,14 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     id: "text", youtube_id: "text", title: "text", description: "text", pages: "text", status: "text", visible: "bool", sort: "int",
     submitted_by: "text", submitted_by_name: "text", reviewed_by_name: "text", review_note: "text", created_at: "text", updated_at: "text",
   },
+  polls: {
+    id: "text", category: "text", title: "text", description: "text", options: "text", opens_at: "text", closes_at: "text",
+    status: "text", results_visibility: "text", public_authorized: "bool", archived: "bool",
+    created_by: "text", created_by_name: "text", created_at: "text", updated_at: "text",
+  },
+  poll_voters: { id: "text", poll_id: "text", user_id: "text", user_name: "text", created_at: "text" },
+  poll_receipts: { id: "text", poll_id: "text", user_id: "text", created_at: "text" },
+  ballots: { id: "text", poll_id: "text", option_id: "text", created_at: "text" },
   featured: {
     id: "text", kind: "text", ref_id: "text", title: "text", text: "text", link: "text", image: "text", pages: "text",
     active: "bool", sort: "int", starts_on: "text", ends_on: "text", created_by_name: "text", created_at: "text", updated_at: "text",
@@ -103,6 +111,11 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id)",
     "CREATE INDEX IF NOT EXISTS finance_status_idx ON finance (status)",
     "CREATE INDEX IF NOT EXISTS videos_status_idx ON videos (status)",
+    "CREATE INDEX IF NOT EXISTS poll_voters_poll_idx ON poll_voters (poll_id)",
+    "CREATE INDEX IF NOT EXISTS poll_receipts_poll_idx ON poll_receipts (poll_id)",
+    "CREATE INDEX IF NOT EXISTS ballots_poll_idx ON ballots (poll_id)",
+    // One vote per member per poll, enforced by the database (the receipt id is poll:user too).
+    "CREATE UNIQUE INDEX IF NOT EXISTS poll_receipts_once_idx ON poll_receipts (poll_id, user_id)",
   );
   return statements;
 }

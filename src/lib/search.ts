@@ -26,6 +26,7 @@ const PAGES: { title: string; href: string; text: string }[] = [
   { title: "Our Story", href: "/our-story", text: "PAHAD and DSSCOLONY shared history since 24 June 2018." },
   { title: "Governance", href: "/governance", text: "General Assembly, Governing Body, Chief Executive Director, Central Secretariat and Directorates." },
   { title: "Transparency & Documents", href: "/transparency", text: "Constitution, policies, reports and official documents." },
+  { title: "Voting Results", href: "/results", text: "Official voting results: Governing Body, Executive Body, General Assembly elections and polls." },
   { title: "Our Work", href: "/our-work", text: "Human development, livelihoods, community development, research, Himalayan sustainability and heritage." },
   { title: "Programmes", href: "/programmes", text: "Turning priorities into practical work: community programmes and projects." },
   { title: "Knowledge & Research", href: "/knowledge", text: "Local knowledge, research, publications and learning resources." },
