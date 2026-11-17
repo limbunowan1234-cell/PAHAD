@@ -12,7 +12,7 @@ export type Role =
   | "department_head" // L4 D1 Department Head (scoped to a Department)
   | "project_coordinator" // L5-1 Project Coordinator (scoped to a Programme)
   | "editor" // L6 Member of the General Assembly
-  | "sysadmin"; // SYS Website Administrator: full L1 access
+  | "sysadmin"; // SYS Website Administrator: sees everything read-only, decides nothing
 
 export type UnitKind = "directorate" | "department" | "programme" | "project" | "designation" | "district" | "subdivision" | "block" | "gp";
 

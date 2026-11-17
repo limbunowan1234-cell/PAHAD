@@ -2,22 +2,24 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { deleteMedia, uploadMedia } from "../../actions";
 import { ActionButton, AdminForm } from "@/components/admin/client";
-import { Card, Empty, Field, PageHeader } from "@/components/admin/ui";
+import { Card, Empty, Field, PageHeader, Notice } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 
 export const metadata = { title: "Gallery" };
 
 export default async function AdminGalleryPage() {
   const user = await requireUser();
-  if (!can(user.role, "media.upload")) redirect("/admin");
+  if (!canView(user.role, "media.upload")) redirect("/admin");
+  const manage = can(user.role, "media.upload");
   const media = await db.all("media");
   const albums = Array.from(new Set(media.map((m) => m.album)));
 
   return (
     <>
       <PageHeader title="Gallery" description="Photos shown on the public Gallery page. Only upload photos you have permission to share." />
+      {manage ? (
       <Card title="Add photos" className="mb-8">
         <AdminForm action={uploadMedia} submitLabel="Add photos" resetOnSuccess>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -37,6 +39,9 @@ export default async function AdminGalleryPage() {
           </div>
         </AdminForm>
       </Card>
+      ) : (
+        <div className="mb-8"><Notice>View only.</Notice></div>
+      )}
 
       {media.length === 0 ? (
         <Empty>No photos yet.</Empty>

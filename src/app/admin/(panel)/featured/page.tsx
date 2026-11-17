@@ -3,11 +3,11 @@ import { deleteFeatured, moveFeatured, saveFeatured, setFeaturedActive, setFeatu
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { FeaturedKindFields } from "@/components/admin/FeaturedKindFields";
 import { PagesPicker } from "@/components/admin/PagesPicker";
-import { Badge, Card, Empty, Field, PageHeader } from "@/components/admin/ui";
+import { Badge, Card, Empty, Field, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { FEATURED_SWITCH } from "@/lib/data";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 import { pageLabel, pageList, todayInIndia } from "@/lib/placements";
 import type { Featured, FeaturedKind } from "@/lib/types";
 import { formatDate, POST_TYPE_LABEL } from "@/lib/utils";
@@ -46,7 +46,8 @@ function DetailFields({ f }: { f?: Featured }) {
 
 export default async function FeaturedPage() {
   const user = await requireUser();
-  if (!can(user.role, "featured.manage")) redirect("/admin");
+  if (!canView(user.role, "featured.manage")) redirect("/admin");
+  const manage = can(user.role, "featured.manage");
   const [items, posts, videos, team, sw] = await Promise.all([db.all("featured"), db.all("posts"), db.all("videos"), db.all("team"), db.get("settings", FEATURED_SWITCH)]);
   const enabled = sw?.value !== "off";
   const list = items.sort((a, b) => a.sort - b.sort || a.created_at.localeCompare(b.created_at));
@@ -91,13 +92,16 @@ export default async function FeaturedPage() {
             <p className="font-semibold text-ink">Featured section <Badge tone={enabled ? "teal" : "grey"}>{enabled ? "ON" : "OFF"}</Badge></p>
             <p className="text-sm text-muted">{enabled ? "Active items appear on their pages." : "Hidden on every page. Your items are kept."}</p>
           </div>
-          <ActionButton variant={enabled ? "ghost" : "primary"} action={setFeaturedSection.bind(null, !enabled)}>
-            {enabled ? "Turn the Featured section OFF" : "Turn the Featured section ON"}
-          </ActionButton>
+          {manage && (
+            <ActionButton variant={enabled ? "ghost" : "primary"} action={setFeaturedSection.bind(null, !enabled)}>
+              {enabled ? "Turn the Featured section OFF" : "Turn the Featured section ON"}
+            </ActionButton>
+          )}
         </div>
       </Card>
 
-      <div className="my-8">
+      {!manage && <div className="my-8"><Notice>View only. Featured content is managed by the President.</Notice></div>}
+      {manage && <div className="my-8">
         <Disclosure summary="Add featured content">
           <AdminForm action={saveFeatured} submitLabel="Add to featured" resetOnSuccess>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -106,7 +110,7 @@ export default async function FeaturedPage() {
             </div>
           </AdminForm>
         </Disclosure>
-      </div>
+      </div>}
 
       {list.length === 0 ? (
         <Empty>Nothing featured yet.</Empty>
@@ -130,21 +134,21 @@ export default async function FeaturedPage() {
                     </p>
                     {issue && <p className="mt-1 text-xs font-semibold text-coral-700">{issue}</p>}
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  {manage && <div className="flex flex-wrap gap-1">
                     <ActionButton action={moveFeatured.bind(null, f.id, -1)}><span aria-label="Move up">↑</span></ActionButton>
                     <ActionButton action={moveFeatured.bind(null, f.id, 1)}><span aria-label="Move down">↓</span></ActionButton>
                     <ActionButton action={setFeaturedActive.bind(null, f.id, !f.active)}>{f.active ? "Deactivate" : "Activate"}</ActionButton>
                     <ActionButton variant="danger" confirm="Remove this item from featured?" action={deleteFeatured.bind(null, f.id)}>Remove</ActionButton>
-                  </div>
+                  </div>}
                 </div>
-                <div className="mt-3">
+                {manage && <div className="mt-3">
                   <Disclosure summary="Edit">
                     <AdminForm action={saveFeatured}>
                       <input type="hidden" name="id" value={f.id} />
                       <div className="grid gap-4 sm:grid-cols-2"><DetailFields f={f} /></div>
                     </AdminForm>
                   </Disclosure>
-                </div>
+                </div>}
               </li>
             );
           })}

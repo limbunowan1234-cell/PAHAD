@@ -3,7 +3,7 @@ import { logout } from "../actions";
 import { AdminNav, type NavKey } from "@/components/admin/client";
 import { requireUser } from "@/lib/auth/session";
 import { db, usingPostgres } from "@/lib/db";
-import { can, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
+import { can, canView, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
 import { phaseOf } from "@/lib/polls";
 import { usingCloudStorage } from "@/lib/storage";
 
@@ -57,8 +57,8 @@ async function Shell({ children }: { children: React.ReactNode }) {
     videos: videos.length,
     voting: openBallots,
   };
-  const showVideos = can(user.role, "videos.manage") || user.can_submit_videos;
-  const items = NAV.filter((n) => can(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
+  const showVideos = canView(user.role, "videos.manage") || user.can_submit_videos;
+  const items = NAV.filter((n) => canView(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
 
   return (
     <div className="lg:flex">

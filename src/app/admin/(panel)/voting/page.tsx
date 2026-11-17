@@ -7,7 +7,7 @@ import { PHASE_TONE, PollFields } from "@/components/admin/PollFields";
 import { Badge, Card, Empty, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 import { CATEGORY, canSeeResults, formatIst, parseOptions, pct, phaseOf, PHASE_LABEL, type PollPhase } from "@/lib/polls";
 import type { Poll, PollCategory, PublicUser } from "@/lib/types";
 
@@ -55,7 +55,7 @@ async function MyBallots({ user, manager }: { user: PublicUser; manager: boolean
   );
 }
 
-async function ManagePolls() {
+async function ManagePolls({ manage }: { manage: boolean }) {
   const [polls, voters, receipts] = await Promise.all([db.all("polls"), db.all("poll_voters"), db.all("poll_receipts")]);
   const count = (rows: { poll_id: string }[], id: string) => rows.filter((r) => r.poll_id === id).length;
   const active = polls.filter((p) => !p.archived);
@@ -81,14 +81,16 @@ async function ManagePolls() {
   };
   return (
     <section className="mt-12">
-      <h2 className="font-display text-2xl text-teal">Manage polls</h2>
-      <div className="my-4">
-        <Disclosure summary="Create a poll">
-          <AdminForm action={savePoll} submitLabel="Create poll" resetOnSuccess>
-            <PollFields />
-          </AdminForm>
-        </Disclosure>
-      </div>
+      <h2 className="font-display text-2xl text-teal">{manage ? "Manage polls" : "All polls (view only)"}</h2>
+      {manage && (
+        <div className="my-4">
+          <Disclosure summary="Create a poll">
+            <AdminForm action={savePoll} submitLabel="Create poll" resetOnSuccess>
+              <PollFields />
+            </AdminForm>
+          </Disclosure>
+        </div>
+      )}
       {(Object.keys(CATEGORY) as PollCategory[]).map((c) => {
         const list = active.filter((p) => p.category === c);
         return (
@@ -117,7 +119,7 @@ export default async function VotingPage() {
       <PageHeader title="Voting" description="Polls for the Governing Body (GB), Executive Body (EB) and General Assembly. Ballots are secret and each eligible member can vote once." />
       <h2 className="mb-3 font-display text-2xl text-teal">My ballots</h2>
       <MyBallots user={user} manager={manager} />
-      {manager && <ManagePolls />}
+      {canView(user.role, "polls.manage") && <ManagePolls manage={manager} />}
     </>
   );
 }

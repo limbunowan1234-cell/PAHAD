@@ -8,8 +8,8 @@ import { can, GEO_KINDS, within, type Permission } from "@/lib/permissions";
 import { loadStructure } from "@/lib/structure";
 import type { CircularAudience, Meeting, PublicUser, Role, Vote } from "@/lib/types";
 
-const GB_ROLES: Role[] = ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member", "sysadmin"]; // L1, incl. SYS Website Administrator
-const EXEC_ROLES: Role[] = ["admin", "executive_secretary", "record_officer"];
+const GB_ROLES: Role[] = ["super_admin", "general_secretary", "joint_secretary", "treasurer", "gb_member"];
+const EXEC_ROLES: Role[] = ["admin", "executive_secretary", "record_officer", "sysadmin"]; // Executive Body, incl. SYS
 
 async function run(permission: Permission, fn: (user: PublicUser) => Promise<string>): Promise<ActionState> {
   try {

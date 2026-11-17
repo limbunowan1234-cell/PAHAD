@@ -5,7 +5,7 @@ import { PagesPicker } from "@/components/admin/PagesPicker";
 import { Badge, Card, Empty, Field, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
+import { can, canView } from "@/lib/permissions";
 import { pageLabel, pageList } from "@/lib/placements";
 import type { Video, VideoStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
@@ -56,9 +56,11 @@ function Thumb({ v }: { v: Video }) {
 export default async function VideosPage() {
   const user = await requireUser();
   const manage = can(user.role, "videos.manage");
+  // SYS Website Administrator: sees the President's view read-only.
+  const viewOnly = !manage && canView(user.role, "videos.manage");
   const mayContribute = manage || user.can_submit_videos;
 
-  if (!mayContribute) {
+  if (!mayContribute && !viewOnly) {
     return (
       <>
         <PageHeader title="Videos" />
@@ -70,7 +72,7 @@ export default async function VideosPage() {
   const all = await db.all("videos");
   const mine = all.filter((v) => v.submitted_by === user.id);
 
-  if (!manage) {
+  if (!manage && !viewOnly) {
     return (
       <>
         <PageHeader title="Videos" description="Share a YouTube video with PAHAD. The President reviews each one and chooses where it appears on the website." />
@@ -115,13 +117,17 @@ export default async function VideosPage() {
         title="Videos"
         description="YouTube videos for the website. Choose the pages each one appears on; the ON/OFF switch hides it everywhere without deleting it. Members can submit videos only when you allow it on Admin Team."
       />
-      <div className="mb-8">
-        <Disclosure summary="Add a YouTube video">
-          <AdminForm action={saveVideo} submitLabel="Add video" resetOnSuccess>
-            <ManageFields />
-          </AdminForm>
-        </Disclosure>
-      </div>
+      {manage ? (
+        <div className="mb-8">
+          <Disclosure summary="Add a YouTube video">
+            <AdminForm action={saveVideo} submitLabel="Add video" resetOnSuccess>
+              <ManageFields />
+            </AdminForm>
+          </Disclosure>
+        </div>
+      ) : (
+        <div className="mb-8"><Notice>View only. Videos are managed by the President.</Notice></div>
+      )}
 
       <h2 className="font-display text-2xl text-teal">Pending approval {pending.length > 0 && <Badge tone="amber">{pending.length}</Badge>}</h2>
       {pending.length === 0 ? (
@@ -136,18 +142,20 @@ export default async function VideosPage() {
                   <p className="font-semibold text-ink">{v.title}</p>
                   {v.description && <p className="text-sm text-muted">{v.description}</p>}
                   <p className="mt-1 text-xs text-muted">From {v.submitted_by_name} · {formatDate(v.created_at)}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  {manage && <div className="mt-3 flex flex-wrap gap-2">
                     <ActionButton variant="primary" action={reviewVideo.bind(null, v.id, "approved")}>Approve</ActionButton>
                     <ActionButton variant="danger" confirm={`Reject “${v.title}”?`} action={reviewVideo.bind(null, v.id, "rejected")}>Reject</ActionButton>
                     <ActionButton variant="danger" confirm={`Delete “${v.title}” permanently?`} action={deleteVideo.bind(null, v.id)}>Delete</ActionButton>
-                  </div>
+                  </div>}
                 </div>
               </div>
-              <div className="mt-3">
-                <Disclosure summary="Edit details and pages before approving">
-                  <AdminForm action={saveVideo}><ManageFields v={v} /></AdminForm>
-                </Disclosure>
-              </div>
+              {manage && (
+                <div className="mt-3">
+                  <Disclosure summary="Edit details and pages before approving">
+                    <AdminForm action={saveVideo}><ManageFields v={v} /></AdminForm>
+                  </Disclosure>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -176,7 +184,7 @@ export default async function VideosPage() {
                       {live ? "" : v.status === "approved" ? " · not showing on the website" : ""}
                     </p>
                     <p className="text-xs text-muted">Added by {v.submitted_by_name || "—"} · {formatDate(v.created_at)}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    {manage && <div className="mt-3 flex flex-wrap gap-2">
                       {v.status === "approved" && (
                         <ActionButton variant={v.visible ? "ghost" : "primary"} action={setVideoVisible.bind(null, v.id, !v.visible)}>
                           {v.visible ? "Switch OFF" : "Switch ON"}
@@ -184,14 +192,16 @@ export default async function VideosPage() {
                       )}
                       {v.status === "rejected" && <ActionButton action={reviewVideo.bind(null, v.id, "approved")}>Approve</ActionButton>}
                       <ActionButton variant="danger" confirm={`Delete “${v.title}” permanently?`} action={deleteVideo.bind(null, v.id)}>Delete</ActionButton>
-                    </div>
+                    </div>}
                   </div>
                 </div>
-                <div className="mt-3">
-                  <Disclosure summary="Edit">
-                    <AdminForm action={saveVideo}><ManageFields v={v} /></AdminForm>
-                  </Disclosure>
-                </div>
+                {manage && (
+                  <div className="mt-3">
+                    <Disclosure summary="Edit">
+                      <AdminForm action={saveVideo}><ManageFields v={v} /></AdminForm>
+                    </Disclosure>
+                  </div>
+                )}
               </li>
             );
           })}
