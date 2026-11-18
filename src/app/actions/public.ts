@@ -1,6 +1,7 @@
 "use server";
 
 import { getMembershipInterests } from "@/lib/data";
+import { memberCategoryFromForm } from "@/lib/membership";
 import { db, newId } from "@/lib/db";
 import { appendToSheet, googleConfigured } from "@/lib/google";
 import type { SubmissionKind } from "@/lib/types";
@@ -66,11 +67,15 @@ export async function applyForMembership(_prev: FormState, fd: FormData): Promis
   // Keep only areas that are on the current list (Admin → Members), each once.
   const allowed = new Set(await getMembershipInterests());
   const interests = [...new Set(fd.getAll("interests").map(String))].filter((i) => allowed.has(i)).join(", ").slice(0, 400);
+  // Category must be on the list; "Former DSSCOLONY member" is a separate checkbox.
+  const category = memberCategoryFromForm(field(fd, "category", 60));
+  const formerDsscolony = fd.get("former_dsscolony") === "on";
 
   if (googleConfigured) {
     await appendToSheet("Membership applications", [
       new Date().toISOString(), name, email.toLowerCase(), phone, area, field(fd, "address", 300), field(fd, "occupation", 160),
-      field(fd, "category", 60) || "General", interests, field(fd, "motivation", 2000), "",
+      category, interests, field(fd, "motivation", 2000), "",
+      formerDsscolony ? "Yes" : "No", // last column, so existing Sheet columns don't shift
     ]);
   }
   await db.insert("members", {
@@ -82,7 +87,8 @@ export async function applyForMembership(_prev: FormState, fd: FormData): Promis
     area,
     address: field(fd, "address", 300),
     occupation: field(fd, "occupation", 160),
-    category: field(fd, "category", 60) || "General",
+    category,
+    former_dsscolony: formerDsscolony,
     interests: interests,
     status: "applicant",
     source: "website",

@@ -10,6 +10,7 @@ import {
   type DbShape,
 } from "./seed";
 import { hashPassword } from "../auth/password";
+import { LEGACY_MEMBER_CATEGORIES } from "../membership";
 
 /**
  * Storage backends:
@@ -199,6 +200,11 @@ function fileBackend(): Backend {
       }
     }
     for (const u of data.users) if ((u.role as string) === "program_director") { u.role = "project_coordinator"; changed = true; }
+    // Old membership categories → the new list (same mapping as the Postgres migration).
+    for (const m of data.members) {
+      const to = LEGACY_MEMBER_CATEGORIES[m.category];
+      if (to) { m.category = to.category; if (to.formerDsscolony) m.former_dsscolony = true; changed = true; }
+    }
     // Local demo: make sure every demo role exists (added after the file was first created).
     if (!process.env.VERCEL) {
       for (const a of DEV_ACCOUNTS) {

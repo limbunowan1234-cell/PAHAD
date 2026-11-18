@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { applyForMembership, submitInquiry, type FormState } from "@/app/actions/public";
+import { DEFAULT_MEMBER_CATEGORY, MEMBER_CATEGORIES } from "@/lib/membership";
 import type { SubmissionKind } from "@/lib/types";
 
 function Field({ label, name, error, required, children }: { label: string; name: string; error?: string; required?: boolean; children: React.ReactNode }) {
@@ -121,15 +122,18 @@ export function MembershipForm({ interests }: { interests: string[] }) {
         <Field label="Occupation or field (optional)" name="occupation">
           <input id="occupation" name="occupation" className="field" />
         </Field>
-        <Field label="I am applying as" name="category">
-          <select id="category" name="category" className="field" defaultValue="General">
-            <option>General</option>
-            <option>Student / Youth</option>
-            <option>Professional</option>
-            <option>Former DSSCOLONY member</option>
-            <option>Institution representative</option>
-          </select>
-        </Field>
+        <div className="space-y-2">
+          <Field label="I am applying as" name="category">
+            <select id="category" name="category" className="field" defaultValue={DEFAULT_MEMBER_CATEGORY}>
+              {MEMBER_CATEGORIES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+          <label className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm hover:bg-sand">
+            <input type="checkbox" name="former_dsscolony" className="h-4 w-4 accent-teal" /> Former DSSCOLONY member
+          </label>
+        </div>
         <div className="sm:col-span-2">
           <Field label="Postal address (optional)" name="address">
             <input id="address" name="address" autoComplete="street-address" className="field" />

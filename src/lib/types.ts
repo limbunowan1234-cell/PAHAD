@@ -102,6 +102,8 @@ export type Member = {
   address: string;
   occupation: string;
   category: string;
+  /** Former DSSCOLONY member: a separate yes/no, no longer a category. */
+  former_dsscolony: boolean;
   interests: string;
   status: MemberStatus;
   source: "admin" | "website";

@@ -14,7 +14,7 @@ import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
 import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
-import { interestsFromText, MAX_INTEREST_LENGTH, MAX_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "@/lib/membership";
+import { interestsFromText, MAX_INTEREST_LENGTH, MAX_INTERESTS, memberCategoryFromForm, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "@/lib/membership";
 import { trainingAudience } from "@/lib/training";
 
 export type { ActionState };
@@ -174,7 +174,8 @@ export async function createMember(_prev: ActionState, fd: FormData): Promise<Ac
     await db.insert("members", {
       id, member_no: await nextMemberNo(), name, email,
       phone: str(fd, "phone", 30), area: str(fd, "area", 120), address: str(fd, "address", 300),
-      occupation: str(fd, "occupation", 160), category: str(fd, "category", 60) || "General",
+      occupation: str(fd, "occupation", 160), category: memberCategoryFromForm(str(fd, "category", 60)),
+      former_dsscolony: fd.get("former_dsscolony") === "on",
       interests: str(fd, "interests", 400), status: "active", source: "admin",
       notes: str(fd, "notes", 2000), added_by: user.name, directorate, unit, geo, created_at: now(),
     });
@@ -194,7 +195,10 @@ export async function updateMember(_prev: ActionState, fd: FormData): Promise<Ac
       ...recordScope(s, user, fd),
       name: str(fd, "name", 120) || m.name, email: str(fd, "email", 160).toLowerCase(), phone: str(fd, "phone", 30),
       area: str(fd, "area", 120), address: str(fd, "address", 300), occupation: str(fd, "occupation", 160),
-      category: str(fd, "category", 60), interests: str(fd, "interests", 400), notes: str(fd, "notes", 2000),
+      // On the list, or the member's own older value (kept so it isn't lost), else the default.
+      category: memberCategoryFromForm(str(fd, "category", 60), m.category),
+      former_dsscolony: fd.get("former_dsscolony") === "on",
+      interests: str(fd, "interests", 400), notes: str(fd, "notes", 2000),
     });
     await log(user, "updated", "member", id, m.name);
     return "Member updated.";

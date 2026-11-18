@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
 
-const COLUMNS = ["member_no", "name", "email", "phone", "area", "address", "occupation", "category", "interests", "status", "source", "added_by", "created_at"] as const;
+const COLUMNS = ["member_no", "name", "email", "phone", "area", "address", "occupation", "category", "former_dsscolony", "interests", "status", "source", "added_by", "created_at"] as const;
 
 function csvCell(v: unknown) {
   let s = String(v ?? "");
