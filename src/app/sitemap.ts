@@ -25,6 +25,7 @@ const pages: [path: string, priority: number, changeFrequency: Freq][] = [
   ["/transparency", 0.6, "monthly"],
   ["/results", 0.5, "monthly"],
   ["/gallery", 0.6, "weekly"],
+  ["/films", 0.7, "weekly"],
   ["/partners", 0.6, "monthly"],
   ["/contact", 0.5, "yearly"],
   ["/privacy", 0.2, "yearly"],

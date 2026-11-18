@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { savePost, type ActionState } from "@/app/admin/actions";
@@ -20,7 +21,22 @@ const CATEGORY_HINT: Record<PostType, string> = {
   training: "e.g. Orientation, Field guide, Facilitator notes",
 };
 
-export function PostEditor({ post, canPublish, units }: { post?: Post; canPublish: boolean; units: Unit[] }) {
+/** Picking this in the Type list opens the Videos module instead (videos aren't a post type). */
+const VIDEO_OPTION = "__video";
+
+export function PostEditor({
+  post,
+  canPublish,
+  units,
+  videoHref,
+}: {
+  post?: Post;
+  canPublish: boolean;
+  units: Unit[];
+  /** Where "Video (YouTube)" leads. Only set for new content by people who can add or submit videos. */
+  videoHref?: string;
+}) {
+  const router = useRouter();
   const [state, action, pending] = useActionState<ActionState, FormData>(savePost, null);
   const [type, setType] = useState<PostType>(post?.type ?? "news");
   const [cover, setCover] = useState(post?.cover ?? "");
@@ -48,10 +64,19 @@ export function PostEditor({ post, canPublish, units }: { post?: Post; canPublis
         <div className="space-y-4 rounded-2xl border border-line bg-white p-5">
           <label className="block">
             <span className="label">Type</span>
-            <select name="type" value={type} onChange={(e) => setType(e.target.value as PostType)} className="field">
+            <select
+              name="type"
+              value={type}
+              onChange={(e) => {
+                if (e.target.value === VIDEO_OPTION && videoHref) router.push(videoHref);
+                else setType(e.target.value as PostType);
+              }}
+              className="field"
+            >
               {(Object.keys(POST_TYPE_LABEL) as PostType[]).map((t) => (
                 <option key={t} value={t}>{POST_TYPE_LABEL[t]}</option>
               ))}
+              {!post && videoHref && <option value={VIDEO_OPTION}>Video (YouTube)</option>}
             </select>
           </label>
           <label className="block">

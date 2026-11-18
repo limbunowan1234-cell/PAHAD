@@ -2,9 +2,10 @@
 
 import { updateTag } from "next/cache";
 import { db, newId } from "@/lib/db";
-import { FEATURED_SWITCH } from "@/lib/data";
+import { FEATURED_SWITCH, getFilmsPage } from "@/lib/data";
 import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { safeUrl, toImageUrl } from "@/lib/drive";
+import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING } from "@/lib/films";
 import { can } from "@/lib/permissions";
 import { pagesFromForm } from "@/lib/placements";
 import type { Featured, FeaturedKind, PublicUser, Video } from "@/lib/types";
@@ -62,7 +63,8 @@ export async function saveVideo(_prev: ActionState, fd: FormData): Promise<Actio
     if (id && !existing) throw new Error("This video no longer exists.");
     const data = {
       ...videoFields(fd),
-      pages: pagesFromForm(fd),
+      // Approved + ON videos always show on the films page; other pages only when "Also show on other pages" is ticked.
+      pages: fd.get("also_other") === "on" ? pagesFromForm(fd) : "",
       visible: fd.get("visible") === "on",
       sort: Number(str(fd, "sort", 6)) || 10,
       updated_at: now(),
@@ -76,7 +78,7 @@ export async function saveVideo(_prev: ActionState, fd: FormData): Promise<Actio
     } else {
       const row: Video = { id: newId(), ...data, status: "approved", submitted_by: user.id, submitted_by_name: user.name, reviewed_by_name: user.name, review_note: "", created_at: now() };
       await db.insert("videos", row);
-      await log(user, "added", "video", row.id, `${row.title} on ${row.pages || "no pages yet"}`);
+      await log(user, "added", "video", row.id, `${row.title} on the films page${row.pages ? ` and ${row.pages}` : ""}`);
     }
     updateTag("videos");
     return existing ? "Saved." : "Video added.";
@@ -93,7 +95,9 @@ export async function reviewVideo(id: string, decision: "approved" | "rejected")
       await notify(v.submitted_by, `The President ${decision} your YouTube video “${v.title}”.`, "/admin/videos");
     }
     updateTag("videos");
-    return decision === "approved" ? "Approved. Choose the pages it appears on to publish it." : "Rejected.";
+    if (decision === "rejected") return "Rejected.";
+    const { title } = await getFilmsPage();
+    return `Approved. It now shows on ${title}. Edit it to also show it on other pages.`;
   });
 }
 
@@ -238,5 +242,25 @@ export async function setFeaturedSection(on: boolean): Promise<ActionState> {
     updateTag("featured");
     updateTag("settings");
     return on ? "Featured section is ON." : "Featured section is OFF across the website.";
+  });
+}
+
+// ------------------------------------------------------------------ films page
+/** Rename the films page and change its intro. Empty fields go back to the defaults. */
+export async function saveFilmsPage(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return guarded("videos.manage", async (user) => {
+    const title = str(fd, "title", 80);
+    const intro = str(fd, "intro", 400);
+    if (title && title.length < 3) throw new Error("The title is too short.");
+    const before = await getFilmsPage();
+    for (const [id, value] of [[FILMS_TITLE_SETTING, title], [FILMS_INTRO_SETTING, intro]] as const) {
+      if (await db.get("settings", id)) await db.update("settings", id, { value, updated_by: user.id });
+      else await db.insert("settings", { id, value, updated_by: user.id, created_at: now() });
+    }
+    await log(user, "updated", "films page", FILMS_TITLE_SETTING, title || FILMS_DEFAULTS.title, {
+      before, after: { title: title || FILMS_DEFAULTS.title, intro: intro || FILMS_DEFAULTS.intro },
+    });
+    updateTag("settings");
+    return "Films page saved. The menu, footer and page now use the new title.";
   });
 }

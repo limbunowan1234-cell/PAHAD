@@ -5,7 +5,6 @@ import { useActionState } from "react";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { applyForMembership, submitInquiry, type FormState } from "@/app/actions/public";
-import { workAreas } from "@/lib/content";
 import type { SubmissionKind } from "@/lib/types";
 
 function Field({ label, name, error, required, children }: { label: string; name: string; error?: string; required?: boolean; children: React.ReactNode }) {
@@ -96,9 +95,9 @@ export function InquiryForm({ defaultKind = "contact", showKind = true }: { defa
   );
 }
 
-const INTERESTS = [...workAreas.map((a) => a.title), "Media & communications", "Events & volunteering"];
 
-export function MembershipForm() {
+/** `interests`: the editable "Areas you'd like to contribute to" list (Admin → Members). */
+export function MembershipForm({ interests }: { interests: string[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(applyForMembership, null);
   if (state?.ok) return <Success message={state.message} />;
   return (
@@ -141,7 +140,7 @@ export function MembershipForm() {
       <fieldset>
         <legend className="mb-3 font-display text-xl text-teal">Areas you’d like to contribute to</legend>
         <div className="grid gap-2 sm:grid-cols-2">
-          {INTERESTS.map((i) => (
+          {interests.map((i) => (
             <label key={i} className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm hover:bg-sand">
               <input type="checkbox" name="interests" value={i} className="h-4 w-4 accent-teal" /> {i}
             </label>

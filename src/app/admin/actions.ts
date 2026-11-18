@@ -14,6 +14,7 @@ import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
 import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
+import { interestsFromText, MAX_INTEREST_LENGTH, MAX_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "@/lib/membership";
 import { trainingAudience } from "@/lib/training";
 
 export type { ActionState };
@@ -220,6 +221,26 @@ export async function deleteMember(id: string) {
     await db.remove("members", id);
     await log(user, "deleted", "member", id, m.name, { before: { name: m.name, email: m.email, phone: m.phone, member_no: m.member_no, status: m.status } });
     return `${m.name} was deleted.`;
+  });
+}
+
+/** "Areas you'd like to contribute to" on the public membership form. Existing members' choices are kept as they are. */
+export async function saveMembershipInterests(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return guarded("members.approve", async (user) => {
+    const items = interestsFromText(String(fd.get("interests") ?? ""));
+    if (items.length === 0) throw new Error("Add at least one area.");
+    if (items.length > MAX_INTERESTS) throw new Error(`Use at most ${MAX_INTERESTS} areas.`);
+    const tooLong = items.find((i) => i.length > MAX_INTEREST_LENGTH);
+    if (tooLong) throw new Error(`Keep each area to ${MAX_INTEREST_LENGTH} characters or fewer (“${tooLong.slice(0, 30)}…”).`);
+    const value = JSON.stringify(items);
+    const row = await db.get("settings", MEMBERSHIP_INTERESTS_SETTING);
+    if (row) await db.update("settings", MEMBERSHIP_INTERESTS_SETTING, { value, updated_by: user.id });
+    else await db.insert("settings", { id: MEMBERSHIP_INTERESTS_SETTING, value, updated_by: user.id, created_at: now() });
+    await log(user, "updated", "membership form", MEMBERSHIP_INTERESTS_SETTING, `${items.length} areas to contribute`, {
+      before: { interests: parseInterests(row?.value) ?? "defaults" }, after: { interests: items },
+    });
+    updateTag("settings");
+    return `Saved. The membership form now lists ${items.length} area${items.length === 1 ? "" : "s"}.`;
   });
 }
 

@@ -1,6 +1,8 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
+import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING, type FilmsPage } from "./films";
+import { DEFAULT_MEMBERSHIP_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "./membership";
 import { onPage, todayInIndia } from "./placements";
 import { phaseOf, tally, type Tally } from "./polls";
 import type { FeaturedKind, PageKey, Poll, Post, PostType, Video } from "./types";
@@ -114,6 +116,33 @@ export async function getPageVideos(page: PageKey): Promise<Video[]> {
   cacheTag("videos");
   return (await db.all("videos"))
     .filter((v) => v.status === "approved" && v.visible && onPage(v.pages, page))
+    .sort((a, b) => a.sort - b.sort || b.created_at.localeCompare(a.created_at));
+}
+
+/** Title and intro of the films page (/films), editable from Admin → Videos. */
+export async function getFilmsPage(): Promise<FilmsPage> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+  const [title, intro] = await Promise.all([db.get("settings", FILMS_TITLE_SETTING), db.get("settings", FILMS_INTRO_SETTING)]);
+  return { title: title?.value.trim() || FILMS_DEFAULTS.title, intro: intro?.value.trim() || FILMS_DEFAULTS.intro };
+}
+
+/** "Areas you'd like to contribute to" on the membership form (Admin → Members). Defaults if unset or invalid. */
+export async function getMembershipInterests(): Promise<string[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+  return parseInterests((await db.get("settings", MEMBERSHIP_INTERESTS_SETTING))?.value) ?? DEFAULT_MEMBERSHIP_INTERESTS;
+}
+
+/** Every approved video that is switched ON, whatever pages it is placed on: the films page shows them all. */
+export async function getFilmVideos(): Promise<Video[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("videos");
+  return (await db.all("videos"))
+    .filter((v) => v.status === "approved" && v.visible)
     .sort((a, b) => a.sort - b.sort || b.created_at.localeCompare(a.created_at));
 }
 

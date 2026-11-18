@@ -1,10 +1,13 @@
 import Image from "next/image";
-import { deleteVideo, reviewVideo, saveVideo, setVideoVisible, submitVideo, withdrawVideo } from "../../video-actions";
+import Link from "next/link";
+import { deleteVideo, reviewVideo, saveFilmsPage, saveVideo, setVideoVisible, submitVideo, withdrawVideo } from "../../video-actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
-import { PagesPicker } from "@/components/admin/PagesPicker";
+import { OtherPagesToggle } from "@/components/admin/OtherPagesToggle";
 import { Badge, Card, Empty, Field, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
+import { getFilmsPage } from "@/lib/data";
 import { db } from "@/lib/db";
+import { FILMS_DEFAULTS, FILMS_PATH } from "@/lib/films";
 import { can, canView } from "@/lib/permissions";
 import { pageLabel, pageList } from "@/lib/placements";
 import type { Video, VideoStatus } from "@/lib/types";
@@ -31,19 +34,22 @@ function LinkFields({ v }: { v?: Video }) {
   );
 }
 
-function ManageFields({ v }: { v?: Video }) {
+function ManageFields({ v, filmsTitle }: { v?: Video; filmsTitle: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {v && <input type="hidden" name="id" value={v.id} />}
       <LinkFields v={v} />
-      <PagesPicker value={v?.pages} />
+      <OtherPagesToggle value={v?.pages} filmsTitle={filmsTitle} />
       <Field label="Display order" hint="Lower numbers show first."><input name="sort" type="number" defaultValue={v?.sort ?? 10} className="field" /></Field>
       <label className="flex items-center gap-2 self-end pb-3 text-sm">
-        <input type="checkbox" name="visible" defaultChecked={v ? v.visible : true} className="h-4 w-4 accent-teal" /> ON: show on the chosen pages
+        <input type="checkbox" name="visible" defaultChecked={v ? v.visible : true} className="h-4 w-4 accent-teal" /> ON: show on the website
       </label>
     </div>
   );
 }
+
+/** Where an approved video shows: always the films page, plus any other chosen pages. */
+const placesFor = (v: Video, filmsTitle: string) => [filmsTitle, ...pageList(v.pages).map(pageLabel)].join(", ");
 
 function Thumb({ v }: { v: Video }) {
   return (
@@ -53,8 +59,11 @@ function Thumb({ v }: { v: Video }) {
   );
 }
 
-export default async function VideosPage() {
+export default async function VideosPage({ searchParams }: PageProps<"/admin/videos">) {
   const user = await requireUser();
+  // Arriving from "New content → Video (YouTube)" opens the add form straight away.
+  const openNew = (await searchParams).new === "1";
+  const films = await getFilmsPage();
   const manage = can(user.role, "videos.manage");
   // SYS Website Administrator: sees the President's view read-only.
   const viewOnly = !manage && canView(user.role, "videos.manage");
@@ -75,7 +84,7 @@ export default async function VideosPage() {
   if (!manage && !viewOnly) {
     return (
       <>
-        <PageHeader title="Videos" description="Share a YouTube video with PAHAD. The President reviews each one and chooses where it appears on the website." />
+        <PageHeader title="Videos" description={`Share a YouTube video with PAHAD. Once the President approves it, it appears on ${films.title}.`} />
         <Card title="Submit YouTube Video">
           <AdminForm action={submitVideo} submitLabel="Submit for approval" resetOnSuccess>
             <div className="grid gap-4 sm:grid-cols-2"><LinkFields /></div>
@@ -95,7 +104,7 @@ export default async function VideosPage() {
                     <Badge tone={STATUS[v.status].tone}>{STATUS[v.status].label}</Badge>
                   </div>
                   <p className="text-xs text-muted">Submitted {formatDate(v.created_at)}{v.reviewed_by_name && v.status !== "pending" ? ` · reviewed by ${v.reviewed_by_name}` : ""}</p>
-                  {v.status === "approved" && <p className="mt-1 text-sm text-muted">{v.visible && pageList(v.pages).length ? `On the website: ${pageList(v.pages).map(pageLabel).join(", ")}` : "Approved, not on the website yet."}</p>}
+                  {v.status === "approved" && <p className="mt-1 text-sm text-muted">{v.visible ? `On the website: ${placesFor(v, films.title)}` : "Approved, switched off for now."}</p>}
                   {v.status === "pending" && (
                     <div className="mt-2"><ActionButton variant="danger" confirm="Withdraw this submission?" action={withdrawVideo.bind(null, v.id)}>Withdraw</ActionButton></div>
                   )}
@@ -115,15 +124,26 @@ export default async function VideosPage() {
     <>
       <PageHeader
         title="Videos"
-        description="YouTube videos for the website. Choose the pages each one appears on; the ON/OFF switch hides it everywhere without deleting it. Members can submit videos only when you allow it on Admin Team."
+        description={`YouTube videos for the website. Every approved video that is ON appears on ${films.title}; tick “Also show on other pages” to place it elsewhere too. The ON/OFF switch hides it everywhere without deleting it. Members can submit videos only when you allow it on Admin Team.`}
       />
       {manage ? (
-        <div className="mb-8">
-          <Disclosure summary="Add a YouTube video">
+        <div className="mb-8 space-y-4">
+          <Disclosure summary="Add a YouTube video" defaultOpen={openNew}>
             <AdminForm action={saveVideo} submitLabel="Add video" resetOnSuccess>
-              <ManageFields />
+              <ManageFields filmsTitle={films.title} />
             </AdminForm>
           </Disclosure>
+          <Card title="Films page">
+            <p className="-mt-2 mb-4 text-sm text-muted">
+              The public page listing every video: <Link href={FILMS_PATH} target="_blank" className="font-semibold text-teal underline">{FILMS_PATH}</Link>. Rename it here; the menu and footer follow. Leave a field empty to use the default.
+            </p>
+            <AdminForm action={saveFilmsPage} submitLabel="Save films page">
+              <div className="grid gap-4">
+                <Field label="Title"><input name="title" maxLength={80} defaultValue={films.title} placeholder={FILMS_DEFAULTS.title} className="field" /></Field>
+                <Field label="Intro"><textarea name="intro" rows={2} maxLength={400} defaultValue={films.intro} placeholder={FILMS_DEFAULTS.intro} className="field" /></Field>
+              </div>
+            </AdminForm>
+          </Card>
         </div>
       ) : (
         <div className="mb-8"><Notice>View only. Videos are managed by the President.</Notice></div>
@@ -152,7 +172,7 @@ export default async function VideosPage() {
               {manage && (
                 <div className="mt-3">
                   <Disclosure summary="Edit details and pages before approving">
-                    <AdminForm action={saveVideo}><ManageFields v={v} /></AdminForm>
+                    <AdminForm action={saveVideo}><ManageFields v={v} filmsTitle={films.title} /></AdminForm>
                   </Disclosure>
                 </div>
               )}
@@ -167,8 +187,8 @@ export default async function VideosPage() {
       ) : (
         <ul className="mt-4 space-y-3">
           {reviewed.map((v) => {
-            const pages = pageList(v.pages);
-            const live = v.status === "approved" && v.visible && pages.length > 0;
+            // Live = approved and ON: it is on the films page whether or not other pages are chosen.
+            const live = v.status === "approved" && v.visible;
             return (
               <li key={v.id} className="rounded-2xl border border-line bg-white p-4">
                 <div className="flex flex-col gap-4 sm:flex-row">
@@ -180,8 +200,8 @@ export default async function VideosPage() {
                       {v.status === "approved" && <Badge tone={v.visible ? "teal" : "grey"}>{v.visible ? "ON" : "OFF"}</Badge>}
                     </div>
                     <p className="mt-1 text-sm text-muted">
-                      {pages.length ? `Pages: ${pages.map(pageLabel).join(", ")}` : "No pages chosen yet"}
-                      {live ? "" : v.status === "approved" ? " · not showing on the website" : ""}
+                      {`Pages: ${placesFor(v, films.title)}`}
+                      {live ? "" : v.status === "approved" ? " · switched off, not showing on the website" : " · not showing on the website"}
                     </p>
                     <p className="text-xs text-muted">Added by {v.submitted_by_name || "—"} · {formatDate(v.created_at)}</p>
                     {manage && <div className="mt-3 flex flex-wrap gap-2">
@@ -198,7 +218,7 @@ export default async function VideosPage() {
                 {manage && (
                   <div className="mt-3">
                     <Disclosure summary="Edit">
-                      <AdminForm action={saveVideo}><ManageFields v={v} /></AdminForm>
+                      <AdminForm action={saveVideo}><ManageFields v={v} filmsTitle={films.title} /></AdminForm>
                     </Disclosure>
                   </div>
                 )}

@@ -1,9 +1,7 @@
 import "server-only";
 import { getMembersOnlyPosts, getPublishedPosts, getPublishedVideos } from "./data";
-import { PLACEMENT_PAGES, pageList } from "./placements";
 import type { Post } from "./types";
 import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
-import { youTubeWatchUrl } from "./youtube";
 
 export type SearchResult = {
   title: string;
@@ -33,6 +31,7 @@ const PAGES: { title: string; href: string; text: string }[] = [
   { title: "News & Stories", href: "/news", text: "Announcements, programme updates and community stories." },
   { title: "Live Events", href: "/events", text: "Community conversations, workshops, meetings and upcoming events." },
   { title: "Gallery", href: "/gallery", text: "Photographs and moments from PAHAD's journey." },
+  { title: "Local Films & Documentaries", href: "/films", text: "Films, documentaries and videos from the Darjeeling hills, the Terai, the Dooars and the Himalaya." },
   { title: "Partners", href: "/partners", text: "Media and news partners Gorkha TV and Khabar Darjeeling; collaborate with PAHAD." },
   { title: "Get Involved", href: "/get-involved", text: "Volunteer, collaborate, share an idea or contribute knowledge." },
   { title: "Membership", href: "/membership", text: "Become a member of PAHAD: apply for membership, join." },
@@ -95,19 +94,15 @@ export async function searchSite(query: string, { signedIn }: { signedIn: boolea
     ...PAGES.map((pg) => ({ title: pg.title, href: pg.href, kind: "Page", snippet: pg.text, membersOnly: false, score: score(words, [[norm(pg.title), 6], [norm(pg.text), 2]]) })),
     ...publicPosts.map((p) => postResult(p, words, false)),
     ...privatePosts.map((p) => postResult(p, words, true)),
-    ...videos.map((v) => {
-      // Open the first page the video is on; a video not placed on any page opens on YouTube.
-      const page = PLACEMENT_PAGES.find((pg) => pg.key === pageList(v.pages)[0]);
-      return {
-        title: v.title,
-        href: page ? `${page.path}#videos-${page.key}` : youTubeWatchUrl(v.youtube_id),
-        external: !page,
-        kind: "Video",
-        snippet: v.description,
-        membersOnly: false,
-        score: score(words, [[norm(v.title), 6], [norm(v.description), 2]]),
-      };
-    }),
+    // Every published video is on the films page: open it there, at the video.
+    ...videos.map((v) => ({
+      title: v.title,
+      href: `/films#film-${v.id}`,
+      kind: "Video",
+      snippet: v.description,
+      membersOnly: false,
+      score: score(words, [[norm(v.title), 6], [norm(v.description), 2]]),
+    })),
   ];
   return results
     .filter((r) => r.score > 0)

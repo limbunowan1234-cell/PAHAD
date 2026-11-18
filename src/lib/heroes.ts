@@ -18,6 +18,7 @@ export const HERO_PAGES = {
   news: { label: "News & Stories", path: "/news", fallback: "" },
   events: { label: "Live Events", path: "/events", fallback: "/images/naksha-2.jpg" },
   gallery: { label: "Gallery", path: "/gallery", fallback: "/images/naksha-3.jpg" },
+  films: { label: "Local Films & Documentaries", path: "/films", fallback: "/images/kanchenjunga-gaurav.jpg" },
   partners: { label: "Partners", path: "/partners", fallback: "" },
   "get-involved": { label: "Get Involved", path: "/get-involved", fallback: "/images/busking-old-age-home.jpg" },
   membership: { label: "Membership", path: "/membership", fallback: "/images/naksha-4.jpg" },

@@ -54,6 +54,7 @@ export const nav: NavGroup[] = [
       { label: "News & Stories", href: "/news", description: "Announcements and updates" },
       { label: "Live Events", href: "/events", description: "What’s on now and coming up" },
       { label: "Gallery", href: "/gallery", description: "Moments from our journey" },
+      { label: "Local Films & Documentaries", href: "/films", description: "Films and documentaries from the hills" },
     ],
   },
   { label: "Partners", href: "/partners" },
@@ -68,3 +69,9 @@ export const nav: NavGroup[] = [
     ],
   },
 ];
+
+/** The menu with the films page under its current (possibly renamed) title. */
+export function navWithFilms(label?: string): NavGroup[] {
+  if (!label) return nav;
+  return nav.map((group) => (group.items ? { ...group, items: group.items.map((item) => (item.href === "/films" ? { ...item, label } : item)) } : group));
+}

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Download, Search } from "lucide-react";
-import { createMember, deleteMember, makeMemberAdmin, setMemberStatus, updateMember } from "../../actions";
+import { createMember, deleteMember, makeMemberAdmin, saveMembershipInterests, setMemberStatus, updateMember } from "../../actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
-import { Badge, Empty, Field, PageHeader } from "@/components/admin/ui";
+import { Badge, Card, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
+import { getMembershipInterests } from "@/lib/data";
 import { db } from "@/lib/db";
+import { MAX_INTEREST_LENGTH, MAX_INTERESTS } from "@/lib/membership";
 import { can, inGeoScope, inScope, roleInfo, roleLabel, ROLES, type Structure } from "@/lib/permissions";
 import { loadStructure, pickableUnits } from "@/lib/structure";
 import { ScopePicker } from "@/components/admin/ScopePicker";
@@ -43,6 +45,23 @@ function place(s: Structure, m: Member) {
   const geo: string[] = [];
   for (let cur = s.byId.get(m.geo); cur; cur = cur.parent_id ? s.byId.get(cur.parent_id) : undefined) geo.unshift(cur.name);
   return [s.byId.get(m.unit || m.directorate)?.name, geo.join(" › ")].filter(Boolean).join(" · ");
+}
+
+/** "Areas you'd like to contribute to" on the public membership form. */
+async function InterestsEditor() {
+  const interests = await getMembershipInterests();
+  return (
+    <Card title="Membership form: areas to contribute" className="mb-8">
+      <AdminForm action={saveMembershipInterests} submitLabel="Save areas">
+        <Field
+          label={`Areas, one per line (up to ${MAX_INTERESTS}, ${MAX_INTEREST_LENGTH} characters each)`}
+          hint="Renaming an area doesn't change what existing members already chose."
+        >
+          <textarea name="interests" rows={Math.min(14, interests.length + 2)} required defaultValue={interests.join("\n")} className="field" />
+        </Field>
+      </AdminForm>
+    </Card>
+  );
 }
 
 export default async function MembersPage({ searchParams }: PageProps<"/admin/members">) {
@@ -88,6 +107,8 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
           </Disclosure>
         </div>
       )}
+
+      {can(user.role, "members.approve") && <InterestsEditor />}
 
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
