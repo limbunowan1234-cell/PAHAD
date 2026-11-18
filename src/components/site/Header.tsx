@@ -6,16 +6,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogIn, Menu, Search, X } from "lucide-react";
-import { nav, site } from "@/lib/site";
+import { navWithFilms, site } from "@/lib/site";
 import { InstallAppButton } from "./InstallApp";
 import { cn } from "@/lib/utils";
 
 /** Reads the URL for active-link styling; wrapped in Suspense by the layout. */
-export function Header() {
-  return <HeaderView pathname={usePathname()} />;
+export function Header({ filmsLabel }: { filmsLabel?: string }) {
+  return <HeaderView pathname={usePathname()} filmsLabel={filmsLabel} />;
 }
 
-export function HeaderView({ pathname }: { pathname: string }) {
+/** `filmsLabel`: the films page's current (possibly renamed) title, read on the server. */
+export function HeaderView({ pathname, filmsLabel }: { pathname: string; filmsLabel?: string }) {
+  const menu = navWithFilms(filmsLabel);
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -59,7 +61,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex xl:gap-1">
-          {nav.map((group) =>
+          {menu.map((group) =>
             group.items ? (
               <div key={group.label} className="group relative">
                 <Link
@@ -144,7 +146,7 @@ export function HeaderView({ pathname }: { pathname: string }) {
         >
           <nav aria-label="Mobile" className="container-page py-4">
             <SearchForm id="mobile-search" className="mb-2" />
-            {nav.map((group) => (
+            {menu.map((group) => (
               <div key={group.label} className="border-b border-line">
                 {group.items ? (
                   <>

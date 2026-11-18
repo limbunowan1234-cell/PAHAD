@@ -7,6 +7,7 @@ import type { PageKey } from "@/lib/types";
 import { MembersOnly } from "./MembersOnly";
 import { MembersBadge } from "./posts";
 import { VideoPlayer } from "./VideoPlayer";
+import { WatchOnYouTube } from "./WatchOnYouTube";
 
 /**
  * Featured content and YouTube videos for one page, all managed from the dashboard
@@ -103,6 +104,7 @@ async function Videos({ page }: { page: PageKey }) {
             <VideoPlayer id={v.youtube_id} title={v.title} />
             <h3 className="mt-4 text-xl font-medium text-teal">{v.title}</h3>
             {v.description && <p className="mt-1 text-muted">{v.description}</p>}
+            <WatchOnYouTube id={v.youtube_id} title={v.title} />
           </li>
         ))}
       </ul>

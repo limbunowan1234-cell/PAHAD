@@ -3,6 +3,7 @@ import { MembershipForm } from "@/components/site/forms";
 import { PageHero } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
 import { PageFeatures } from "@/components/site/PageFeatures";
+import { getMembershipInterests } from "@/lib/data";
 
 export const metadata: Metadata = pageMetadata({
   title: "Membership",
@@ -17,7 +18,8 @@ const steps = [
   ["Welcome", "Once approved under PAHAD's rules, you receive a member number and ways to take part."],
 ];
 
-export default function MembershipPage() {
+export default async function MembershipPage() {
+  const interests = await getMembershipInterests();
   return (
     <>
       <PageHero
@@ -54,7 +56,7 @@ export default function MembershipPage() {
         <div className="rounded-[var(--radius-card)] border border-line p-6 sm:p-10">
           <h2 className="text-3xl font-medium text-teal">Membership application</h2>
           <p className="mt-2 mb-8 text-muted">It takes about three minutes.</p>
-          <MembershipForm />
+          <MembershipForm interests={interests} />
         </div>
       </section>
       <PageFeatures page="membership" />

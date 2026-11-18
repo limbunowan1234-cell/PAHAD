@@ -1,8 +1,15 @@
 import { Footer } from "@/components/site/Footer";
 import { Suspense } from "react";
 import { Header, HeaderView } from "@/components/site/Header";
+import { getFilmsPage } from "@/lib/data";
 import { JsonLd, organizationJsonLd } from "@/components/site/JsonLd";
 import { site } from "@/lib/site";
+
+/** Reads the films page title (cached) so the menu shows it under its current name. */
+async function SiteHeader() {
+  const { title } = await getFilmsPage();
+  return <Header filmsLabel={title} />;
+}
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,7 +26,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         Skip to content
       </a>
       <Suspense fallback={<HeaderView pathname="" />}>
-        <Header />
+        <SiteHeader />
       </Suspense>
       <main id="main" className="flex-1">
         {children}

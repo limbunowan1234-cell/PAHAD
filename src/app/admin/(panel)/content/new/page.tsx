@@ -15,7 +15,12 @@ export default async function NewContentPage() {
   return (
     <>
       <PageHeader title="New content" actions={<Link href="/admin/content" className="text-sm font-semibold text-teal">← All content</Link>} />
-      <PostEditor canPublish={canPublish(s, user, { author_id: user.id, directorate: user.directorate, unit: user.unit })} units={pickableUnits(s, user)} />
+      <PostEditor
+        canPublish={canPublish(s, user, { author_id: user.id, directorate: user.directorate, unit: user.unit })}
+        units={pickableUnits(s, user)}
+        // Videos live in their own module; offer it here to the President and members allowed to submit.
+        videoHref={can(user.role, "videos.manage") || user.can_submit_videos ? "/admin/videos?new=1" : undefined}
+      />
     </>
   );
 }

@@ -2,11 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { cacheLife } from "next/cache";
 import { Mail, MessageCircle } from "lucide-react";
+import { getFilmsPage } from "@/lib/data";
+import { FILMS_PATH } from "@/lib/films";
 import { site } from "@/lib/site";
 import { SocialIcon } from "./SocialIcon";
 import { InstallAppButton } from "./InstallApp";
 
-const columns = [
+const columns = (filmsTitle: string) => [
   {
     title: "Organisation",
     links: [
@@ -29,6 +31,7 @@ const columns = [
       ["News & Stories", "/news"],
       ["Events", "/events"],
       ["Gallery", "/gallery"],
+      [filmsTitle, FILMS_PATH],
     ],
   },
   {
@@ -48,7 +51,9 @@ async function CopyrightYear() {
   return new Date().getFullYear();
 }
 
-export function Footer() {
+export async function Footer() {
+  // Cached (settings tag), so the footer stays part of the static page.
+  const { title: filmsTitle } = await getFilmsPage();
   return (
     <footer className="mt-auto bg-teal-950 text-white/85">
       <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.3fr_2fr]">
@@ -92,7 +97,7 @@ export function Footer() {
         </div>
 
         <div className="grid gap-10 sm:grid-cols-3">
-          {columns.map((col) => (
+          {columns(filmsTitle).map((col) => (
             <div key={col.title}>
               <h2 className="font-sans text-xs font-bold uppercase tracking-[0.16em] text-cream">{col.title}</h2>
               <ul className="mt-4 space-y-2.5 text-sm">
