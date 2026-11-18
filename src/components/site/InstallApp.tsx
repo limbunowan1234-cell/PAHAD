@@ -20,6 +20,12 @@ if (typeof window !== "undefined") {
   });
 }
 
+function isIos() {
+  const ua = navigator.userAgent;
+  // iPadOS reports itself as a Mac, so also check for touch.
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -48,11 +54,14 @@ export function InstallAppButton({
   const [ready, setReady] = useState(false);
   const [installed, setInstalled] = useState(false);
   const [help, setHelp] = useState(false);
+  // APKs only install on Android; iPhone / iPad can't use them.
+  const [ios, setIos] = useState(false);
 
   useEffect(() => {
     const sync = () => {
       setReady(Boolean(deferred));
       setInstalled(isStandalone());
+      setIos(isIos());
     };
     sync();
     listeners.add(sync);
@@ -61,7 +70,13 @@ export function InstallAppButton({
     };
   }, []);
 
-  if (installed) return null;
+  const apkLink = apk && !ios && (
+    <a href={apk} download className={cn("mt-2 block text-xs underline underline-offset-2 opacity-80 hover:opacity-100", apkClassName)}>
+      {installed ? "Download the Android app (APK)" : "Or download the Android app (APK)"}
+    </a>
+  );
+  // Already running as an installed web app: no install button, but keep the APK download.
+  if (installed) return apkLink || null;
 
   async function install() {
     if (deferred) {
@@ -79,11 +94,7 @@ export function InstallAppButton({
       <button type="button" onClick={install} className={cn("inline-flex items-center justify-center gap-2", className)} data-ready={ready || undefined}>
         <Download className="h-4 w-4" aria-hidden /> {label}
       </button>
-      {apk && (
-        <a href={apk} download className={cn("mt-2 block text-xs underline underline-offset-2 opacity-80 hover:opacity-100", apkClassName)}>
-          Or download the Android app (APK)
-        </a>
-      )}
+      {apkLink}
       {help && (
         <div role="dialog" aria-modal="true" aria-labelledby="install-title" className="fixed inset-0 z-[80] flex items-end justify-center bg-teal-950/60 p-4 sm:items-center" onClick={() => setHelp(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
