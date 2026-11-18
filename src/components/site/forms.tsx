@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { applyForMembership, submitInquiry, type FormState } from "@/app/actions/public";
-import { DEFAULT_MEMBER_CATEGORY, MEMBER_CATEGORIES } from "@/lib/membership";
+import { DEFAULT_MEMBER_CATEGORY, MAX_INTEREST_CHOICES, MEMBER_CATEGORIES } from "@/lib/membership";
 import type { SubmissionKind } from "@/lib/types";
 
 function Field({ label, name, error, required, children }: { label: string; name: string; error?: string; required?: boolean; children: React.ReactNode }) {
@@ -100,7 +100,10 @@ export function InquiryForm({ defaultKind = "contact", showKind = true }: { defa
 /** `interests`: the editable "Areas you'd like to contribute to" list (Admin → Members). */
 export function MembershipForm({ interests }: { interests: string[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(applyForMembership, null);
+  // At most MAX_INTEREST_CHOICES areas: the rest are disabled once that many are ticked.
+  const [chosen, setChosen] = useState<string[]>([]);
   if (state?.ok) return <Success message={state.message} />;
+  const full = chosen.length >= MAX_INTEREST_CHOICES;
   return (
     <form method="post" onSubmit={keepValuesOnSubmit(action)} className="relative space-y-6" noValidate>
       <Honeypot />
@@ -142,13 +145,33 @@ export function MembershipForm({ interests }: { interests: string[] }) {
       </fieldset>
 
       <fieldset>
-        <legend className="mb-3 font-display text-xl text-teal">Areas you’d like to contribute to</legend>
+        <legend className="mb-1 font-display text-xl text-teal">Areas you’d like to contribute to</legend>
+        <p id="interests-hint" className="mb-3 text-sm text-muted" aria-live="polite">
+          Choose up to {MAX_INTEREST_CHOICES}. {chosen.length > 0 && `${chosen.length} of ${MAX_INTEREST_CHOICES} chosen.`}
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
-          {interests.map((i) => (
-            <label key={i} className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm hover:bg-sand">
-              <input type="checkbox" name="interests" value={i} className="h-4 w-4 accent-teal" /> {i}
-            </label>
-          ))}
+          {interests.map((i) => {
+            const on = chosen.includes(i);
+            const locked = full && !on;
+            return (
+              <label
+                key={i}
+                className={`flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-sm ${locked ? "cursor-not-allowed opacity-50" : "hover:bg-sand"}`}
+              >
+                <input
+                  type="checkbox"
+                  name="interests"
+                  value={i}
+                  checked={on}
+                  disabled={locked}
+                  aria-describedby="interests-hint"
+                  onChange={(e) => setChosen((c) => (e.target.checked ? [...c, i].slice(0, MAX_INTEREST_CHOICES) : c.filter((x) => x !== i)))}
+                  className="h-4 w-4 accent-teal"
+                />{" "}
+                {i}
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 

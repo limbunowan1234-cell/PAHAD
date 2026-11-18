@@ -1,7 +1,7 @@
 "use server";
 
 import { getMembershipInterests } from "@/lib/data";
-import { memberCategoryFromForm } from "@/lib/membership";
+import { MAX_INTEREST_CHOICES, memberCategoryFromForm } from "@/lib/membership";
 import { db, newId } from "@/lib/db";
 import { appendToSheet, googleConfigured } from "@/lib/google";
 import type { SubmissionKind } from "@/lib/types";
@@ -66,7 +66,11 @@ export async function applyForMembership(_prev: FormState, fd: FormData): Promis
 
   // Keep only areas that are on the current list (Admin → Members), each once.
   const allowed = new Set(await getMembershipInterests());
-  const interests = [...new Set(fd.getAll("interests").map(String))].filter((i) => allowed.has(i)).join(", ").slice(0, 400);
+  const interests = [...new Set(fd.getAll("interests").map(String))]
+    .filter((i) => allowed.has(i))
+    .slice(0, MAX_INTEREST_CHOICES) // at most 3, even if the form is bypassed
+    .join(", ")
+    .slice(0, 400);
   // Category must be on the list; "Former DSSCOLONY member" is a separate checkbox.
   const category = memberCategoryFromForm(field(fd, "category", 60));
   const formerDsscolony = fd.get("former_dsscolony") === "on";
