@@ -6,7 +6,7 @@ import { Badge, Card, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
 import { getMembershipInterests } from "@/lib/data";
 import { db } from "@/lib/db";
-import { MAX_INTEREST_LENGTH, MAX_INTERESTS } from "@/lib/membership";
+import { isMemberCategory, MAX_INTEREST_LENGTH, MAX_INTERESTS, MEMBER_CATEGORIES, normalizeMemberCategory } from "@/lib/membership";
 import { can, inGeoScope, inScope, roleInfo, roleLabel, ROLES, type Structure } from "@/lib/permissions";
 import { loadStructure, pickableUnits } from "@/lib/structure";
 import { ScopePicker } from "@/components/admin/ScopePicker";
@@ -18,9 +18,11 @@ export const metadata = { title: "Members" };
 
 const TONE = { active: "green", applicant: "amber", inactive: "grey", rejected: "red" } as const;
 const LABEL: Record<MemberStatus, string> = { active: "Active", applicant: "Applicant", inactive: "Inactive", rejected: "Not approved" };
-const CATEGORIES = ["General", "Student / Youth", "Professional", "Former DSSCOLONY member", "Institution representative"];
 
 function MemberFields({ m, units }: { m?: Member; units: Unit[] }) {
+  // Old names are shown under their new ones; any other unknown value stays selectable so saving keeps it.
+  const current = m ? normalizeMemberCategory(m.category, m.former_dsscolony) : null;
+  const extra = current && !isMemberCategory(current.category) ? current.category : null;
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Full name *"><input name="name" required defaultValue={m?.name} className="field" /></Field>
@@ -29,10 +31,14 @@ function MemberFields({ m, units }: { m?: Member; units: Unit[] }) {
       <Field label="Town / area"><input name="area" defaultValue={m?.area} className="field" /></Field>
       <Field label="Occupation"><input name="occupation" defaultValue={m?.occupation} className="field" /></Field>
       <Field label="Category">
-        <select name="category" defaultValue={m?.category ?? "General"} className="field">
-          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+        <select name="category" defaultValue={current?.category ?? MEMBER_CATEGORIES[0]} className="field">
+          {MEMBER_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+          {extra && <option value={extra}>{extra} (older category)</option>}
         </select>
       </Field>
+      <label className="flex items-center gap-2 self-end pb-3 text-sm">
+        <input type="checkbox" name="former_dsscolony" defaultChecked={current?.formerDsscolony ?? false} className="h-4 w-4 accent-teal" /> Former DSSCOLONY member
+      </label>
       <ScopePicker units={units} mode="record" value={m} />
       <Field label="Address" className="sm:col-span-2"><input name="address" defaultValue={m?.address} className="field" /></Field>
       <Field label="Interests" className="sm:col-span-2"><input name="interests" defaultValue={m?.interests} className="field" placeholder="e.g. Research, Youth, Media" /></Field>
@@ -140,11 +146,12 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-ink">{m.name}</p>
                     <Badge tone={TONE[m.status]}>{LABEL[m.status]}</Badge>
+                    {normalizeMemberCategory(m.category, m.former_dsscolony).formerDsscolony && <Badge>Former DSSCOLONY</Badge>}
                     {m.member_no && <span className="text-xs font-mono text-muted">{m.member_no}</span>}
                     {m.email && admins.has(m.email.toLowerCase()) && <Badge tone="teal">Admin: {roleLabel(admins.get(m.email.toLowerCase())!.role)}</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-muted">
-                    {[m.email, m.phone, m.area, m.category, place(s, m)].filter(Boolean).join(" · ")}
+                    {[m.email, m.phone, m.area, normalizeMemberCategory(m.category).category, place(s, m)].filter(Boolean).join(" · ")}
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     {m.source === "website" ? "Applied on the website" : `Added by ${m.added_by}`} · {formatDate(m.created_at)}

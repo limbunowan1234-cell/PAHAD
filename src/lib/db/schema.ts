@@ -1,3 +1,4 @@
+import { LEGACY_MEMBER_CATEGORIES } from "../membership";
 import type { TableName } from "../types";
 
 type ColType = "text" | "bool" | "int";
@@ -16,7 +17,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   },
   members: {
     id: "text", member_no: "text", name: "text", email: "text", phone: "text", area: "text",
-    address: "text", occupation: "text", category: "text", interests: "text", status: "text",
+    address: "text", occupation: "text", category: "text", former_dsscolony: "bool", interests: "text", status: "text",
     source: "text", notes: "text", added_by: "text", directorate: "text", unit: "text", geo: "text", created_at: "text",
   },
   tasks: {
@@ -107,6 +108,10 @@ export function createTableSQL(): string[] {
     "CREATE UNIQUE INDEX IF NOT EXISTS posts_slug_idx ON posts (slug)",
     "CREATE INDEX IF NOT EXISTS posts_type_status_idx ON posts (type, status)",
     "CREATE INDEX IF NOT EXISTS members_status_idx ON members (status)",
+    // One-time, repeatable: old membership categories → the new list ("Former DSSCOLONY member" becomes the checkbox).
+    ...Object.entries(LEGACY_MEMBER_CATEGORIES).map(([from, to]) =>
+      `UPDATE members SET category = '${to.category}'${to.formerDsscolony ? ", former_dsscolony = true" : ""} WHERE category = '${from}'`,
+    ),
     "CREATE INDEX IF NOT EXISTS tasks_assignee_idx ON tasks (assigned_to)",
     "CREATE INDEX IF NOT EXISTS activity_created_idx ON activity (created_at)",
     "CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id)",

@@ -23,7 +23,7 @@ var SHEETS = {
   records: {
     name: 'PAHAD Website Records',
     tabs: {
-      'Membership applications': ['Received', 'Name', 'Email', 'Phone', 'Town / area', 'Address', 'Occupation', 'Category', 'Interests', 'Why join', 'GP / Ward'],
+      'Membership applications': ['Received', 'Name', 'Email', 'Phone', 'Town / area', 'Address', 'Occupation', 'Category', 'Interests', 'Why join', 'GP / Ward', 'Former DSSCOLONY'],
       'Messages': ['Received', 'Type', 'Name', 'Email', 'Phone', 'Organisation', 'Message'],
     },
   },
@@ -44,6 +44,13 @@ function setup() {
         sh.appendRow(def.tabs[name]);
         sh.setFrozenRows(1);
         sh.getRange(1, 1, 1, def.tabs[name].length).setFontWeight('bold');
+      } else {
+        // Columns added later (always at the end): fill in their headings. Only empty header cells are written.
+        var headers = def.tabs[name];
+        var row = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+        headers.forEach(function (h, i) {
+          if (!row[i]) sh.getRange(1, i + 1).setValue(h).setFontWeight('bold');
+        });
       }
     });
     var first = ss.getSheetByName('Sheet1');
