@@ -15,6 +15,8 @@ export const DEFAULT_MEMBERSHIP_INTERESTS: string[] = [
 ];
 
 export const MAX_INTERESTS = 20;
+/** How many areas one applicant may tick on the membership form. */
+export const MAX_INTEREST_CHOICES = 3;
 export const MAX_INTEREST_LENGTH = 80;
 
 /** The stored list, or null when the value is missing, not JSON, or not a non-empty list of strings. */
