@@ -49,6 +49,8 @@ export type User = {
   finance: string;
   /** YouTube Embed Submission Permission, granted or revoked by the President only. */
   can_submit_videos: boolean;
+  /** Allowed by the President to edit the website menu and pages (L1 always can). */
+  can_manage_menu: boolean;
   active: boolean;
   password_hash: string;
   created_at: string;
@@ -336,6 +338,24 @@ export type TeamMember = {
   created_at: string;
 };
 
+/** A page created from the dashboard (Admin → Menu & Pages), shown at /pages/<slug>. */
+export type CustomPage = {
+  id: string;
+  slug: string;
+  title: string;
+  /** Small label above the title, e.g. "Media". */
+  eyebrow: string;
+  intro: string;
+  body: string;
+  cover: string;
+  /** Also list published posts whose category / label matches this (e.g. "Feature"). */
+  collect: string;
+  status: "published" | "draft";
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /** Small key/value settings, e.g. "hero:about" → image URL. */
 export type Setting = {
   id: string;
@@ -443,5 +463,6 @@ export type Tables = {
   poll_receipts: PollReceipt;
   ballots: Ballot;
   password_resets: PasswordReset;
+  pages: CustomPage;
 };
 export type TableName = keyof Tables;

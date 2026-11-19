@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createAdmin, deleteAdmin, setFinanceAccess, updateAdmin } from "../../actions";
 import { setVideoPermission } from "../../video-actions";
+import { setMenuPermission } from "../../menu-actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { ScopePicker } from "@/components/admin/ScopePicker";
 import { Badge, Card, Field, Notice, PageHeader } from "@/components/admin/ui";
@@ -57,6 +58,7 @@ export default async function TeamPage() {
   const manage = can(user.role, "team.manage");
   const financeManage = can(user.role, "finance.access.manage");
   const videoPermission = can(user.role, "videos.permission");
+  const menuPermission = can(user.role, "menu.permission");
   const s = await loadStructure();
   const pickable = s.units.filter((u) => u.kind !== "designation" && u.kind !== "project");
   const designations = s.units.filter((u) => u.kind === "designation" && u.active).map((u) => u.name);
@@ -145,6 +147,7 @@ export default async function TeamPage() {
                     {!u.active && <Badge tone="red">Deactivated</Badge>}
                     {fin !== "none" && <Badge>Finance: {fin}</Badge>}
                     {u.can_submit_videos && !can(u.role, "videos.manage") && <Badge tone="green">YouTube submission: ON</Badge>}
+                    {u.can_manage_menu && !can(u.role, "menu.manage") && <Badge tone="green">Menu &amp; pages: ON</Badge>}
                   </div>
                   <p className="text-sm text-muted">{[u.email, u.designation, where].filter(Boolean).join(" · ")}</p>
                   <p className="text-xs text-muted">Last sign-in: {u.last_login ? formatDate(u.last_login, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "never"}</p>
@@ -152,6 +155,11 @@ export default async function TeamPage() {
                 {videoPermission && !can(u.role, "videos.manage") && u.active && (
                   <ActionButton variant={u.can_submit_videos ? "ghost" : "primary"} action={setVideoPermission.bind(null, u.id, !u.can_submit_videos)}>
                     {u.can_submit_videos ? "YouTube submission: turn OFF" : "YouTube submission: turn ON"}
+                  </ActionButton>
+                )}
+                {menuPermission && !can(u.role, "menu.manage") && u.active && (
+                  <ActionButton variant={u.can_manage_menu ? "ghost" : "primary"} action={setMenuPermission.bind(null, u.id, !u.can_manage_menu)}>
+                    {u.can_manage_menu ? "Menu & pages: turn OFF" : "Menu & pages: turn ON"}
                   </ActionButton>
                 )}
                 {manage && u.id !== user.id && !u.owner && (

@@ -2,48 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { cacheLife } from "next/cache";
 import { Mail, MessageCircle } from "lucide-react";
-import { getFilmsPage } from "@/lib/data";
-import { FILMS_PATH } from "@/lib/films";
-import { site } from "@/lib/site";
+import { getFilmsPage, getMenu } from "@/lib/data";
+import { visibleMenu } from "@/lib/menu";
+import { site, type NavGroup } from "@/lib/site";
 import { SocialIcon } from "./SocialIcon";
 import { InstallAppButton } from "./InstallApp";
 
-const columns = (filmsTitle: string) => [
-  {
-    title: "Organisation",
-    links: [
-      ["About PAHAD", "/about"],
-      ["Our Team", "/team"],
-      ["Vision & Mission", "/vision-mission"],
-      ["Values & Principles", "/values"],
-      ["Our Story", "/our-story"],
-      ["Governance", "/governance"],
-      ["Transparency", "/transparency"],
-      ["Voting results", "/results"],
-    ],
-  },
-  {
-    title: "Our Work",
-    links: [
-      ["Areas of Work", "/our-work"],
-      ["Programmes", "/programmes"],
-      ["Knowledge & Research", "/knowledge"],
-      ["News & Stories", "/news"],
-      ["Events", "/events"],
-      ["Gallery", "/gallery"],
-      [filmsTitle, FILMS_PATH],
-    ],
-  },
-  {
-    title: "Take Part",
-    links: [
-      ["Get Involved", "/get-involved"],
-      ["Membership", "/membership"],
-      ["Partners", "/partners"],
-      ["Contact", "/contact"],
-    ],
-  },
-];
+/**
+ * Footer columns follow the website menu (Admin → Menu & Pages): one column per section with links,
+ * then "More" for single-link sections such as Partners, plus Voting results.
+ */
+function columns(menu: NavGroup[]) {
+  const cols = menu.filter((g) => g.items?.length).map((g) => ({ title: g.label, links: g.items!.map((i) => [i.label, i.href] as const) }));
+  const more: (readonly [string, string])[] = menu.filter((g) => !g.items?.length).map((g) => [g.label, g.href] as const);
+  const all = JSON.stringify(menu);
+  if (!all.includes('"/results"')) more.push(["Voting results", "/results"]);
+  if (more.length) cols.push({ title: "More", links: more });
+  return cols;
+}
 
 async function CopyrightYear() {
   "use cache";
@@ -53,7 +29,7 @@ async function CopyrightYear() {
 
 export async function Footer() {
   // Cached (settings tag), so the footer stays part of the static page.
-  const { title: filmsTitle } = await getFilmsPage();
+  const [{ title: filmsTitle }, menu] = await Promise.all([getFilmsPage(), getMenu()]);
   return (
     <footer className="mt-auto bg-teal-950 text-white/85">
       <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.3fr_2fr]">
@@ -96,13 +72,13 @@ export async function Footer() {
           <InstallAppButton apk="/downloads/PAHAD.apk" className="mt-6 rounded-full bg-coral px-5 py-2.5 text-sm font-semibold text-ink hover:bg-peach" />
         </div>
 
-        <div className="grid gap-10 sm:grid-cols-3">
-          {columns(filmsTitle).map((col) => (
+        <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
+          {columns(visibleMenu(menu, filmsTitle)).map((col) => (
             <div key={col.title}>
               <h2 className="font-sans text-xs font-bold uppercase tracking-[0.16em] text-cream">{col.title}</h2>
               <ul className="mt-4 space-y-2.5 text-sm">
                 {col.links.map(([label, href]) => (
-                  <li key={href}>
+                  <li key={`${label}${href}`}>
                     <Link href={href} className="hover:text-white hover:underline">
                       {label}
                     </Link>

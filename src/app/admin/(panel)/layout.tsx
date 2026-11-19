@@ -3,7 +3,7 @@ import { logout } from "../actions";
 import { AdminNav, type NavKey } from "@/components/admin/client";
 import { requireUser } from "@/lib/auth/session";
 import { db, usingPostgres } from "@/lib/db";
-import { can, canView, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
+import { can, canManageMenu, canView, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
 import { phaseOf } from "@/lib/polls";
 import { usingCloudStorage } from "@/lib/storage";
 
@@ -20,6 +20,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
   { key: "videos", label: "Videos", href: "/admin/videos", perm: "dashboard.view" }, // President, or members the President allowed
   { key: "featured", label: "Featured", href: "/admin/featured", perm: "featured.manage" },
+  { key: "menu", label: "Menu & Pages", href: "/admin/menu", perm: "dashboard.view" }, // L1, or people the President allowed
   { key: "finance", label: "Finance", href: "/admin/finance", perm: "dashboard.view" },
   { key: "meetings", label: "GB Meetings", href: "/admin/meetings", perm: "gbm.view" },
   { key: "voting", label: "Voting", href: "/admin/voting", perm: "dashboard.view" },
@@ -58,7 +59,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
     voting: openBallots,
   };
   const showVideos = canView(user.role, "videos.manage") || user.can_submit_videos;
-  const items = NAV.filter((n) => canView(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
+  const items = NAV.filter((n) => canView(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos) && (n.key !== "menu" || canManageMenu(user) || user.role === "sysadmin")).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
 
   return (
     <div className="lg:flex">

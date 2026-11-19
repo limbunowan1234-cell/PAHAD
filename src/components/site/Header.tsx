@@ -6,18 +6,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogIn, Menu, Search, X } from "lucide-react";
-import { navWithFilms, site } from "@/lib/site";
+import { nav, site, type NavGroup } from "@/lib/site";
 import { InstallAppButton } from "./InstallApp";
 import { cn } from "@/lib/utils";
 
 /** Reads the URL for active-link styling; wrapped in Suspense by the layout. */
-export function Header({ filmsLabel }: { filmsLabel?: string }) {
-  return <HeaderView pathname={usePathname()} filmsLabel={filmsLabel} />;
+export function Header({ menu }: { menu?: NavGroup[] }) {
+  return <HeaderView pathname={usePathname()} menu={menu} />;
 }
 
-/** `filmsLabel`: the films page's current (possibly renamed) title, read on the server. */
-export function HeaderView({ pathname, filmsLabel }: { pathname: string; filmsLabel?: string }) {
-  const menu = navWithFilms(filmsLabel);
+/** `menu`: the website menu as arranged in Admin → Menu & Pages, read on the server. */
+export function HeaderView({ pathname, menu = nav }: { pathname: string; menu?: NavGroup[] }) {
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);

@@ -2,10 +2,11 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
 import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING, type FilmsPage } from "./films";
+import { DEFAULT_MENU, MENU_SETTING, sanitizeMenu, type MenuGroup } from "./menu";
 import { DEFAULT_MEMBERSHIP_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "./membership";
 import { onPage, todayInIndia } from "./placements";
 import { phaseOf, tally, type Tally } from "./polls";
-import type { FeaturedKind, PageKey, Poll, Post, PostType, Video } from "./types";
+import type { CustomPage, FeaturedKind, PageKey, Poll, Post, PostType, Video } from "./types";
 import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
 import { youTubeThumb, youTubeWatchUrl } from "./youtube";
 
@@ -217,4 +218,45 @@ export async function getPublicPollResults(): Promise<{ poll: Poll; tally: Tally
       return { poll, tally: { ...t, notVoted: [] } };
     }),
   );
+}
+
+// ------------------------------------------------------------------ menu and custom pages
+/** The website menu: the saved one (Admin → Menu & Pages), or the built-in default. */
+export async function getMenu(): Promise<MenuGroup[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+  const row = await db.get("settings", MENU_SETTING);
+  if (!row) return DEFAULT_MENU;
+  try {
+    return sanitizeMenu(JSON.parse(row.value)) ?? DEFAULT_MENU;
+  } catch {
+    return DEFAULT_MENU;
+  }
+}
+
+/** A published dashboard-made page, or null. */
+export async function getCustomPage(slug: string): Promise<CustomPage | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("pages");
+  const rows = await db.findBy("pages", "slug", slug);
+  return rows.find((p) => p.status === "published") ?? null;
+}
+
+/** Published public posts whose category / label matches (case-insensitive). */
+export async function getPostsByLabel(label: string): Promise<Post[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("posts");
+  const want = label.trim().toLowerCase();
+  if (!want) return [];
+  return (await getPublishedPosts()).filter((p) => p.type !== "document" && p.category.trim().toLowerCase() === want);
+}
+
+export async function getPublishedPageSlugs(): Promise<string[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("pages");
+  return (await db.all("pages")).filter((p) => p.status === "published").map((p) => p.slug);
 }

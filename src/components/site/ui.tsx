@@ -12,6 +12,7 @@ export async function PageHero({
   title,
   intro,
   page,
+  image: imageOverride,
   children,
 }: {
   eyebrow: string;
@@ -19,9 +20,11 @@ export async function PageHero({
   intro?: ReactNode;
   /** Which page this is; its banner photo can be changed by Super Admins. */
   page?: HeroKey;
+  /** A specific banner photo (used by pages made in Admin → Menu & Pages). */
+  image?: string;
   children?: ReactNode;
 }) {
-  const image = page ? (await getSiteImages())[heroSettingId(page)] || HERO_PAGES[page].fallback : "";
+  const image = imageOverride ? imageOverride : page ? (await getSiteImages())[heroSettingId(page)] || HERO_PAGES[page].fallback : "";
   return (
     <section className="relative isolate overflow-hidden bg-teal-900 text-white">
       {image && (
