@@ -1,5 +1,7 @@
 import "server-only";
 import { getMembersOnlyPosts, getPublishedPosts, getPublishedVideos } from "./data";
+import { getLivePlusPosts, isVerifiedPlus, toCard } from "./plus/posts";
+import { PLUS_HUBS, type PlusHub } from "./plus/config";
 import type { Post } from "./types";
 import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
 
@@ -32,6 +34,7 @@ const PAGES: { title: string; href: string; text: string }[] = [
   { title: "Live Events", href: "/events", text: "Community conversations, workshops, meetings and upcoming events." },
   { title: "Gallery", href: "/gallery", text: "Photographs and moments from PAHAD's journey." },
   { title: "Local Films & Documentaries", href: "/films", text: "Films, documentaries and videos from the Darjeeling hills, the Terai, the Dooars and the Himalaya." },
+  { title: "PAHAD+ app", href: "/plus", text: "PAHAD+ community app: events, places to roam, local business, cafés, alerts, jobs and opportunities in Darjeeling, Kalimpong, Siliguri and Sikkim." },
   { title: "Partners", href: "/partners", text: "Media and news partners Gorkha TV and Khabar Darjeeling; collaborate with PAHAD." },
   { title: "Get Involved", href: "/get-involved", text: "Volunteer, collaborate, share an idea or contribute knowledge." },
   { title: "Membership", href: "/membership", text: "Become a member of PAHAD: apply for membership, join." },
@@ -85,10 +88,11 @@ function postResult(p: Post, words: string[], membersOnly: boolean): SearchResul
 export async function searchSite(query: string, { signedIn }: { signedIn: boolean }): Promise<SearchResult[]> {
   const words = norm(query).split(/\s+/).filter((w) => w.length > 1).slice(0, 8);
   if (words.length === 0) return [];
-  const [publicPosts, privatePosts, videos] = await Promise.all([
+  const [publicPosts, privatePosts, videos, plusPosts] = await Promise.all([
     getPublishedPosts(),
     signedIn ? getMembersOnlyPosts() : Promise.resolve([]),
     getPublishedVideos(),
+    getLivePlusPosts(),
   ]);
   const results = [
     ...PAGES.map((pg) => ({ title: pg.title, href: pg.href, kind: "Page", snippet: pg.text, membersOnly: false, score: score(words, [[norm(pg.title), 6], [norm(pg.text), 2]]) })),
@@ -102,6 +106,15 @@ export async function searchSite(query: string, { signedIn }: { signedIn: boolea
       snippet: v.description,
       membersOnly: false,
       score: score(words, [[norm(v.title), 6], [norm(v.description), 2]]),
+    })),
+    // PAHAD+: verified posts only, and only their public fields.
+    ...plusPosts.filter(isVerifiedPlus).map(toCard).map((c) => ({
+      title: c.title,
+      href: c.href,
+      kind: `PAHAD+ ${PLUS_HUBS[c.hub as PlusHub].label}`,
+      snippet: c.summary,
+      membersOnly: false,
+      score: score(words, [[norm(c.title), 6], [norm(`${c.summary} ${c.locality} ${c.region}`), 3], [norm(c.body), 1]]),
     })),
   ];
   return results

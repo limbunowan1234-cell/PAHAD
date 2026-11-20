@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { issueCircular } from "../../gbm-actions";
-import { AdminForm, Disclosure } from "@/components/admin/client";
+import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
+import { makeCircularInternal, requestCircularPublic } from "../../plus-actions";
+import { canApprovePublic } from "@/lib/plus/access";
 import { Badge, Empty, Field, PageHeader } from "@/components/admin/ui";
 import { RichText } from "@/components/site/posts";
 import { requireUser } from "@/lib/auth/session";
@@ -31,11 +33,14 @@ export default async function CircularsPage() {
   if (!can(user.role, "circulars.view")) redirect("/admin");
   const s = await loadStructure();
   const member = (await db.findBy("members", "email", user.email.toLowerCase()))[0];
+  const issuer = can(user.role, "circulars.issue");
+  const approver = canApprovePublic(user);
+  const publicPending = new Set((await db.findBy("approvals", "status", "pending")).filter((a) => a.entity === "circular").map((a) => a.entity_id));
   const circulars = (await db.all("circulars")).filter((c) => canSeeCircular(s, user, member?.geo ?? "", c));
 
   return (
     <>
-      <PageHeader title="Circulars" description="Official circulars and notices. Each one is numbered and kept as a permanent record." />
+      <PageHeader title="Circulars" description="Official circulars and notices. Each one is numbered and kept as a permanent record. Circulars are internal; one approved as public also appears in the PAHAD+ app under Policy & Assembly Summaries." />
       {can(user.role, "circulars.issue") && (
         <div className="mb-8">
           <Disclosure summary="Issue a circular">
@@ -71,10 +76,22 @@ export default async function CircularsPage() {
                 <span className="font-mono text-sm font-semibold text-teal">{c.number}</span>
                 <Badge>{AUDIENCE[c.audience]}</Badge>
                 {c.geo && <Badge tone="amber">{s.byId.get(c.geo)?.name ?? "Area"}</Badge>}
+                {c.visibility === "public" ? <Badge tone="teal">Public · in PAHAD+</Badge> : <Badge tone="grey">Internal</Badge>}
+                {c.visibility !== "public" && publicPending.has(c.id) && <Badge tone="amber">Public requested</Badge>}
                 <span className="text-xs text-muted">{formatDate(c.created_at)} · {c.issued_by_name}</span>
               </div>
               <h2 className="mt-2 font-display text-xl text-teal">{c.title}</h2>
               <div className="mt-2 text-sm"><RichText text={c.body} /></div>
+              {issuer && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {c.visibility !== "public" && !publicPending.has(c.id) && (
+                    <ActionButton confirm={approver ? `Make circular ${c.number} public? It will show in PAHAD+ under Policy & Assembly Summaries.` : undefined} action={requestCircularPublic.bind(null, c.id)}>
+                      {approver ? "Make public (PAHAD+)" : "Request public (PAHAD+)"}
+                    </ActionButton>
+                  )}
+                  {c.visibility === "public" && <ActionButton action={makeCircularInternal.bind(null, c.id)}>Make internal</ActionButton>}
+                </div>
+              )}
             </li>
           ))}
         </ul>

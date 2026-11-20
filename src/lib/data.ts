@@ -12,8 +12,12 @@ import { youTubeThumb, youTubeWatchUrl } from "./youtube";
 /** settings row: "off" turns the whole Featured section off; anything else is on. */
 export const FEATURED_SWITCH = "featured:enabled";
 
-/** Members Only posts never leave the server for signed-out visitors: every public list filters them out here. */
-export const isPublicPost = (p: Pick<Post, "visibility">) => p.visibility !== "members";
+/**
+ * Only "public" (or "" on older posts) is public. Members Only posts never leave the server for signed-out
+ * visitors, and Internal posts never reach the public site at all: every public list filters them out here.
+ */
+export const isPublicPost = (p: Pick<Post, "visibility">) => p.visibility === "public" || !p.visibility;
+export const isMembersPost = (p: Pick<Post, "visibility">) => p.visibility === "members";
 
 // Public, cached reads. Admin actions call updateTag(...) so changes show at once.
 
@@ -48,7 +52,7 @@ export async function getMembersOnlyPosts(type?: PostType): Promise<Post[]> {
   cacheLife("minutes");
   cacheTag("posts");
   return (await db.all("posts"))
-    .filter((p) => p.status === "published" && !isPublicPost(p) && (!type || p.type === type) && !p.audience)
+    .filter((p) => p.status === "published" && isMembersPost(p) && (!type || p.type === type) && !p.audience)
     .sort((a, b) => (b.published_at || b.created_at).localeCompare(a.published_at || a.created_at));
 }
 
@@ -62,13 +66,13 @@ export async function getTrainingPosts(): Promise<Post[]> {
     .sort((a, b) => (b.published_at || b.created_at).localeCompare(a.published_at || a.created_at));
 }
 
-/** A published post of any visibility. Callers must gate Members Only content (see PostDetail). */
+/** A published public or Members Only post (never Internal). Callers must gate Members Only content (see PostDetail). */
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   "use cache";
   cacheLife("minutes");
   cacheTag("posts");
   const rows = await db.findBy("posts", "slug", slug);
-  return rows.find((p) => p.status === "published") ?? null;
+  return rows.find((p) => p.status === "published" && p.visibility !== "internal") ?? null;
 }
 
 export async function getPartners() {
@@ -184,7 +188,8 @@ export async function getPageFeatured(page: PageKey): Promise<{ public: Featured
       const p = posts.find((x) => x.id === f.ref_id && x.status === "published");
       if (!p || p.type === "document" || p.audience) continue;
       const card = { ...base, label: POST_TYPE_LABEL[p.type], title: f.title || p.title, text: f.text || p.excerpt, image: p.cover, href: `${POST_TYPE_PATH[p.type]}/${p.slug}` };
-      (isPublicPost(p) ? out.public : out.members).push(card);
+      if (isPublicPost(p)) out.public.push(card);
+      else if (isMembersPost(p)) out.members.push(card); // Internal posts are never featured on the website
     } else if (f.kind === "video") {
       const v = videos.find((x) => x.id === f.ref_id && x.status === "approved" && x.visible);
       if (!v) continue;

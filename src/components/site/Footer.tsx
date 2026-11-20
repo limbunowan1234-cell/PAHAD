@@ -39,6 +39,7 @@ const columns = (filmsTitle: string) => [
     links: [
       ["Get Involved", "/get-involved"],
       ["Membership", "/membership"],
+      ["PAHAD+ app", "/plus"],
       ["Partners", "/partners"],
       ["Contact", "/contact"],
     ],

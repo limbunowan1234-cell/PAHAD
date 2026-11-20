@@ -7,12 +7,12 @@ type ColType = "text" | "bool" | "int";
 export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   users: {
     id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text", unit: "text", geo: "text",
-    owner: "bool", finance: "text", can_submit_videos: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
+    owner: "bool", finance: "text", can_submit_videos: "bool", can_verify_plus: "bool", plus_region: "text", can_approve_public: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
     cover: "text", category: "text", event_date: "text", location: "text", file_url: "text", form_url: "text", directorate: "text", unit: "text",
-    status: "text", visibility: "text", audience: "text", author_id: "text", author_name: "text", created_at: "text",
+    status: "text", visibility: "text", plus_approved: "bool", audience: "text", author_id: "text", author_name: "text", created_at: "text",
     updated_at: "text", published_at: "text",
   },
   members: {
@@ -35,7 +35,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     decided_by_name: "text", decided_at: "text", created_by_name: "text", created_at: "text",
   },
   circulars: {
-    id: "text", number: "text", title: "text", body: "text", audience: "text", geo: "text", meeting_id: "text",
+    id: "text", number: "text", title: "text", body: "text", audience: "text", visibility: "text", geo: "text", meeting_id: "text",
     issued_by: "text", issued_by_name: "text", created_at: "text",
   },
   submissions: {
@@ -81,6 +81,25 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   poll_receipts: { id: "text", poll_id: "text", user_id: "text", created_at: "text" },
   ballots: { id: "text", poll_id: "text", option_id: "text", created_at: "text" },
   password_resets: { id: "text", user_id: "text", expires_at: "text", used: "bool", created_at: "text" },
+  plus_users: {
+    id: "text", email: "text", name: "text", phone: "text", account_type: "text", password_hash: "text", email_verified: "bool",
+    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text",
+  },
+  plus_tokens: { id: "text", user_id: "text", kind: "text", expires_at: "text", used: "bool", created_at: "text" },
+  plus_posts: {
+    id: "text", hub: "text", brief_type: "text", kind: "text", stage: "text", region: "text", locality: "text", title: "text",
+    summary: "text", body: "text", image: "text", youtube_id: "text", starts_at: "text", ends_at: "text", venue: "text",
+    organiser: "text", contact_phone: "text", contact_whatsapp: "text", contact_email: "text", address: "text", website: "text",
+    link: "text", map_link: "text", best_season: "text", hours: "text", valid_until: "text", deadline: "text", status: "text",
+    flags: "int", verified_by_name: "text", verified_at: "text", reject_reason: "text", author_id: "text", author_name: "text",
+    author_type: "text", created_at: "text", updated_at: "text",
+  },
+  plus_flags: { id: "text", post_id: "text", user_id: "text", reason: "text", created_at: "text" },
+  plus_blocks: { id: "text", blocker_id: "text", blocked_id: "text", created_at: "text" },
+  approvals: {
+    id: "text", kind: "text", entity: "text", entity_id: "text", title: "text", target: "text", status: "text", requested_by: "text",
+    requested_by_name: "text", decided_by_name: "text", note: "text", created_at: "text", decided_at: "text",
+  },
   featured: {
     id: "text", kind: "text", ref_id: "text", title: "text", text: "text", link: "text", image: "text", pages: "text",
     active: "bool", sort: "int", starts_on: "text", ends_on: "text", created_by_name: "text", created_at: "text", updated_at: "text",
@@ -121,6 +140,11 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS poll_receipts_poll_idx ON poll_receipts (poll_id)",
     "CREATE INDEX IF NOT EXISTS ballots_poll_idx ON ballots (poll_id)",
     "CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS plus_users_email_idx ON plus_users (lower(email))",
+    "CREATE INDEX IF NOT EXISTS plus_posts_status_idx ON plus_posts (status)",
+    "CREATE INDEX IF NOT EXISTS plus_posts_author_idx ON plus_posts (author_id)",
+    "CREATE INDEX IF NOT EXISTS plus_flags_post_idx ON plus_flags (post_id)",
+    "CREATE INDEX IF NOT EXISTS approvals_status_idx ON approvals (status)",
     // One vote per member per poll, enforced by the database (the receipt id is poll:user too).
     "CREATE UNIQUE INDEX IF NOT EXISTS poll_receipts_once_idx ON poll_receipts (poll_id, user_id)",
   );

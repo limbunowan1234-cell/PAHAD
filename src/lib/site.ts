@@ -55,6 +55,7 @@ export const nav: NavGroup[] = [
       { label: "Live Events", href: "/events", description: "What’s on now and coming up" },
       { label: "Gallery", href: "/gallery", description: "Moments from our journey" },
       { label: "Local Films & Documentaries", href: "/films", description: "Films and documentaries from the hills" },
+      { label: "PAHAD+ app", href: "/plus", description: "Events, places, local business and briefs from the hills" },
     ],
   },
   { label: "Partners", href: "/partners" },

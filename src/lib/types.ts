@@ -49,6 +49,11 @@ export type User = {
   finance: string;
   /** YouTube Embed Submission Permission, granted or revoked by the President only. */
   can_submit_videos: boolean;
+  /** PAHAD+ verifier, granted by the President. plus_region "" = every region. */
+  can_verify_plus: boolean;
+  plus_region: string;
+  /** May approve internal → public and organisation posts for PAHAD+, granted by the President. */
+  can_approve_public: boolean;
   active: boolean;
   password_hash: string;
   created_at: string;
@@ -58,8 +63,8 @@ export type PublicUser = Omit<User, "password_hash">;
 
 export type PostType = "news" | "event" | "programme" | "resource" | "document" | "training";
 export type PostStatus = "draft" | "pending" | "published";
-/** Who can read a published post. "" (older posts) counts as public. */
-export type PostVisibility = "public" | "members";
+/** Who can read a published post. "" (older posts) counts as public. "internal" = admins only, inside the dashboard. */
+export type PostVisibility = "public" | "members" | "internal";
 
 export type Post = {
   id: string;
@@ -82,6 +87,8 @@ export type Post = {
   status: PostStatus;
   /** Public, or Members Only (signed-in accounts). */
   visibility: PostVisibility | "";
+  /** Shown in PAHAD+ (the PAHAD tab and feed): set only by the President or an assigned approver. */
+  plus_approved: boolean;
   /** Training Material only: "" = all members, "executive" = L1–L2, "governing_body" = L1. */
   audience: string;
   author_id: string;
@@ -178,6 +185,8 @@ export type Circular = {
   title: string;
   body: string;
   audience: CircularAudience;
+  /** "" = internal (dashboard only). "public" once the President or an assigned approver approved it. */
+  visibility: string;
   /** Optional geographical unit: only people inside it receive the circular. */
   geo: string;
   /** Meeting this notice is about, if any. */
@@ -285,6 +294,93 @@ export type Featured = {
  * so the link itself is never stored. Valid for 30 minutes, once.
  */
 export type PasswordReset = { id: string; user_id: string; expires_at: string; used: boolean; created_at: string };
+
+// ------------------------------------------------------------------ PAHAD+ (public app, /plus)
+/** A PAHAD Plus User: a public app user, never an organisational member or a dashboard account. */
+export type PlusUser = {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  account_type: string;
+  password_hash: string;
+  email_verified: boolean;
+  terms_accepted_at: string;
+  status: "active" | "suspended";
+  created_at: string;
+  last_login: string;
+};
+/** One-time link for a PP user. id = SHA-256 of the token in the link. */
+export type PlusToken = { id: string; user_id: string; kind: "verify" | "reset"; expires_at: string; used: boolean; created_at: string };
+export type PlusPost = {
+  id: string;
+  hub: string;
+  brief_type: string;
+  /** Roam: kind of place. */
+  kind: string;
+  /** Roam: "open" or "developing". */
+  stage: string;
+  region: string;
+  locality: string;
+  title: string;
+  summary: string;
+  body: string;
+  image: string;
+  youtube_id: string;
+  starts_at: string;
+  ends_at: string;
+  // Locked until verified ↓
+  venue: string;
+  organiser: string;
+  contact_phone: string;
+  contact_whatsapp: string;
+  contact_email: string;
+  address: string;
+  website: string;
+  /** Register / apply / source link. */
+  link: string;
+  map_link: string;
+  // ↑
+  best_season: string;
+  hours: string;
+  valid_until: string;
+  deadline: string;
+  status: string;
+  flags: number;
+  verified_by_name: string;
+  verified_at: string;
+  reject_reason: string;
+  author_id: string;
+  author_name: string;
+  author_type: string;
+  created_at: string;
+  updated_at: string;
+};
+/** One report per PP user per post: id = `${post_id}:${user_id}`. */
+export type PlusFlag = { id: string; post_id: string; user_id: string; reason: string; created_at: string };
+/** id = `${blocker_id}:${blocked_id}`. */
+export type PlusBlock = { id: string; blocker_id: string; blocked_id: string; created_at: string };
+
+/**
+ * Requests the President (or an approver he assigns) must decide:
+ *  make_public: an internal post or circular → public; plus_feature: a PAHAD post → shown in PAHAD+.
+ */
+export type Approval = {
+  id: string;
+  kind: "make_public" | "plus_feature";
+  entity: "post" | "circular";
+  entity_id: string;
+  title: string;
+  /** make_public on a post: the visibility asked for ("public" or "members"). */
+  target: string;
+  status: "pending" | "approved" | "rejected";
+  requested_by: string;
+  requested_by_name: string;
+  decided_by_name: string;
+  note: string;
+  created_at: string;
+  decided_at: string;
+};
 
 /** Voting categories: Governing Body (L1), Executive Body (L2) and General Assembly. */
 export type PollCategory = "gb" | "eb" | "ga";
@@ -443,5 +539,11 @@ export type Tables = {
   poll_receipts: PollReceipt;
   ballots: Ballot;
   password_resets: PasswordReset;
+  plus_users: PlusUser;
+  plus_tokens: PlusToken;
+  plus_posts: PlusPost;
+  plus_flags: PlusFlag;
+  plus_blocks: PlusBlock;
+  approvals: Approval;
 };
 export type TableName = keyof Tables;

@@ -29,9 +29,12 @@ export function PostEditor({
   canPublish,
   units,
   videoHref,
+  canApprovePublic = false,
 }: {
   post?: Post;
   canPublish: boolean;
+  /** President or an assigned approver: can move items out of Internal directly. */
+  canApprovePublic?: boolean;
   units: Unit[];
   /** Where "Video (YouTube)" leads. Only set for new content by people who can add or submit videos. */
   videoHref?: string;
@@ -101,11 +104,15 @@ export function PostEditor({
           {type !== "document" && type !== "training" && (
             <label className="block">
               <span className="label">Privacy</span>
-              <select name="visibility" defaultValue={post?.visibility === "members" ? "members" : "public"} className="field">
-                <option value="public">Public: anyone can read it</option>
+              <select name="visibility" defaultValue={post?.visibility === "members" || post?.visibility === "internal" ? post.visibility : "public"} className="field">
+                <option value="public">Public: pahad.org and the PAHAD tab of PAHAD+</option>
                 <option value="members">Members only: signed-in members</option>
+                <option value="internal">Internal: admins only (dashboard)</option>
               </select>
-              <span className="mt-1 block text-xs text-muted">Members-only posts are hidden from search engines, search results and public lists.</span>
+              <span className="mt-1 block text-xs text-muted">
+                Members-only and internal posts are hidden from search engines, search results and public lists.
+                {post?.visibility === "internal" && !canApprovePublic && " Moving an internal post out of Internal needs the President's approval: your change is sent to Approvals."}
+              </span>
             </label>
           )}
           <div className="[&>div]:!grid-cols-1">

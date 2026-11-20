@@ -12,10 +12,12 @@ import { appendToSheet } from "@/lib/google";
 import { storeUpload } from "@/lib/storage";
 import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
 import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
-import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
+import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostVisibility, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 import { interestsFromText, MAX_INTEREST_LENGTH, MAX_INTERESTS, memberCategoryFromForm, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "@/lib/membership";
 import { trainingAudience } from "@/lib/training";
+import { canApprovePublic } from "@/lib/plus/access";
+import { openApprovalRequest } from "@/lib/plus/approvals";
 
 export type { ActionState };
 
@@ -95,7 +97,12 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
 
     // Privacy: Public by default. Documents are plain file links on /transparency, so they are always public.
     // Training Material is always Members Only, limited further to the levels chosen.
-    const visibility = type === "training" ? "members" : type !== "document" && str(fd, "visibility", 10) === "members" ? "members" : "public";
+    // "Internal" is for admins only. Moving an item out of internal needs the President or an assigned approver:
+    // anyone else's change is held as an approval request and the item stays internal until it is decided.
+    const asked = str(fd, "visibility", 10);
+    const chosen: PostVisibility = type === "training" ? "members" : type === "document" ? "public" : asked === "members" ? "members" : asked === "internal" ? "internal" : "public";
+    const leavingInternal = existing?.visibility === "internal" && chosen !== "internal" && !canApprovePublic(user);
+    const visibility: PostVisibility = leavingInternal ? "internal" : chosen;
     const audience = type === "training" ? trainingAudience(str(fd, "audience", 20)) : "";
 
     const data: Partial<Post> = {
@@ -107,6 +114,8 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
       location: str(fd, "location", 160),
       updated_at: now(),
     };
+    // PAHAD+ shows public content only.
+    if (visibility !== "public") data.plus_approved = false;
     if (status === "published" && existing?.status !== "published") data.published_at = now();
 
     if (existing) {
@@ -116,12 +125,17 @@ export async function savePost(_prev: ActionState, fd: FormData): Promise<Action
         after: { title, status, visibility, excerpt: data.excerpt },
       });
       await notifyAuthor(user, existing, "edited");
+      if (leavingInternal && (await openApprovalRequest(user, { kind: "make_public", entity: "post", entity_id: existing.id, title, target: chosen }))) {
+        await log(user, "requested", "make public", existing.id, `${title}: asked to make ${chosen === "members" ? "members only" : "public"}`);
+      }
     } else {
-      const row = { ...data, id: newId(), author_id: user.id, author_name: user.name, created_at: now(), published_at: data.published_at ?? "" } as Post;
+      const row = { ...data, id: newId(), author_id: user.id, author_name: user.name, created_at: now(), published_at: data.published_at ?? "", plus_approved: false } as Post;
       await db.insert("posts", row);
-      await log(user, "created", "content", row.id, `${title} (${status}${visibility === "members" ? ", members only" : ""})`);
+      await log(user, "created", "content", row.id, `${title} (${status}${visibility === "members" ? ", members only" : visibility === "internal" ? ", internal" : ""})`);
     }
     updateTag("posts");
+    if (existing?.plus_approved) updateTag("plus");
+    if (leavingInternal) return "Saved. It stays Internal until the President (or an assigned approver) approves the change; the request is in Approvals.";
     return status === "pending" ? "Saved and sent for review. It will appear on the website once it is approved." : status === "published" ? "Published." : "Draft saved.";
   });
   if (result?.ok) redirect(`/admin/content?saved=${encodeURIComponent(result.message)}`);
@@ -471,7 +485,7 @@ async function createAdminAccount(
   if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
   const id = newId();
   await db.insert("users", {
-    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: role === "sysadmin" ? "none" : "", can_submit_videos: false, active: true,
+    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: role === "sysadmin" ? "none" : "", can_submit_videos: false, can_verify_plus: false, plus_region: "", can_approve_public: false, active: true,
     password_hash: hashPassword(password), created_at: now(), last_login: null,
   });
   await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}${source}`, { after: { name, email, role, directorate, unit, geo } });
