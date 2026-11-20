@@ -311,9 +311,11 @@ export type PlusUser = {
   status: "active" | "suspended";
   created_at: string;
   last_login: string;
+  /** Linked PAHAD membership (members.id), confirmed by email. Only shows a "PAHAD member" badge: no member access. */
+  member_id: string;
 };
-/** One-time link for a PP user. id = SHA-256 of the token in the link. */
-export type PlusToken = { id: string; user_id: string; kind: "verify" | "reset"; expires_at: string; used: boolean; created_at: string };
+/** One-time link for a PP user. id = SHA-256 of the token in the link. data: e.g. the member id for "link". */
+export type PlusToken = { id: string; user_id: string; kind: "verify" | "reset" | "link"; expires_at: string; used: boolean; created_at: string; data: string };
 export type PlusPost = {
   id: string;
   hub: string;
@@ -355,9 +357,36 @@ export type PlusPost = {
   author_id: string;
   author_name: string;
   author_type: string;
+  /** The poster has a linked PAHAD membership. */
+  author_member: boolean;
+  /** Events: free E-Passes offered by the organiser; capacity 0 = no limit. */
+  pass_enabled: boolean;
+  pass_capacity: number;
+  likes: number;
   created_at: string;
   updated_at: string;
 };
+/**
+ * A free E-Pass for an event. id = `${post_id}:${user_id}` (one per person per event);
+ * code = the random code in the QR, shown at the gate.
+ */
+export type PlusPass = {
+  id: string;
+  code: string;
+  post_id: string;
+  user_id: string;
+  holder_name: string;
+  status: "active" | "cancelled" | "checked_in";
+  checked_in_at: string;
+  checked_in_by: string;
+  reminded: boolean;
+  created_at: string;
+};
+/** id = `${post_id}:${user_id}`. */
+export type PlusLike = { id: string; post_id: string; user_id: string; created_at: string };
+export type PlusSave = { id: string; post_id: string; user_id: string; created_at: string };
+/** A phone/browser that asked for PAHAD+ notifications. id = SHA-256 of the endpoint. regions: comma-separated, "" = none. */
+export type PlusPushSub = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string; regions: string; created_at: string };
 /** One report per PP user per post: id = `${post_id}:${user_id}`. */
 export type PlusFlag = { id: string; post_id: string; user_id: string; reason: string; created_at: string };
 /** id = `${blocker_id}:${blocked_id}`. */
@@ -578,6 +607,10 @@ export type Tables = {
   plus_flags: PlusFlag;
   plus_blocks: PlusBlock;
   approvals: Approval;
+  plus_passes: PlusPass;
+  plus_likes: PlusLike;
+  plus_saves: PlusSave;
+  plus_push: PlusPushSub;
   pages: CustomPage;
   translations: Translation;
 };

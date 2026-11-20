@@ -26,6 +26,7 @@ export default function DeleteAccountPage() {
       <ul>
         <li>Your account: name, email address, phone number and password, straight away.</li>
         <li>Your sign-in and email links, the reports you made, and the accounts you blocked.</li>
+        <li>Your E-Passes, likes, saved posts, notification subscriptions and any PAHAD membership link.</li>
         <li>Your posts are taken off PAHAD+ at once, and their phone, WhatsApp, email and address details are erased.</li>
       </ul>
       <h2>What is kept</h2>

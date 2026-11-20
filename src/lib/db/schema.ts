@@ -83,17 +83,24 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   password_resets: { id: "text", user_id: "text", expires_at: "text", used: "bool", created_at: "text" },
   plus_users: {
     id: "text", email: "text", name: "text", phone: "text", account_type: "text", password_hash: "text", email_verified: "bool",
-    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text",
+    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text", member_id: "text",
   },
-  plus_tokens: { id: "text", user_id: "text", kind: "text", expires_at: "text", used: "bool", created_at: "text" },
+  plus_tokens: { id: "text", user_id: "text", kind: "text", expires_at: "text", used: "bool", created_at: "text", data: "text" },
   plus_posts: {
     id: "text", hub: "text", brief_type: "text", kind: "text", stage: "text", region: "text", locality: "text", title: "text",
     summary: "text", body: "text", image: "text", youtube_id: "text", starts_at: "text", ends_at: "text", venue: "text",
     organiser: "text", contact_phone: "text", contact_whatsapp: "text", contact_email: "text", address: "text", website: "text",
     link: "text", map_link: "text", best_season: "text", hours: "text", valid_until: "text", deadline: "text", status: "text",
     flags: "int", verified_by_name: "text", verified_at: "text", reject_reason: "text", author_id: "text", author_name: "text",
-    author_type: "text", created_at: "text", updated_at: "text",
+    author_type: "text", author_member: "bool", pass_enabled: "bool", pass_capacity: "int", likes: "int", created_at: "text", updated_at: "text",
   },
+  plus_passes: {
+    id: "text", code: "text", post_id: "text", user_id: "text", holder_name: "text", status: "text", checked_in_at: "text",
+    checked_in_by: "text", reminded: "bool", created_at: "text",
+  },
+  plus_likes: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
+  plus_saves: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
+  plus_push: { id: "text", user_id: "text", endpoint: "text", p256dh: "text", auth: "text", regions: "text", created_at: "text" },
   plus_flags: { id: "text", post_id: "text", user_id: "text", reason: "text", created_at: "text" },
   plus_blocks: { id: "text", blocker_id: "text", blocked_id: "text", created_at: "text" },
   approvals: {
@@ -153,6 +160,12 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS plus_posts_author_idx ON plus_posts (author_id)",
     "CREATE INDEX IF NOT EXISTS plus_flags_post_idx ON plus_flags (post_id)",
     "CREATE INDEX IF NOT EXISTS approvals_status_idx ON approvals (status)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS plus_passes_code_idx ON plus_passes (code)",
+    "CREATE INDEX IF NOT EXISTS plus_passes_post_idx ON plus_passes (post_id)",
+    "CREATE INDEX IF NOT EXISTS plus_passes_user_idx ON plus_passes (user_id)",
+    "CREATE INDEX IF NOT EXISTS plus_likes_post_idx ON plus_likes (post_id)",
+    "CREATE INDEX IF NOT EXISTS plus_saves_user_idx ON plus_saves (user_id)",
+    "CREATE INDEX IF NOT EXISTS plus_push_user_idx ON plus_push (user_id)",
     // One vote per member per poll, enforced by the database (the receipt id is poll:user too).
     "CREATE UNIQUE INDEX IF NOT EXISTS poll_receipts_once_idx ON poll_receipts (poll_id, user_id)",
   );

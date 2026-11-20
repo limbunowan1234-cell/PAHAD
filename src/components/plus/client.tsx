@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { Compass, Home, Loader2, PlusCircle, UserRound } from "lucide-react";
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
+import { Bell, BellOff, Bookmark, Camera, Compass, Heart, Home, Loader2, PlusCircle, UserRound } from "lucide-react";
 import type { ActionState } from "@/lib/admin-helpers";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import { BRIEF_TYPES, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, ROAM_KINDS, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "@/lib/plus/config";
@@ -207,6 +207,17 @@ export function NewPostForm({
           <F label="Ends"><input type="datetime-local" name="ends_at" className="field" /></F>
         </div>
       )}
+      {hub === "events" && (
+        <fieldset className="space-y-3 rounded-2xl bg-sand p-4">
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="pass_enabled" className="mt-1 h-4 w-4 accent-teal" />
+            <span><strong>Offer free E-Passes</strong> with a QR code. People get them once PAHAD verifies the event; you check them in at the gate from PAHAD+.</span>
+          </label>
+          <F label="How many E-Passes?" hint="Leave empty for no limit.">
+            <input type="number" name="pass_capacity" min={0} max={100000} className="field" />
+          </F>
+        </fieldset>
+      )}
       {hub === "roam" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <F label="Kind of place *">
@@ -268,5 +279,210 @@ export function NewPostForm({
         </div>
       </fieldset>
     </PlusForm>
+  );
+}
+
+// ------------------------------------------------------------------ likes and saves
+type Toggle = (postId: string) => Promise<{ ok: boolean; message: string; on?: boolean; count?: number }>;
+
+export function LikeSaveBar({
+  postId, likes, liked, saved, signedIn, like, save,
+}: { postId: string; likes: number; liked: boolean; saved: boolean; signedIn: boolean; like: Toggle; save: Toggle }) {
+  const [state, setState] = useState({ likes, liked, saved });
+  const [msg, setMsg] = useState("");
+  const [pending, start] = useTransition();
+  const run = (fn: Toggle, kind: "like" | "save") =>
+    start(async () => {
+      if (!signedIn) return setMsg(kind === "like" ? "Sign in to like posts." : "Sign in to save posts.");
+      const r = await fn(postId);
+      if (!r.ok) return setMsg(r.message);
+      setMsg(kind === "save" ? r.message : "");
+      setState((s) => (kind === "like" ? { ...s, liked: Boolean(r.on), likes: r.count ?? s.likes } : { ...s, saved: Boolean(r.on) }));
+    });
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" disabled={pending} onClick={() => run(like, "like")} aria-pressed={state.liked}
+        className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ring-1", state.liked ? "bg-coral/20 text-coral-700 ring-coral" : "bg-white text-teal ring-line hover:bg-sand")}>
+        <Heart className={cn("h-4 w-4", state.liked && "fill-current")} aria-hidden /> {state.liked ? "Liked" : "Like"}{state.likes > 0 && <span aria-label={`${state.likes} likes`}> · {state.likes}</span>}
+      </button>
+      <button type="button" disabled={pending} onClick={() => run(save, "save")} aria-pressed={state.saved}
+        className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ring-1", state.saved ? "bg-sage-100 text-teal ring-teal" : "bg-white text-teal ring-line hover:bg-sand")}>
+        <Bookmark className={cn("h-4 w-4", state.saved && "fill-current")} aria-hidden /> {state.saved ? "Saved" : "Save"}
+      </button>
+      {msg && <span role="status" className="text-xs text-muted">{msg}</span>}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ push notifications
+function keyBytes(base64: string) {
+  const s = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+}
+
+export function PushToggle({
+  publicKey, regions, saveSub, removeSub,
+}: {
+  publicKey: string;
+  regions: readonly string[];
+  saveSub: (sub: PushSubscriptionJSON, regions: string[]) => Promise<ActionState>;
+  removeSub: (endpoint: string) => Promise<ActionState>;
+}) {
+  const [support, setSupport] = useState<"checking" | "no" | "blocked" | "yes">("checking");
+  const [sub, setSub] = useState<PushSubscription | null>(null);
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [msg, setMsg] = useState<ActionState>(null);
+  const [pending, start] = useTransition();
+
+  useEffect(() => {
+    (async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return setSupport("no");
+      if (Notification.permission === "denied") return setSupport("blocked");
+      try {
+        const reg = await navigator.serviceWorker.register("/plus-sw.js", { scope: "/plus" });
+        setSub(await reg.pushManager.getSubscription());
+        setSupport("yes");
+      } catch {
+        setSupport("no");
+      }
+    })();
+  }, []);
+
+  if (!publicKey) return <p className="text-sm text-muted">Phone notifications aren&apos;t switched on for PAHAD+ yet.</p>;
+  if (support === "checking") return <p className="text-sm text-muted">Checking this device…</p>;
+  if (support === "no") return <p className="text-sm text-muted">This browser can&apos;t show notifications. Install the PAHAD+ app or use Chrome.</p>;
+  if (support === "blocked") return <p className="text-sm text-muted">Notifications are blocked for PAHAD+ in this browser&apos;s settings. Allow them there, then come back.</p>;
+
+  const turnOn = () => start(async () => {
+    try {
+      if ((await Notification.requestPermission()) !== "granted") return setMsg({ ok: false, message: "Notifications weren't allowed." });
+      const reg = await navigator.serviceWorker.ready;
+      const s = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }));
+      const r = await saveSub(s.toJSON(), chosen);
+      setMsg(r);
+      if (r?.ok) setSub(s);
+    } catch {
+      setMsg({ ok: false, message: "Couldn't turn on notifications on this device." });
+    }
+  });
+  const turnOff = () => start(async () => {
+    if (!sub) return;
+    const r = await removeSub(sub.endpoint);
+    await sub.unsubscribe().catch(() => false);
+    setSub(null);
+    setMsg(r);
+  });
+
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-muted">Get a notification when your post is verified, a reminder before events you have an E-Pass for, and verified alerts for the regions you choose.</p>
+      <fieldset>
+        <legend className="label">Alerts for</legend>
+        <div className="flex flex-wrap gap-2">
+          {regions.map((r) => (
+            <label key={r} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 ring-1 ring-line has-[:checked]:bg-sage-100 has-[:checked]:ring-teal">
+              <input type="checkbox" name="alert_region" value={r} checked={chosen.includes(r)} onChange={(e) => setChosen((c) => (e.target.checked ? [...c, r] : c.filter((x) => x !== r)))} className="accent-teal" /> {r}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={pending} onClick={turnOn} className="btn btn-primary !px-4 !py-2 text-sm disabled:opacity-60">
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Bell className="h-4 w-4" aria-hidden />} {sub ? "Save alert regions" : "Turn on notifications"}
+        </button>
+        {sub && (
+          <button type="button" disabled={pending} onClick={turnOff} className="btn bg-white !px-4 !py-2 text-sm text-teal ring-1 ring-line">
+            <BellOff className="h-4 w-4" aria-hidden /> Turn off on this device
+          </button>
+        )}
+      </div>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={cn("text-sm", msg.ok ? "text-teal" : "text-red-700")}>{msg.message}</p>}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ gate check-in
+type GateResult = { ok: boolean; message: string; name?: string; at?: string } | null;
+const noSubscribe = () => () => {};
+type Detector = { detect: (src: CanvasImageSource) => Promise<{ rawValue: string }[]> };
+
+export function GateScanner({ action }: { action: (prev: GateResult, fd: FormData) => Promise<GateResult> }) {
+  const [state, formAction, pending] = useActionState(action, null);
+  const [scanning, setScanning] = useState(false);
+  // Camera scanning needs the browser's QR reader (Chrome on Android); typing the code always works.
+  const canScan = useSyncExternalStore(noSubscribe, () => "BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia), () => false);
+  const video = useRef<HTMLVideoElement>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const last = useRef("");
+
+  useEffect(() => {
+    if (state) {
+      router.refresh();
+      if (input.current) input.current.value = "";
+    }
+  }, [state, router]);
+
+  useEffect(() => {
+    if (!scanning) return;
+    let stream: MediaStream | null = null;
+    let stop = false;
+    const Ctor = (window as unknown as { BarcodeDetector: new (o: { formats: string[] }) => Detector }).BarcodeDetector;
+    const detector = new Ctor({ formats: ["qr_code"] });
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (!video.current) return;
+        video.current.srcObject = stream;
+        await video.current.play();
+        while (!stop) {
+          const codes = await detector.detect(video.current).catch(() => []);
+          const raw = codes[0]?.rawValue;
+          if (raw && raw !== last.current && input.current && form.current) {
+            last.current = raw;
+            input.current.value = raw;
+            form.current.requestSubmit();
+            setTimeout(() => { last.current = ""; }, 4000);
+          }
+          await new Promise((r) => setTimeout(r, 350));
+        }
+      } catch {
+        setScanning(false);
+      }
+    })();
+    return () => {
+      stop = true;
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [scanning]);
+
+  const time = state?.at ? new Date(state.at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "";
+  return (
+    <div className="space-y-4">
+      {state && (
+        <div role={state.ok ? "status" : "alert"} className={cn("rounded-2xl p-5 text-center", state.ok ? "bg-green-600 text-white" : "bg-red-700 text-white")}>
+          <p className="text-2xl font-bold">{state.ok ? "✓ " : "✕ "}{state.message}</p>
+          {state.name && <p className="mt-1 text-lg">{state.name}{time && ` · ${state.ok ? "" : "at "}${time}`}</p>}
+        </div>
+      )}
+      {canScan && (
+        <div>
+          {scanning ? (
+            <div className="space-y-2">
+              <video ref={video} playsInline muted className="aspect-square w-full rounded-2xl bg-ink object-cover" />
+              <button type="button" onClick={() => setScanning(false)} className="btn w-full bg-white text-teal ring-1 ring-line">Stop camera</button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setScanning(true)} className="btn btn-primary w-full"><Camera className="h-5 w-5" aria-hidden /> Scan E-Pass QR</button>
+          )}
+        </div>
+      )}
+      <form ref={form} method="post" onSubmit={keepValuesOnSubmit(formAction)} className="flex gap-2">
+        <label htmlFor="gate-code" className="sr-only">E-Pass code</label>
+        <input ref={input} id="gate-code" name="code" required autoComplete="off" autoCapitalize="characters" placeholder="E-Pass code" className="field flex-1 font-mono uppercase" />
+        <button type="submit" disabled={pending} className="btn btn-primary disabled:opacity-60">{pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Check in"}</button>
+      </form>
+    </div>
   );
 }
