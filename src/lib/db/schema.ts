@@ -7,7 +7,7 @@ type ColType = "text" | "bool" | "int";
 export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   users: {
     id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text", unit: "text", geo: "text",
-    owner: "bool", finance: "text", can_submit_videos: "bool", can_manage_menu: "bool", can_verify_plus: "bool", plus_region: "text", can_approve_public: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
+    owner: "bool", finance: "text", can_submit_videos: "bool", can_manage_menu: "bool", can_verify_plus: "bool", plus_region: "text", can_approve_public: "bool", can_flagproof_plus: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
@@ -83,16 +83,16 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   password_resets: { id: "text", user_id: "text", expires_at: "text", used: "bool", created_at: "text" },
   plus_users: {
     id: "text", email: "text", name: "text", phone: "text", account_type: "text", password_hash: "text", email_verified: "bool",
-    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text", member_id: "text", suspend_reason: "text", suspended_by: "text",
+    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text", member_id: "text", suspend_reason: "text", suspended_by: "text", instagram: "text", contact_email: "text", hide_contacts: "bool", private_mode: "bool", hide_saved: "bool", mute_support: "bool", mute_events: "bool", admin_user_id: "text", admin_mode: "bool",
   },
   plus_tokens: { id: "text", user_id: "text", kind: "text", expires_at: "text", used: "bool", created_at: "text", data: "text" },
   plus_posts: {
     id: "text", hub: "text", brief_type: "text", kind: "text", stage: "text", region: "text", locality: "text", title: "text",
     summary: "text", body: "text", image: "text", youtube_id: "text", starts_at: "text", ends_at: "text", venue: "text",
-    organiser: "text", contact_phone: "text", contact_whatsapp: "text", contact_email: "text", address: "text", website: "text",
-    link: "text", map_link: "text", best_season: "text", hours: "text", valid_until: "text", deadline: "text", status: "text",
+    organiser: "text", contact_phone: "text", contact_whatsapp: "text", contact_email: "text", contact_instagram: "text", address: "text", website: "text",
+    link: "text", map_link: "text", reg_id: "text", show_contacts: "bool", video_url: "text", pass_mode: "text", official: "bool", spotlight: "bool", best_season: "text", hours: "text", valid_until: "text", deadline: "text", status: "text",
     flags: "int", verified_by_name: "text", verified_at: "text", reject_reason: "text", author_id: "text", author_name: "text",
-    author_type: "text", author_member: "bool", pass_enabled: "bool", pass_capacity: "int", price: "int", likes: "int", created_at: "text", updated_at: "text",
+    author_type: "text", author_member: "bool", pass_enabled: "bool", pass_capacity: "int", price: "int", likes: "int", supports: "int", created_at: "text", updated_at: "text",
   },
   plus_passes: {
     id: "text", code: "text", post_id: "text", user_id: "text", holder_name: "text", status: "text", checked_in_at: "text",
@@ -106,6 +106,9 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     id: "text", rzp_order_id: "text", rzp_payment_id: "text", post_id: "text", user_id: "text", holder_name: "text", amount: "int",
     fee: "int", status: "text", pass_id: "text", refund_id: "text", created_at: "text", paid_at: "text", refunded_at: "text",
   },
+  plus_follows: { id: "text", follower_id: "text", followee_id: "text", created_at: "text" },
+  plus_supports: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
+  plus_notifications: { id: "text", user_id: "text", kind: "text", title: "text", body: "text", url: "text", read: "bool", created_at: "text" },
   plus_payouts: { id: "text", post_id: "text", organiser_id: "text", amount: "int", reference: "text", paid_by_name: "text", paid_at: "text" },
   plus_likes: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
   plus_saves: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
@@ -178,6 +181,9 @@ export function createTableSQL(): string[] {
     "CREATE UNIQUE INDEX IF NOT EXISTS plus_orders_rzp_idx ON plus_orders (rzp_order_id)",
     "CREATE INDEX IF NOT EXISTS plus_orders_post_idx ON plus_orders (post_id)",
     "CREATE INDEX IF NOT EXISTS plus_payouts_post_idx ON plus_payouts (post_id)",
+    "CREATE INDEX IF NOT EXISTS plus_follows_follower_idx ON plus_follows (follower_id)",
+    "CREATE INDEX IF NOT EXISTS plus_supports_post_idx ON plus_supports (post_id)",
+    "CREATE INDEX IF NOT EXISTS plus_notifications_user_idx ON plus_notifications (user_id)",
     // One vote per member per poll, enforced by the database (the receipt id is poll:user too).
     "CREATE UNIQUE INDEX IF NOT EXISTS poll_receipts_once_idx ON poll_receipts (poll_id, user_id)",
   );

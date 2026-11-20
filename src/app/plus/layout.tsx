@@ -1,45 +1,42 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
-import { PlusNav, PlusNavView } from "@/components/plus/client";
+import { PlusNav, PlusNavView, PlusSplash, PlusTopBar, PlusTopBarView } from "@/components/plus/client";
+import { db } from "@/lib/db";
+import { canModeratePlus } from "@/lib/plus/access";
+import { getPlusUser } from "@/lib/plus/session";
+import { appAdmin } from "@/lib/plus/app-admin";
 
 export const metadata: Metadata = {
-  title: { default: "PAHAD+ | Events, places, business and briefs from the hills", template: "%s | PAHAD+" },
-  description: "The community app for Darjeeling, Kalimpong, Siliguri and Sikkim: events, places to roam, local businesses, alerts, jobs and opportunities. By PAHAD.",
+  title: { default: "PAHAD+ | Events & Entertainment from the hills", template: "%s | PAHAD+" },
+  description: "The community app for Darjeeling, Kalimpong, Siliguri and Sikkim: events and entertainment, places to roam, local businesses, alerts, jobs and opportunities. By PAHAD.",
   applicationName: "PAHAD+",
   manifest: "/plus.webmanifest",
   icons: { icon: "/icons/plus-192.png", apple: "/icons/plus-apple-180.png" },
-  appleWebApp: { capable: true, title: "PAHAD+", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "PAHAD+", statusBarStyle: "black-translucent" },
 };
 
-export const viewport: Viewport = { themeColor: "#164d58", viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: "#11181B", viewportFit: "cover", colorScheme: "dark" };
 
-/** PAHAD+ has its own app shell: a slim top bar and, on phones, a bottom tab bar. */
+/** Bottom bar with the viewer's unread notifications, and the Desk tab for PAHAD admins (dashboard sign-in or Admin mode). */
+async function Nav() {
+  const [viewer, admin] = await Promise.all([getPlusUser(), appAdmin()]);
+  const unread = viewer ? (await db.findBy("plus_notifications", "user_id", viewer.id)).filter((n) => !n.read).length : 0;
+  return <PlusNav unread={unread} desk={Boolean(admin && (canModeratePlus(admin) || admin.role === "sysadmin"))} />;
+}
+
+/** PAHAD+ app shell: dark theme, one phone-width column (centred on larger screens), top bar and bottom bar. */
 export default function PlusLayout({ children }: LayoutProps<"/plus">) {
   return (
-    <div className="flex min-h-screen flex-col bg-sand">
-      <a href="#plus-main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">
-        Skip to content
-      </a>
-      <header className="sticky top-0 z-40 bg-teal pt-[env(safe-area-inset-top)] text-white shadow-sm">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
-          <Link href="/plus" className="flex items-center gap-2 font-display text-xl font-semibold">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-coral text-lg font-bold text-ink" aria-hidden>+</span>
-            PAHAD+
-          </Link>
-          <Suspense fallback={<PlusNavView variant="top" pathname="" />}><PlusNav variant="top" /></Suspense>
-        </div>
-      </header>
-      <main id="plus-main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-4 md:pb-12">
-        {children}
-      </main>
-      <footer className="hidden border-t border-line bg-white py-6 text-center text-xs text-muted md:block">
-        PAHAD+ is run by <Link href="/" className="underline">PAHAD</Link> ·{" "}
-        <Link href="/plus/terms" className="underline">Terms &amp; community guidelines</Link> ·{" "}
-        <Link href="/privacy#pahad-plus" className="underline">Privacy</Link> ·{" "}
-        <Link href="/plus/delete-account" className="underline">Delete account</Link>
-      </footer>
-      <Suspense fallback={<PlusNavView variant="bottom" pathname="" />}><PlusNav variant="bottom" /></Suspense>
+    <div className="plus-dark min-h-dvh bg-[#0d1315]">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-sand md:shadow-[0_24px_70px_rgba(9,14,16,0.72)]">
+        <PlusSplash />
+        <a href="#plus-main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">
+          Skip to content
+        </a>
+        <Suspense fallback={<PlusTopBarView />}><PlusTopBar /></Suspense>
+        <main id="plus-main" className="flex-1 px-4 pb-28 pt-4">{children}</main>
+        <Suspense fallback={<PlusNavView pathname="" unread={0} desk={false} />}><Nav /></Suspense>
+      </div>
     </div>
   );
 }

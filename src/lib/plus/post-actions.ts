@@ -1,13 +1,19 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { updateTag } from "next/cache";
 import { db, newId } from "@/lib/db";
 import { fileFrom, now, str, type ActionState } from "@/lib/admin-helpers";
 import { parseYouTubeId } from "@/lib/youtube";
 import type { PlusPost } from "@/lib/types";
-import { HUB_KEYS, PLUS_REGIONS, PLUS_RULES, ROAM_KINDS, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "./config";
+import { HUB_KEYS, PLUS_REGIONS, PLUS_RULES, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "./config";
+import { canApprovePublic, canGrantFlagProof } from "./access";
+import { appAdmin } from "./app-admin";
+import { imageLink, videoFileLink } from "./media";
 import { getPlusUser } from "./session";
+import { notifyPlus } from "./notify";
+import { AUTHENTIC_SUPPORTS } from "./posts";
 import { isApprovedOrganiser } from "./payments";
 import { paymentsConfigured } from "./razorpay";
 
@@ -55,20 +61,40 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     if (v === null) return { ok: false, message: "One of the links isn't a valid web address." };
     links[k] = v;
   }
-  const yt = str(fd, "youtube", 600);
-  const youtube_id = yt ? parseYouTubeId(yt) : "";
-  if (youtube_id === null) return { ok: false, message: "That doesn't look like a YouTube link." };
+  // Video: a YouTube link / id, or a direct https .mp4 / .webm file.
+  const vid = str(fd, "youtube", 600);
+  let youtube_id = "", video_url = "";
+  if (vid) {
+    youtube_id = parseYouTubeId(vid) ?? "";
+    if (!youtube_id) {
+      const file = videoFileLink(vid);
+      if (!file) return { ok: false, message: "Use a YouTube link, or a direct video link ending in .mp4 or .webm." };
+      video_url = file;
+    }
+  }
+  const imageUrl = imageLink(str(fd, "image_url", 500));
+  if (imageUrl === null) return { ok: false, message: "The image link must start with https://." };
+
+  // Contacts: WhatsApp or phone is needed to post (except quick alerts and tips); "Show publicly" lets them show before verification.
+  const whatsapp = str(fd, "contact_whatsapp", 30), phone = str(fd, "contact_phone", 30);
+  const briefType = str(fd, "brief_type", 20);
+  const contactOptional = hub === "briefs" && (briefType === "alert" || briefType === "tip");
+  if (!contactOptional && !whatsapp && !phone) return { ok: false, message: "Add a contact or WhatsApp number (it's needed to post)." };
+  const admin = fd.get("official") === "on" ? await appAdmin() : null;
+  if (fd.get("official") === "on" && (!admin || !canApprovePublic(admin))) return { ok: false, message: "Only PAHAD admins with approval rights can publish a regulated circular." };
 
   const p: Omit<PlusPost, "id" | "image"> = {
     hub, brief_type: "", kind: "", stage: "", region, locality: str(fd, "locality", 80), title, summary, body: str(fd, "body", 4000),
     youtube_id, starts_at: "", ends_at: "",
-    venue: str(fd, "venue", 160), organiser: str(fd, "organiser", 120), contact_phone: str(fd, "contact_phone", 30),
-    contact_whatsapp: str(fd, "contact_whatsapp", 30), contact_email: str(fd, "contact_email", 160), address: str(fd, "address", 240),
-    website: links.website, link: links.link, map_link: links.map_link,
+    venue: str(fd, "venue", 160), organiser: str(fd, "organiser", 120), contact_phone: phone,
+    contact_whatsapp: whatsapp, contact_email: str(fd, "contact_email", 160), contact_instagram: str(fd, "contact_instagram", 60).replace(/^@?/, "@").replace(/^@$/, ""),
+    address: str(fd, "address", 240),
+    website: links.website, link: links.link, map_link: links.map_link, reg_id: "",
+    show_contacts: fd.get("show_contacts") === "on", video_url, pass_mode: "", official: false, spotlight: false,
     best_season: str(fd, "best_season", 80), hours: str(fd, "hours", 120), valid_until: "", deadline: "",
     status: "unverified", flags: 0, verified_by_name: "", verified_at: "", reject_reason: "",
     author_id: u.id, author_name: u.name, author_type: u.account_type, author_member: Boolean(u.member_id),
-    pass_enabled: false, pass_capacity: 0, price: 0, likes: 0, created_at: now(), updated_at: now(),
+    pass_enabled: false, pass_capacity: 0, price: 0, likes: 0, supports: 0, created_at: now(), updated_at: now(),
   };
 
   if (hub === "events") {
@@ -82,6 +108,8 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     // Free E-Passes: open once the event is verified (registration is locked until then).
     p.pass_enabled = fd.get("pass_enabled") === "on";
     p.pass_capacity = p.pass_enabled ? Math.min(Math.max(Math.round(Number(str(fd, "pass_capacity", 7)) || 0), 0), 100_000) : 0;
+    // The organiser chooses: E-Passes issued instantly, or Pending until they (or PAHAD) approve each one.
+    p.pass_mode = p.pass_enabled && fd.get("pass_mode") === "approval" ? "approval" : "";
     // Paid E-Passes: approved paid organisers only, when payments are switched on. Price fixed once posted.
     const rupeesAsked = Number(str(fd, "price", 8) || 0);
     if (p.pass_enabled && rupeesAsked > 0) {
@@ -90,14 +118,11 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
       p.price = Math.round(rupeesAsked * 100);
     }
   } else if (hub === "roam") {
-    const kind = str(fd, "kind", 60);
-    const stage = str(fd, "stage", 20);
-    if (!(ROAM_KINDS as readonly string[]).includes(kind)) return { ok: false, message: "Choose what kind of place it is." };
+    const stage = str(fd, "stage", 20) || "open";
     if (!Object.hasOwn(ROAM_STAGES, stage)) return { ok: false, message: "Is it open to visitors, or being developed?" };
-    p.kind = kind;
     p.stage = stage;
   } else if (hub === "business") {
-    p.kind = str(fd, "kind", 60);
+    p.reg_id = str(fd, "reg_id", 40); // shown only once verified, like the address
   } else {
     const type = str(fd, "brief_type", 20) as BriefType;
     // Policy & Assembly Summaries come only from PAHAD circulars approved as public.
@@ -116,9 +141,28 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     }
   }
 
-  let image = "";
+  // Subcategory for every hub (e.g. Folk Music, Eco-Trail, Café, Cold-Chain).
+  p.kind = str(fd, "kind", 60);
+  // Events can carry an end; other hubs may give optional dates too.
+  if (hub !== "events") {
+    const st = str(fd, "starts_at", 20), en = str(fd, "ends_at", 20);
+    if (st && DATETIME.test(st)) p.starts_at = st;
+    if (en && DATETIME.test(en) && (!p.starts_at || en >= p.starts_at)) p.ends_at = en;
+  }
+  // Regulated admin circular: PAHAD's own post, published verified.
+  if (admin) {
+    p.official = true;
+    p.author_name = "PAHAD";
+    p.author_type = "organisation";
+    p.status = canGrantFlagProof(admin) ? "flag_proof" : "verified";
+    p.verified_by_name = admin.name;
+    p.verified_at = now();
+    p.show_contacts = true;
+  }
+
+  let image = imageUrl;
   try {
-    image = (await fileFrom(fd, "image", "images")) ?? "";
+    image = (await fileFrom(fd, "image", "images")) ?? imageUrl;
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The photo could not be uploaded." };
   }
@@ -166,6 +210,7 @@ export async function blockPlusUser(authorId: string): Promise<ActionState> {
   const u = await getPlusUser();
   if (!u) return { ok: false, message: "Please sign in to block someone." };
   if (!authorId || authorId === u.id) return { ok: false, message: "You can't block this account." };
+  if ((await db.get("plus_users", authorId))?.admin_user_id) return { ok: false, message: "Official PAHAD accounts cannot be blocked. Report a post instead." };
   const id = `${u.id}:${authorId}`;
   if (!(await db.get("plus_blocks", id))) await db.insert("plus_blocks", { id, blocker_id: u.id, blocked_id: authorId, created_at: now() });
   return { ok: true, message: "Blocked. You won't see their posts any more." };
@@ -211,4 +256,43 @@ export async function toggleSave(postId: string): Promise<ToggleState> {
   if (had) await db.remove("plus_saves", id);
   else await db.insert("plus_saves", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null);
   return { ok: true, message: had ? "Removed from Saved." : "Saved. Find it on Me → Saved.", on: !had };
+}
+
+/** "Support": vouch that a post is genuine. One per person per post; the count helps PAHAD's verifiers. */
+export async function toggleSupport(postId: string): Promise<ToggleState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Sign in to support posts." };
+  const p = await livePostFor(postId);
+  if (!p) return { ok: false, message: "This post is no longer available." };
+  if (p.author_id === u.id) return { ok: false, message: "You can't support your own post." };
+  const id = `${postId}:${u.id}`;
+  const had = Boolean(await db.get("plus_supports", id));
+  if (had) await db.remove("plus_supports", id);
+  else await db.insert("plus_supports", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null);
+  const count = (await db.findBy("plus_supports", "post_id", postId)).length;
+  await db.update("plus_posts", postId, { supports: count });
+  // Tell the poster about their first support, and when the post becomes Authentic (more than 5 supports).
+  if (!had && (count === 1 || count === AUTHENTIC_SUPPORTS + 1)) {
+    after(() => notifyPlus(p.author_id, count === 1
+      ? { kind: "support", title: "Someone supported your post", body: `${u.name} vouched that “${p.title}” is genuine.`, url: `/plus/${postId}` }
+      : { kind: "support", title: "Your post is now Authentic ✓", body: `More than ${AUTHENTIC_SUPPORTS} people support “${p.title}”.`, url: `/plus/${postId}` }));
+  }
+  updateTag("plus");
+  return { ok: true, message: had ? "Support removed." : "Thanks for vouching for this post.", on: !had, count };
+}
+
+/** Follow an account: its posts appear in your Following tab. */
+export async function toggleFollow(authorId: string): Promise<ToggleState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Sign in to follow accounts." };
+  if (!authorId || authorId === u.id) return { ok: false, message: "You can't follow this account." };
+  if (!(await db.get("plus_users", authorId))) return { ok: false, message: "This account no longer exists." };
+  const id = `${u.id}:${authorId}`;
+  const had = Boolean(await db.get("plus_follows", id));
+  if (had) await db.remove("plus_follows", id);
+  else {
+    await db.insert("plus_follows", { id, follower_id: u.id, followee_id: authorId, created_at: now() }).catch(() => null);
+    after(() => notifyPlus(authorId, { kind: "support", title: "New follower", body: `${u.name} started following you on PAHAD+.`, url: `/plus/u/${u.id}` }));
+  }
+  return { ok: true, message: had ? "Unfollowed." : "Following. Their posts appear in your Following tab.", on: !had };
 }

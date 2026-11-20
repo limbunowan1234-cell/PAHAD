@@ -5,64 +5,15 @@ import { after } from "next/server";
 import { db, newId } from "@/lib/db";
 import { guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { PLUS_REGIONS, type PlusStatus } from "@/lib/plus/config";
-import { canApprovePublic, canGrantFlagProof, canModeratePlus, canVerifyPlusPost } from "@/lib/plus/access";
-import { pushToRegion, pushToUser } from "@/lib/plus/push";
+import { canApprovePublic, canModeratePlus } from "@/lib/plus/access";
+import { pushToUser } from "@/lib/plus/push";
+import { LABEL, moderateOne } from "@/lib/plus/moderation";
 import { eventMoney, FEE_SETTING } from "@/lib/plus/payments";
 import { refundRazorpayPayment, rupees } from "@/lib/plus/razorpay";
 import { openApprovalRequest } from "@/lib/plus/approvals";
 import type { PublicUser } from "@/lib/types";
 
 // ------------------------------------------------------------------ PAHAD+ queue
-async function loadForModeration(user: PublicUser, id: string) {
-  if (!canModeratePlus(user)) throw new Error("Only the President or members he assigned as PAHAD+ verifiers can do this.");
-  const p = await db.get("plus_posts", id);
-  if (!p) throw new Error("This post no longer exists.");
-  if (p.status === "removed") throw new Error("The poster removed this post.");
-  if (!canVerifyPlusPost(user, p)) {
-    throw new Error(p.hub === "roam" ? "Places (Roam) are verified by members above the General Assembly, or by the local verifier for that region." : "This post is outside the region you verify.");
-  }
-  return p;
-}
-
-const LABEL: Record<PlusStatus, string> = {
-  unverified: "unverified", verified: "verified", flag_proof: "Flag-Proof", hold: "on hold", rejected: "rejected", removed: "removed",
-};
-
-/** One moderation decision (shared by the single form and the bulk bar). Throws a friendly Error when not allowed. */
-async function moderateOne(user: PublicUser, id: string, to: PlusStatus, reason: string) {
-  if (!["verified", "flag_proof", "hold", "rejected", "unverified"].includes(to)) throw new Error("Choose an action.");
-  const p = await loadForModeration(user, id);
-  if (to === "flag_proof" && !canGrantFlagProof(user)) throw new Error("Only the President can make a post Flag-Proof.");
-  if (p.status === "flag_proof" && to !== "flag_proof" && !canGrantFlagProof(user)) throw new Error("Only the President can change a Flag-Proof post.");
-  if (to === "rejected" && reason.length < 3) throw new Error("Please give the poster a reason.");
-
-  const verifying = to === "verified" || to === "flag_proof";
-  await db.update("plus_posts", id, {
-    status: to,
-    reject_reason: to === "rejected" || to === "hold" ? reason : "",
-    ...(verifying ? { verified_by_name: user.name, verified_at: p.verified_at || now() } : {}),
-    // Restoring after reports starts the count again.
-    ...(to !== "hold" && p.status === "hold" ? { flags: 0 } : {}),
-    updated_at: now(),
-  });
-  if (to !== "hold" && p.status === "hold") for (const f of await db.findBy("plus_flags", "post_id", id)) await db.remove("plus_flags", f.id);
-  await log(user, to === "rejected" ? "rejected" : verifying ? "verified" : "moderated", "plus post", id, `${p.title}: ${LABEL[to]}${reason ? ` (${reason})` : ""}`, {
-    before: { status: p.status }, after: { status: to },
-  });
-  // Phone notifications (when switched on): tell the poster, and for a newly verified alert, everyone following that region.
-  const wasVerified = p.status === "verified" || p.status === "flag_proof";
-  if ((verifying && !wasVerified) || to === "rejected") {
-    after(() => pushToUser(p.author_id, verifying
-      ? { title: "Your post is verified ✅", body: `“${p.title}” now shows its full details on PAHAD+.`, url: `/plus/${p.id}`, tag: `post-${p.id}` }
-      : { title: "Your post wasn't approved", body: reason ? `“${p.title}”: ${reason}` : `“${p.title}”`, url: "/plus/me", tag: `post-${p.id}` }).then(() => undefined));
-  }
-  const liveAlert = p.hub === "briefs" && p.brief_type === "alert" && (!p.valid_until || Date.parse(p.valid_until) > Date.now());
-  if (verifying && !wasVerified && liveAlert) {
-    after(() => pushToRegion(p.region, { title: `⚠️ ${p.region}: ${p.title}`, body: p.summary, url: `/plus/${p.id}`, tag: `alert-${p.id}` }, p.author_id).then(() => undefined));
-  }
-  return p.title;
-}
-
 /** Verify / hold / restore / reject. Reject needs a reason, which the poster sees. */
 export async function moderatePlusPost(_prev: ActionState, fd: FormData): Promise<ActionState> {
   return guarded("dashboard.view", async (user) => {
@@ -227,12 +178,28 @@ export async function setPlusVerifier(_prev: ActionState, fd: FormData): Promise
     const on = fd.get("on") === "on";
     const region = str(fd, "region", 40);
     if (region && !(PLUS_REGIONS as readonly string[]).includes(region)) throw new Error("Choose a region.");
-    await db.update("users", target.id, { can_verify_plus: on, plus_region: on ? region : "" });
+    await db.update("users", target.id, { can_verify_plus: on, plus_region: on ? region : "", ...(on ? {} : { can_flagproof_plus: false }) });
     await log(user, on ? "granted" : "revoked", "plus permission", target.id, `PAHAD+ verifier ${on ? `ON${region ? ` (${region})` : ""}` : "OFF"} for ${target.name}`, {
       before: { can_verify_plus: target.can_verify_plus, plus_region: target.plus_region }, after: { can_verify_plus: on, plus_region: on ? region : "" },
     });
     if (target.id !== user.id) await notify(target.id, on ? `You are now a PAHAD+ verifier${region ? ` for ${region}` : ""}. Open PAHAD+ in your dashboard.` : "Your PAHAD+ verifier role was switched off.", on ? "/admin/plus" : "");
     return on ? `${target.name} is a PAHAD+ verifier${region ? ` for ${region}` : ""}.` : `${target.name} is no longer a PAHAD+ verifier.`;
+  });
+}
+
+/** Flag-Proof power for a PAHAD+ verifier (President only). */
+export async function setFlagProofPermission(userId: string, on: boolean): Promise<ActionState> {
+  return guarded("plus.permission", async (user) => {
+    const target = await db.get("users", userId);
+    if (!target) throw new Error("Account not found.");
+    if (target.role === "sysadmin") throw new Error("The Website Administrator account is view-only.");
+    if (on && !target.can_verify_plus) throw new Error("Make them a PAHAD+ verifier first.");
+    await db.update("users", userId, { can_flagproof_plus: on });
+    await log(user, on ? "granted" : "revoked", "plus permission", userId, `PAHAD+ Flag-Proof ${on ? "ON" : "OFF"} for ${target.name}`, {
+      before: { can_flagproof_plus: target.can_flagproof_plus }, after: { can_flagproof_plus: on },
+    });
+    if (target.id !== user.id) await notify(target.id, on ? "You can now make PAHAD+ posts Flag-Proof (protected from community flags)." : "Your PAHAD+ Flag-Proof permission was switched off.", on ? "/admin/plus" : "");
+    return on ? `${target.name} can now make posts Flag-Proof.` : `${target.name} can no longer make posts Flag-Proof.`;
   });
 }
 

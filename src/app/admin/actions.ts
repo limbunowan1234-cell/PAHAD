@@ -523,7 +523,7 @@ async function createAdminAccount(
   if ((await db.all("users")).some((u) => u.email.toLowerCase() === email)) throw new Error("An admin with this email already exists.");
   const id = newId();
   await db.insert("users", {
-    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: role === "sysadmin" ? "none" : "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, active: true,
+    id, email, name, role, designation, directorate, unit, geo, owner: false, finance: role === "sysadmin" ? "none" : "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, can_flagproof_plus: false, active: true,
     password_hash: hashPassword(password), created_at: now(), last_login: null,
   });
   await log(user, "created admin", "team", id, `${name} as ${roleLabel(role)}${source}`, { after: { name, email, role, directorate, unit, geo } });

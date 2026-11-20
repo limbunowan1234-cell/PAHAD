@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isOptimisable } from "@/lib/plus/media";
 import Link from "next/link";
 import { BadgeCheck, Clock, Heart, Lock, MapPin, ShieldCheck, Ticket } from "lucide-react";
 import { BRIEF_TYPES, PLUS_HUBS, type PlusHub } from "@/lib/plus/config";
@@ -60,7 +61,7 @@ export function PlusCardView({ c, at }: { c: PlusCard; at: number }) {
     <article className={cn("group relative flex snap-start flex-col overflow-hidden rounded-[var(--radius-card)] border bg-white shadow-sm", alert ? "border-coral" : "border-line")}>
       <div className={cn("relative aspect-[16/10] bg-gradient-to-br", HUB_BG[c.hub])}>
         {img ? (
-          <Image src={img} alt="" fill sizes="(min-width:1024px) 400px, (min-width:640px) 50vw, 100vw" className="object-cover" />
+          <Image src={img} unoptimized={!isOptimisable(img)} alt="" fill sizes="(min-width:1024px) 400px, (min-width:640px) 50vw, 100vw" className="object-cover" />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-5xl" aria-hidden>{c.briefType ? BRIEF_TYPES[c.briefType].emoji : PLUS_HUBS[c.hub].emoji}</span>
         )}
@@ -89,9 +90,9 @@ export function PlusCardView({ c, at }: { c: PlusCard; at: number }) {
 }
 
 const LOCKED: Record<PlusHub, string> = {
-  events: "registration and forms, the exact venue and the organiser's contact",
-  roam: "the map location and booking or contact details",
-  business: "phone, WhatsApp, address, website and social links",
+  events: "registration and forms, and the E-Pass",
+  roam: "the map location and booking links",
+  business: "the website, booking links and the registration ID",
   briefs: "the apply or source link, and attachments",
 };
 
@@ -100,8 +101,8 @@ export function LockedBox({ hub }: { hub: PlusHub }) {
     <div className="flex gap-3 rounded-2xl border border-dashed border-teal-700/40 bg-sand p-4 text-sm">
       <Lock className="mt-0.5 h-5 w-5 shrink-0 text-teal" aria-hidden />
       <div>
-        <p className="font-semibold text-teal">Full details unlock once PAHAD verifies this post</p>
-        <p className="mt-1 text-muted">Hidden for now: {LOCKED[hub]}. This keeps PAHAD+ safe from fake listings and scams.</p>
+        <p className="font-semibold text-teal">Some details unlock once PAHAD verifies this post</p>
+        <p className="mt-1 text-muted">Waiting for verification: {LOCKED[hub]}. Contacts show only if the poster chose to show them. This keeps PAHAD+ safe from fake listings and scams.</p>
       </div>
     </div>
   );

@@ -12,6 +12,8 @@ export type Role =
   | "department_head" // L4 D1 Department Head (scoped to a Department)
   | "project_coordinator" // L5-1 Project Coordinator (scoped to a Programme)
   | "editor" // L6 Member of the General Assembly
+  | "creator" // C1 Creator: an artist who submits videos (no voting rights)
+  | "honorary" // H1 Honorary Member: advises and trains, non-binding (no voting rights)
   | "sysadmin"; // SYS Website Administrator: sees everything read-only, decides nothing
 
 export type UnitKind = "directorate" | "department" | "programme" | "project" | "designation" | "district" | "subdivision" | "block" | "gp";
@@ -54,6 +56,8 @@ export type User = {
   plus_region: string;
   /** May approve internal → public and organisation posts for PAHAD+, granted by the President. */
   can_approve_public: boolean;
+  /** PAHAD+ verifier the President also allowed to make posts Flag-Proof (protected from community flags). */
+  can_flagproof_plus: boolean;
   /** Allowed by the President to edit the website menu and pages (L1 always can). */
   can_manage_menu: boolean;
   active: boolean;
@@ -315,6 +319,18 @@ export type PlusUser = {
   member_id: string;
   suspend_reason: string;
   suspended_by: string;
+  /** Collaboration contacts used to prefill posts (shown only where the person switches them on). */
+  instagram: string;
+  contact_email: string;
+  /** Settings (stored as "off" switches so existing accounts keep the defaults). */
+  hide_contacts: boolean;
+  private_mode: boolean;
+  hide_saved: boolean;
+  mute_support: boolean;
+  mute_events: boolean;
+  /** Access type: a PAHAD dashboard account linked to this app account (proved by signing in to both). */
+  admin_user_id: string;
+  admin_mode: boolean;
 };
 /** One-time link for a PP user. id = SHA-256 of the token in the link. data: e.g. the member id for "link". */
 export type PlusToken = { id: string; user_id: string; kind: "verify" | "reset" | "link"; expires_at: string; used: boolean; created_at: string; data: string };
@@ -341,12 +357,25 @@ export type PlusPost = {
   contact_phone: string;
   contact_whatsapp: string;
   contact_email: string;
+  contact_instagram: string;
   address: string;
   website: string;
   /** Register / apply / source link. */
   link: string;
   map_link: string;
+  /** Business: registration / licence number (optional). */
+  reg_id: string;
   // ↑
+  /** The poster chose to show phone, WhatsApp, Instagram, email and address before verification. */
+  show_contacts: boolean;
+  /** A direct video file link (https .mp4 / .webm), as an alternative to YouTube. */
+  video_url: string;
+  /** Events: "" = E-Passes issued instantly, "approval" = they start Pending until the organiser or PAHAD approves. */
+  pass_mode: string;
+  /** Posted from the app by a PAHAD admin as a regulated circular. */
+  official: boolean;
+  /** Picked by PAHAD for the Discover "Executive Spotlight". */
+  spotlight: boolean;
   best_season: string;
   hours: string;
   valid_until: string;
@@ -367,6 +396,8 @@ export type PlusPost = {
   /** Paid E-Pass price in paise (0 = free). Only approved paid organisers, fixed when posted. */
   price: number;
   likes: number;
+  /** People who vouch the post is genuine ("Support"). Helps verifiers. */
+  supports: number;
   created_at: string;
   updated_at: string;
 };
@@ -380,7 +411,7 @@ export type PlusPass = {
   post_id: string;
   user_id: string;
   holder_name: string;
-  status: "active" | "cancelled" | "checked_in";
+  status: "pending" | "active" | "cancelled" | "revoked" | "checked_in";
   checked_in_at: string;
   checked_in_by: string;
   reminded: boolean;
@@ -423,6 +454,12 @@ export type PlusOrder = {
 };
 /** A payout PAHAD made to an organiser for an event (bank transfer / UPI done outside the app). */
 export type PlusPayout = { id: string; post_id: string; organiser_id: string; amount: number; reference: string; paid_by_name: string; paid_at: string };
+/** In-app notifications for PAHAD+ accounts (also sent as push when switched on). */
+export type PlusNotification = { id: string; user_id: string; kind: "verify" | "support" | "events" | "account"; title: string; body: string; url: string; read: boolean; created_at: string };
+/** id = `${follower_id}:${followee_id}`. */
+export type PlusFollow = { id: string; follower_id: string; followee_id: string; created_at: string };
+/** One per user per post: id = `${post_id}:${user_id}`. */
+export type PlusSupport = { id: string; post_id: string; user_id: string; created_at: string };
 /** id = `${post_id}:${user_id}`. */
 export type PlusLike = { id: string; post_id: string; user_id: string; created_at: string };
 export type PlusSave = { id: string; post_id: string; user_id: string; created_at: string };
@@ -655,6 +692,9 @@ export type Tables = {
   plus_organisers: PlusOrganiser;
   plus_orders: PlusOrder;
   plus_payouts: PlusPayout;
+  plus_follows: PlusFollow;
+  plus_supports: PlusSupport;
+  plus_notifications: PlusNotification;
   pages: CustomPage;
   translations: Translation;
 };

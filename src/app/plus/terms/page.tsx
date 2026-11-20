@@ -14,16 +14,17 @@ export default function PlusTermsPage() {
 
       <h2>How posts are checked</h2>
       <ul>
-        <li>Posts go live straight away marked <strong>Unverified</strong>. Until PAHAD verifies a post, only its title, photo, place and summary are shown; contact, booking, registration and apply links stay hidden.</li>
+        <li>Posts go live straight away marked <strong>Unverified</strong>. Until PAHAD verifies a post, booking, registration and apply links, the map and the registration ID stay hidden. Contacts show only if the poster chose to show them, with a warning that the post is not verified yet.</li>
         <li>PAHAD&apos;s verifiers may verify, hold, or reject any post, and may give a reason. Unverified posts drop out after {PLUS_RULES.unverifiedDays} days.</li>
         <li>Civic &amp; road alerts expire on their own (at most {PLUS_RULES.alertMaxDays} days). Jobs and opportunities close on their last date.</li>
         <li>When {PLUS_RULES.flagsToHold} people report a post it is hidden while PAHAD reviews it.</li>
+        <li>A post is marked <strong>Authentic</strong> when more than 5 people support it, or when the poster&apos;s identity is confirmed (a linked PAHAD member, an approved organiser, or PAHAD). This is the community&apos;s view, not a PAHAD check.</li>
         <li>Verification means PAHAD checked that the post is genuine at the time. It is not an endorsement or guarantee. Use your own judgement before paying anyone.</li>
       </ul>
 
       <h2>E-Passes</h2>
       <ul>
-        <li>E-Passes are free, one per person per event, and open only once PAHAD verifies the event. Organisers can set a limit.</li>
+        <li>E-Passes are one per person per event and open only once PAHAD verifies the event. Organisers can set a limit, and choose whether passes are ready instantly or need their approval; they may revoke a free pass before the event.</li>
         <li>Your E-Pass is your ticket: don&apos;t share or copy its QR code. Each pass can be checked in once.</li>
         <li>The organiser runs the event and may refuse entry. Cancel your free E-Pass if you can&apos;t go, so someone else can.</li>
         <li><strong>Paid E-Passes</strong> are sold by organisers PAHAD has approved. You pay PAHAD through Razorpay; PAHAD keeps a fee and pays the organiser after the event. Paid E-Passes can&apos;t be cancelled in the app: ask the organiser or PAHAD. If an event is cancelled, PAHAD refunds paid E-Passes in full to the original payment method.</li>

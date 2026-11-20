@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isOptimisable } from "@/lib/plus/media";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -9,12 +10,12 @@ import { confirmPaidPass, startPaidPass } from "@/lib/plus/pay-actions";
 import { isApprovedOrganiser, placesHeld } from "@/lib/plus/payments";
 import { paymentsConfigured, rupees } from "@/lib/plus/razorpay";
 import { hubLabel, LockedBox, plusDate, timing, TrustBadge } from "@/components/plus/ui";
-import { blockPlusUser, deleteOwnPlusPost, reportPlusPost, toggleLike, toggleSave } from "@/lib/plus/post-actions";
+import { blockPlusUser, deleteOwnPlusPost, reportPlusPost, toggleFollow, toggleLike, toggleSave, toggleSupport } from "@/lib/plus/post-actions";
 import { registerPass } from "@/lib/plus/pass-actions";
 import { passesOpen, takenPlaces } from "@/lib/plus/passes";
 import { db } from "@/lib/db";
 import { ROAM_STAGES } from "@/lib/plus/config";
-import { getPlusPost, isLivePlus, toCard, requestTime } from "@/lib/plus/posts";
+import { AUTHOR_BADGE, getPlusPost, isLivePlus, toCard, requestTime, withAuthentic } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 
 export const metadata = { title: "Post", robots: { index: false } };
@@ -37,14 +38,17 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
   const mine = Boolean(viewer && post && post.author_id === viewer.id);
   if (!post || (!isLivePlus(post, at) && !mine)) notFound();
   // Never pass the raw post to the page: toCard leaves out the locked fields until it is verified.
-  const c = toCard(post);
+  const [c] = await withAuthentic([toCard(post)]);
+  const authentic = c.authentic;
   const when = timing(c, at);
   const l = c.locked;
   const live = isLivePlus(post, at);
   // Viewer's own like / save / E-Pass, and places left.
-  const [liked, saved, myPass, taken] = await Promise.all([
+  const [liked, saved, supported, followed, myPass, taken] = await Promise.all([
     viewer ? db.get("plus_likes", `${post.id}:${viewer.id}`) : null,
     viewer ? db.get("plus_saves", `${post.id}:${viewer.id}`) : null,
+    viewer ? db.get("plus_supports", `${post.id}:${viewer.id}`) : null,
+    viewer && post.author_id ? db.get("plus_follows", `${viewer.id}:${post.author_id}`) : null,
     viewer ? db.get("plus_passes", `${post.id}:${viewer.id}`) : null,
     c.passEnabled ? (post.price > 0 ? placesHeld(post.id, viewer?.id) : takenPlaces(post.id)) : Promise.resolve(0),
   ]);
@@ -71,13 +75,15 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
       <div className="overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 ring-line">
         {c.image && (
           <div className="relative aspect-[16/10] bg-sand">
-            <Image src={c.image} alt="" fill priority sizes="(min-width:672px) 672px, 100vw" className="object-cover" />
+            <Image src={c.image} unoptimized={!isOptimisable(c.image)} alt="" fill priority sizes="(min-width:672px) 672px, 100vw" className="object-cover" />
           </div>
         )}
         <div className="p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-semibold text-ink">{hubLabel(c)}</span>
             <TrustBadge c={c} size="md" />
+            {authentic && <span className="rounded-full bg-sage px-3 py-1 text-xs font-extrabold text-sand">✓ Authentic</span>}
+            {c.authorBadge && <span className="rounded-full bg-[#D9A75A]/20 px-3 py-1 text-xs font-extrabold text-[#E9C27A] ring-1 ring-[#D9A75A]/50">{AUTHOR_BADGE[c.authorBadge]}</span>}
           </div>
           <h1 className="mt-3 font-display text-3xl leading-tight text-teal">{c.title}</h1>
           <p className="mt-2 flex items-center gap-1 text-sm text-muted"><MapPin className="h-4 w-4" aria-hidden /> {[c.locality, c.region].filter(Boolean).join(", ")}</p>
@@ -95,29 +101,32 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
 
           {c.body && <p className="mt-5 whitespace-pre-line leading-relaxed text-ink">{c.body}</p>}
           {c.youtubeId && <div className="mt-5"><VideoPlayer id={c.youtubeId} title={c.title} /></div>}
+          {c.videoUrl && <video className="mt-5 aspect-video w-full rounded-[var(--radius-card)] bg-black" src={c.videoUrl} controls playsInline preload="metadata" />}
 
           <div className="mt-6">
             {l && Object.values(l).some(Boolean) ? (
-              <section aria-label="Contact and details" className="space-y-2 rounded-2xl bg-sage-100 p-4 text-sm">
+              <section id="contact" aria-label="Contact and details" className="scroll-mt-20 space-y-2 rounded-2xl bg-sage-100 p-4 text-sm">
+                {c.contactsUnverified && <p className="rounded-xl bg-cream p-2.5 text-xs font-bold">◷ The poster chose to show these before PAHAD verified the post. Check before you pay or share personal details.</p>}
                 {l.venue && <p><span className="text-muted">Venue:</span> <strong>{l.venue}</strong></p>}
                 {l.organiser && <p><span className="text-muted">Organiser:</span> <strong>{l.organiser}</strong></p>}
                 {l.address && <p><span className="text-muted">Address:</span> <strong>{l.address}</strong></p>}
+                {l.regId && <p><span className="text-muted">Registration ID:</span> <strong className="font-mono">{l.regId}</strong></p>}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {l.phone && <a href={`tel:${l.phone}`} className="btn btn-primary !px-4 !py-2 text-sm"><Phone className="h-4 w-4" aria-hidden /> Call</a>}
                   {l.whatsapp && <a href={waLink(l.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn btn-primary !px-4 !py-2 text-sm">WhatsApp</a>}
                   {l.email && <a href={`mailto:${l.email}`} className="btn btn-primary !px-4 !py-2 text-sm"><Mail className="h-4 w-4" aria-hidden /> Email</a>}
+                  {l.instagram && <a href={`https://instagram.com/${encodeURIComponent(l.instagram.replace(/^@/, ""))}`} target="_blank" rel="noopener noreferrer nofollow" className="btn btn-primary !px-4 !py-2 text-sm">Instagram {l.instagram}</a>}
                   {l.link && <a href={l.link} target="_blank" rel="noopener noreferrer nofollow" className="btn btn-accent !px-4 !py-2 text-sm"><ExternalLink className="h-4 w-4" aria-hidden /> {c.hub === "events" ? "Register" : c.hub === "briefs" ? "Apply / source" : "Book"}</a>}
                   {l.website && <a href={l.website} target="_blank" rel="noopener noreferrer nofollow" className="btn bg-white !px-4 !py-2 text-sm text-teal ring-1 ring-line"><Globe className="h-4 w-4" aria-hidden /> Website</a>}
                   {l.mapLink && <a href={l.mapLink} target="_blank" rel="noopener noreferrer nofollow" className="btn bg-white !px-4 !py-2 text-sm text-teal ring-1 ring-line"><MapPin className="h-4 w-4" aria-hidden /> Map</a>}
                 </div>
               </section>
-            ) : !l ? (
-              <LockedBox hub={c.hub} />
             ) : null}
+            {!c.verified && <div className="mt-3"><LockedBox hub={c.hub} /></div>}
           </div>
 
           {c.passEnabled && (
-            <section aria-label="E-Pass" className="mt-4 rounded-2xl border border-teal/30 bg-white p-4 text-sm">
+            <section id="epass" aria-label="E-Pass" className="mt-4 scroll-mt-20 rounded-2xl border border-teal/30 bg-white p-4 text-sm">
               <p className="flex items-center gap-2 font-semibold text-teal"><Ticket className="h-5 w-5" aria-hidden /> {paid ? `E-Pass ${rupees(post.price)}` : "Free E-Pass"}</p>
               {holding ? (
                 <Link href={`/plus/pass/${holding.code}`} className="btn btn-primary mt-3"><QrCode className="h-4 w-4" aria-hidden /> {holding.status === "checked_in" ? "Checked in · view E-Pass" : "View my E-Pass"}</Link>
@@ -136,7 +145,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
                 </div>
               ) : viewer ? (
                 <div className="mt-2">
-                  <PlusButton action={registerPass.bind(null, post.id)} className="!bg-teal !px-4 !py-2 !text-white">Get my free E-Pass</PlusButton>
+                  <PlusButton action={registerPass.bind(null, post.id)} className="!bg-teal !px-4 !py-2 !text-white">{post.pass_mode === "approval" ? "Request an E-Pass" : "Get my free E-Pass"}</PlusButton>
                   {left !== null && <p className="mt-2 text-xs text-muted">{left} of {post.pass_capacity} left</p>}
                 </div>
               ) : (
@@ -150,12 +159,14 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
 
           {live && (
             <div className="mt-5">
-              <LikeSaveBar postId={post.id} likes={c.likes} liked={Boolean(liked)} saved={Boolean(saved)} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave} />
+              <LikeSaveBar postId={post.id} likes={c.likes} liked={Boolean(liked)} saved={Boolean(saved)} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave}
+                support={mine ? undefined : { count: c.supports, on: Boolean(supported), action: toggleSupport }}
+                follow={mine || !c.authorId ? undefined : { authorId: c.authorId, on: Boolean(followed), action: toggleFollow }} />
             </div>
           )}
 
           <p className="mt-6 flex flex-wrap items-center gap-x-1 text-xs text-muted">
-            <span>Posted by {c.authorName}</span>
+            <span>Posted by {c.source === "user" && c.authorId ? <Link href={`/plus/u/${c.authorId}`} className="underline">{c.authorName}</Link> : c.authorName}</span>
             {c.authorMember && <span className="inline-flex items-center gap-0.5 rounded-full bg-sage-100 px-2 py-0.5 font-semibold text-teal"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> PAHAD member</span>}
             <span>· {plusDate(c.createdAt)}{post.verified_by_name && c.verified ? " · verified by PAHAD" : ""}</span>
           </p>

@@ -29,6 +29,9 @@ export const USER_BRIEF_TYPES: BriefType[] = ["alert", "opportunity", "job", "ti
 export const ROAM_KINDS = ["Tourist spot", "Viewpoint", "Eco-trail", "Heritage homestay", "Heritage / cultural site", "Other"] as const;
 export const ROAM_STAGES = { open: "Open to visitors", developing: "Being developed" } as const;
 
+/** Short public account ID shown on the profile and the identity QR. */
+export const plusAccountId = (u: { id: string }) => `PLUS-${u.id.replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase()}`;
+
 export type PlusAccountType = "individual" | "business" | "organisation";
 export const ACCOUNT_TYPES: Record<PlusAccountType, string> = {
   individual: "Individual",

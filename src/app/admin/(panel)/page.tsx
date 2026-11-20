@@ -49,6 +49,18 @@ export default async function Dashboard() {
       />
 
       {user.role === "editor" && <MemberPortal user={user} />}
+      {(user.role === "creator" || user.role === "honorary") && (
+        <section className="mb-6 rounded-2xl border border-line bg-sand/60 p-5">
+          <h2 className="font-display text-xl text-teal">{user.role === "creator" ? "C1 Creator" : "H1 Honorary Member"}</h2>
+          {user.role === "creator" ? (
+            <p className="mt-1 text-sm text-ink/80">Share your art with PAHAD: submit your YouTube videos and upload photos. The President approves what goes on the website.</p>
+          ) : (
+            <p className="mt-1 text-sm text-ink/80">Thank you for guiding PAHAD. You can share advice and training notes (they are reviewed before publishing) and see sessions PAHAD asks you to lead under My tasks. Your advice is non-binding.</p>
+          )}
+          <p className="mt-2 text-xs text-muted">Associates have no voting rights in PAHAD polls.</p>
+          {user.role === "creator" && <Link href="/admin/videos?new=1" className="btn btn-primary mt-3 inline-flex !px-4 !py-2 text-sm">Submit a video</Link>}
+        </section>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
-import { GateScanner } from "@/components/plus/client";
+import { GateScanner, PlusButton } from "@/components/plus/client";
 import { plusDate } from "@/components/plus/ui";
 import { db } from "@/lib/db";
-import { checkInPass } from "@/lib/plus/pass-actions";
+import { checkInPass, decidePass } from "@/lib/plus/pass-actions";
 import { gateAccess } from "@/lib/plus/passes";
 import { eventMoney } from "@/lib/plus/payments";
 import { rupees } from "@/lib/plus/razorpay";
@@ -27,18 +27,20 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
       </div>
     );
   }
-  const passes = (await db.findBy("plus_passes", "post_id", id)).filter((p) => p.status !== "cancelled").sort((a, b) => a.holder_name.localeCompare(b.holder_name));
+  const allPasses = (await db.findBy("plus_passes", "post_id", id)).filter((p) => p.status !== "cancelled" && p.status !== "revoked");
+  const pending = allPasses.filter((p) => p.status === "pending");
+  const passes = allPasses.filter((p) => p.status !== "pending").sort((a, b) => a.holder_name.localeCompare(b.holder_name));
   const inCount = passes.filter((p) => p.status === "checked_in").length;
   const money = post.price > 0 ? await eventMoney(id) : null;
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <Link href={`/plus/${id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-teal"><ArrowLeft className="h-4 w-4" aria-hidden /> Event</Link>
-      <header className="rounded-[var(--radius-card)] bg-teal p-5 text-white">
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Check-in</p>
+      <header className="rounded-[var(--radius-card)] bg-[#1D353A] p-5 text-ink">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/70">Check-in</p>
         <h1 className="mt-1 font-display text-2xl leading-tight">{post.title}</h1>
-        <p className="mt-1 text-sm text-white/85">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-        <p className="mt-3 text-3xl font-bold">{inCount} <span className="text-base font-normal text-white/80">checked in of {passes.length}{post.pass_capacity ? ` (limit ${post.pass_capacity})` : ""}</span></p>
-        <p className="mt-1 text-xs text-white/70">You: {who.name}</p>
+        <p className="mt-1 text-sm text-ink/85">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+        <p className="mt-3 text-3xl font-bold">{inCount} <span className="text-base font-normal text-ink/80">checked in of {passes.length}{post.pass_capacity ? ` (limit ${post.pass_capacity})` : ""}</span></p>
+        <p className="mt-1 text-xs text-ink/70">You: {who.name}</p>
       </header>
       {money && (
         <section aria-label="Sales" className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] bg-white p-5 text-sm ring-1 ring-line sm:grid-cols-4">
@@ -54,6 +56,24 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
         <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line"><GateScanner action={checkInPass.bind(null, id)} /></section>
       ) : (
         <p className="rounded-2xl bg-sand p-4 text-sm text-muted">View only.</p>
+      )}
+      {pending.length > 0 && (
+        <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+          <h2 className="font-display text-lg text-teal">Waiting for approval ({pending.length})</h2>
+          <ul className="mt-3 divide-y divide-line text-sm">
+            {pending.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span>{p.holder_name}</span>
+                {who.canAct && (
+                  <span className="flex gap-2">
+                    <PlusButton action={decidePass.bind(null, p.code, "approve")} className="!bg-sage !text-sand !ring-0">✓ Approve</PlusButton>
+                    <PlusButton confirm={`Revoke ${p.holder_name}'s request?`} action={decidePass.bind(null, p.code, "revoke")} className="!text-coral-700">Revoke</PlusButton>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
         <h2 className="font-display text-lg text-teal">Registrations ({passes.length})</h2>

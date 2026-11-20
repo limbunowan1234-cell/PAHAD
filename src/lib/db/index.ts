@@ -88,7 +88,7 @@ function postgresBackend(url: string): Backend {
       if (users === 0 && email && password) {
         await rawInsert("users", {
           id: randomUUID(), email: email.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, active: true,
+          role: "super_admin", designation: process.env.SUPERADMIN_TITLE ?? "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, can_flagproof_plus: false, active: true,
           password_hash: hashPassword(password), created_at: new Date().toISOString(), last_login: null,
         });
       }
@@ -152,12 +152,12 @@ function fileBackend(): Backend {
       ? process.env.SUPERADMIN_EMAIL && process.env.SUPERADMIN_PASSWORD
         ? [{
             id: randomUUID(), email: process.env.SUPERADMIN_EMAIL.toLowerCase(), name: process.env.SUPERADMIN_NAME ?? "Super Admin",
-            role: "super_admin" as const, designation: "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, active: true,
+            role: "super_admin" as const, designation: "Founder & President", directorate: "", unit: "", geo: "", owner: true, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, can_flagproof_plus: false, active: true,
             password_hash: hashPassword(process.env.SUPERADMIN_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           }]
         : []
       : DEV_ACCOUNTS.map((a) => ({
-          id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, active: true,
+          id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, can_flagproof_plus: false, active: true,
           password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
         }));
     const admin = users.find((u) => u.role === "admin");
@@ -167,7 +167,7 @@ function fileBackend(): Backend {
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
       notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [], pages: [], translations: [],
       videos: [], featured: [], polls: [], poll_voters: [], poll_receipts: [], ballots: [], password_resets: [],
-      plus_users: [], plus_tokens: [], plus_posts: [], plus_flags: [], plus_blocks: [], approvals: [], plus_passes: [], plus_likes: [], plus_saves: [], plus_push: [], plus_organisers: [], plus_orders: [], plus_payouts: [],
+      plus_users: [], plus_tokens: [], plus_posts: [], plus_flags: [], plus_blocks: [], approvals: [], plus_passes: [], plus_likes: [], plus_saves: [], plus_push: [], plus_organisers: [], plus_orders: [], plus_payouts: [], plus_follows: [], plus_supports: [], plus_notifications: [],
     };
   }
   function load(): DbShape {
@@ -212,7 +212,7 @@ function fileBackend(): Backend {
         if (!data.users.some((u) => u.email === a.email)) {
           changed = true;
           data.users.push({
-            id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, active: true,
+            id: randomUUID(), ...a, directorate: a.directorate ?? "", unit: "", geo: "", owner: a.owner ?? false, finance: "", can_submit_videos: false, can_manage_menu: false, can_verify_plus: false, plus_region: "", can_approve_public: false, can_flagproof_plus: false, active: true,
             password_hash: hashPassword(DEV_PASSWORD), created_at: new Date().toISOString(), last_login: null,
           });
         } else if (a.owner && !data.users.find((u) => u.email === a.email)!.owner) {

@@ -23,7 +23,8 @@ export function canVerifyPlusPost(u: PublicUser, post: Pick<PlusPost, "hub" | "r
 }
 
 /** Flag-Proof (can't be held by community reports): President only. */
-export const canGrantFlagProof = (u: PublicUser) => can(u.role, "plus.flagproof");
+/** Flag-Proof: the President, and verifiers he allowed (Admin Team switch). */
+export const canGrantFlagProof = (u: PublicUser) => can(u.role, "plus.flagproof") || (u.can_flagproof_plus && u.can_verify_plus);
 
 /** Approve internal → public, and organisation posts for PAHAD+. */
 export const canApprovePublic = (u: PublicUser) => isPresident(u) || u.can_approve_public;

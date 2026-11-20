@@ -43,6 +43,10 @@ export const ROLES: RoleInfo[] = [
     summary: "Projects within their Programme: add, edit, archive and mark complete." },
   { id: "editor", code: "L6", label: "Member of General Assembly", tier: "General Assembly", level: 6,
     summary: "Uploads content for review and adds members." },
+  { id: "creator", code: "C1", label: "Creator", tier: "Associates", level: 7,
+    summary: "An artist (music, film, photography, any art form). Submits videos and media to PAHAD; the President approves what is published. No voting rights." },
+  { id: "honorary", code: "H1", label: "Honorary Member", tier: "Associates", level: 7,
+    summary: "Respected for a speciality in any field, or holds a senior position in another organisation or business. Advises and trains members and admins; advice is non-binding. No voting rights." },
   { id: "sysadmin", code: "SYS", label: "Website Administrator", tier: "Executive Body", level: 9,
     summary: "Builds and maintains the website. Part of the Executive Body: sees every part of the panel, including finance and voting, and votes in polls it is eligible for, but cannot approve, publish or change anything (except page banner photos). All decisions are made by the President." },
 ];
@@ -60,29 +64,33 @@ const DH: Role = "department_head";
 const PC: Role = "project_coordinator";
 const E: Role = "editor";
 const SYS: Role = "sysadmin";
+const CR: Role = "creator";
+const HN: Role = "honorary";
 const EXEC = [P, GS, JS, TR, GB, C, ES, RO, MD, DH, PC, E]; // everyone with organisational duties
+/** C1 Creator and H1 Honorary Member: associates with a dashboard account but no organisational duties and no vote. */
+export const NON_VOTING: readonly Role[] = [CR, HN];
 
 export const PERMISSIONS = {
-  "dashboard.view": [...EXEC, SYS],
+  "dashboard.view": [...EXEC, SYS, CR, HN],
 
   "content.view": [...EXEC, SYS], // SYS: read-only
-  "content.create": EXEC, // L6 / L1 E: always "Awaiting review"
+  "content.create": [...EXEC, HN], // L6 / L1 E / H1: always "Awaiting review" (H1: advice and training notes)
   "content.publish": [P, GS, JS, C], // publish / approve anyone's content
   "content.publish_own": [ES, RO, MD, DH, PC], // own items, or within own unit for scoped roles
   "content.edit_any": [P, GS, C],
   "content.delete": [P, GS, C],
 
-  "media.upload": EXEC,
+  "media.upload": [...EXEC, CR, HN],
   "media.delete": [P, GS, C],
 
-  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E, SYS],
+  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E, SYS, HN], // H1: read-only, to know who they advise and train
   "members.create": [P, GS, JS, C, ES, MD, DH, PC, E], // scoped roles: own unit
   "members.edit": [P, GS, JS, C, MD, DH],
   "members.approve": [P, GS, JS, C, MD, DH],
   "members.delete": [P, GS],
   "members.export": [P, GS, C, RO],
 
-  "tasks.view_own": [...EXEC, SYS],
+  "tasks.view_own": [...EXEC, SYS, CR, HN], // H1 can be given advisory / training sessions
   "tasks.view_all": [P, GS, C, ES, SYS],
   "tasks.assign": [P, GS, JS, C, ES, MD, DH, PC], // scoped roles: own unit
   "tasks.delete": [P, GS, C],
@@ -114,7 +122,7 @@ export const PERMISSIONS = {
 
   // Circulars and the General Assembly member portal
   "circulars.issue": [P, GS, JS],
-  "circulars.view": [...EXEC, SYS],
+  "circulars.view": [...EXEC, SYS, CR, HN],
   "portal.invite": [P, GS], // give verified members an L6 portal account
 
   // YouTube videos and featured content: managed by the President only.
@@ -140,6 +148,14 @@ export const PERMISSIONS = {
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
+
+/** Can this account submit YouTube videos? The President, C1 Creators always, others when switched on. */
+export function canSubmitVideos(u: Pick<PublicUser, "role" | "can_submit_videos">): boolean {
+  return can(u.role, "videos.manage") || u.role === "creator" || Boolean(u.can_submit_videos);
+}
+
+/** C1 Creators and H1 Honorary Members have no voting rights in any poll. */
+export const canVote = (role: Role | null | undefined) => Boolean(role) && !NON_VOTING.includes(role as Role);
 
 export function can(role: Role | null | undefined, permission: Permission): boolean {
   if (!role) return false;
@@ -286,7 +302,10 @@ export function abilities(role: Role): string[] {
     ["team.manage", "Create admins and change roles"],
     ["finance.access.manage", "Grant or change finance access"],
   ];
-  return list.filter(([p]) => can(role, p)).map(([, label]) => label);
+  const out = list.filter(([p]) => can(role, p)).map(([, label]) => label);
+  if (role === "creator") out.unshift("Submit YouTube videos for the President's approval");
+  if (NON_VOTING.includes(role)) out.push("No voting rights");
+  return out;
 }
 
 export const UNIT_LABEL: Record<UnitKind, string> = {

@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getFilmsPage } from "@/lib/data";
 import { db } from "@/lib/db";
 import { FILMS_DEFAULTS, FILMS_PATH } from "@/lib/films";
-import { can, canView } from "@/lib/permissions";
+import { can, canView, canSubmitVideos } from "@/lib/permissions";
 import { pageLabel, pageList } from "@/lib/placements";
 import type { Video, VideoStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
@@ -67,7 +67,7 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
   const manage = can(user.role, "videos.manage");
   // SYS Website Administrator: sees the President's view read-only.
   const viewOnly = !manage && canView(user.role, "videos.manage");
-  const mayContribute = manage || user.can_submit_videos;
+  const mayContribute = manage || canSubmitVideos(user);
 
   if (!mayContribute && !viewOnly) {
     return (
