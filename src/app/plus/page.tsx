@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search, X } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { PlusEmblem } from "@/components/plus/client";
 import { ReelsFeed, type Reel } from "@/components/plus/reels";
 import { timing } from "@/components/plus/ui";
 import { db } from "@/lib/db";
-import { BRIEF_TYPES, HUB_KEYS, PLUS_HUBS, PLUS_REGIONS, type BriefType, type PlusHub } from "@/lib/plus/config";
-import { toggleLike, toggleSave } from "@/lib/plus/post-actions";
-import { plusFeed, requestTime, type PlusCard, type PlusFilters } from "@/lib/plus/posts";
+import { BRIEF_TYPES, HUB_KEYS, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, type BriefType, type PlusHub } from "@/lib/plus/config";
+import { reportPlusPost, toggleFollow, toggleLike, toggleSave, toggleSupport } from "@/lib/plus/post-actions";
+import { plusFeed, requestTime, type PlusCard, type PlusFilters, type PlusTab } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 import { cn } from "@/lib/utils";
 
@@ -16,13 +16,27 @@ export const metadata = { title: { absolute: "PAHAD+ | Events, places, business 
 type SP = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
+const TABS: { key: PlusTab; label: string }[] = [
+  { key: "community", label: "Community" },
+  { key: "following", label: "Following" },
+  { key: "foryou", label: "For You" },
+];
+const PILLS: { key: PlusHub | "jobs"; label: string }[] = [
+  { key: "events", label: "Events" },
+  { key: "roam", label: "Roam" },
+  { key: "business", label: "Business" },
+  { key: "jobs", label: "Jobs" },
+  { key: "briefs", label: "Briefs" },
+];
+
 function filtersFrom(sp: SP): PlusFilters {
-  const hub = one(sp.hub) as PlusHub;
+  const tab = one(sp.tab) as PlusTab;
+  const hub = one(sp.hub) as PlusHub | "jobs";
   const type = one(sp.type) as BriefType;
   const region = one(sp.region);
   return {
-    tab: one(sp.tab) === "pahad" ? "pahad" : "foryou",
-    hub: HUB_KEYS.includes(hub) ? hub : undefined,
+    tab: ["following", "foryou", "pahad"].includes(tab) ? tab : "community",
+    hub: hub === "jobs" || HUB_KEYS.includes(hub as PlusHub) ? hub : undefined,
     region: (PLUS_REGIONS as readonly string[]).includes(region) ? region : undefined,
     type: Object.hasOwn(BRIEF_TYPES, type) ? type : undefined,
     q: one(sp.q).slice(0, 80) || undefined,
@@ -32,9 +46,8 @@ function filtersFrom(sp: SP): PlusFilters {
 function hrefWith(f: PlusFilters, change: Partial<PlusFilters>) {
   const next = { ...f, ...change };
   if (next.hub !== "briefs") next.type = undefined;
-  if (next.tab === "pahad") next.region = undefined;
   const q: Record<string, string> = {};
-  if (next.tab === "pahad") q.tab = "pahad";
+  if (next.tab !== "community") q.tab = next.tab;
   if (next.hub) q.hub = next.hub;
   if (next.type) q.type = next.type;
   if (next.region) q.region = next.region;
@@ -42,59 +55,69 @@ function hrefWith(f: PlusFilters, change: Partial<PlusFilters>) {
   return { pathname: "/plus", query: q };
 }
 
-function toReel(c: PlusCard, at: number, liked: Set<string>, saved: Set<string>): Reel {
+const CTA: Record<PlusHub, string> = { business: "Connect with Business", events: "Event details", roam: "Plan a visit", briefs: "Read" };
+
+function toReel(c: PlusCard, at: number, liked: Set<string>, saved: Set<string>, supported: Set<string>, followed: Set<string>, viewerId: string): Reel {
+  const pass = c.passEnabled && c.verified ? (c.price > 0 ? `E-Pass ₹${c.price / 100}` : "Free E-Pass") : "";
   return {
     id: c.id, href: c.href, userPost: c.source === "user",
+    hubKey: c.briefType === "job" ? "jobs" : c.hub,
     hubLabel: c.briefType ? BRIEF_TYPES[c.briefType].label : PLUS_HUBS[c.hub].label,
+    category: c.kind,
     emoji: c.briefType ? BRIEF_TYPES[c.briefType].emoji : PLUS_HUBS[c.hub].emoji,
     region: c.region, locality: c.locality, title: c.title, summary: c.summary, image: c.image, youtubeId: c.youtubeId,
     trust: c.source === "pahad" ? "pahad" : c.flagProof ? "flag_proof" : c.verified ? "verified" : "unverified",
-    author: c.authorName, authorMember: c.authorMember, likes: c.likes, liked: liked.has(c.id), saved: saved.has(c.id),
-    pass: c.passEnabled && c.verified ? (c.price > 0 ? `E-Pass ₹${c.price / 100}` : "Free E-Pass") : "",
+    authentic: c.authentic,
+    author: c.authorName, authorId: c.authorId, canFollow: c.source === "user" && Boolean(c.authorId) && c.authorId !== viewerId,
+    following: followed.has(c.authorId), authorMember: c.authorMember,
+    likes: c.likes, liked: liked.has(c.id), saved: saved.has(c.id), supports: c.supports, supported: supported.has(c.id),
+    flags: c.flags,
+    address: c.locked?.address || "", regId: c.locked?.regId || "",
+    pass, cta: pass ? `Get ${pass}` : CTA[c.hub],
     when: timing(c, at), alert: c.briefType === "alert",
   };
 }
 
-/** Header drawn over the picture: tabs (For You, PAHAD, regions), search, hub pills and Brief types. */
+/** Header drawn over the picture: Community · Following · For You, PAHAD's picks (⭐), then the hub pills. */
 function ReelsHeader({ f }: { f: PlusFilters }) {
-  const tab = (label: string, href: ReturnType<typeof hrefWith>, on: boolean) => (
-    <Link href={href} scroll={false} aria-current={on ? "true" : undefined}
-      className={cn("shrink-0 border-b-2 pb-1 drop-shadow", on ? "border-teal font-extrabold text-teal" : "border-transparent font-semibold text-ink/70")}>{label}</Link>
-  );
   const pill = (label: string, href: ReturnType<typeof hrefWith>, on: boolean) => (
     <Link href={href} scroll={false} aria-current={on ? "true" : undefined}
-      className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px]", on ? "bg-teal font-extrabold text-sand" : "border border-ink/15 bg-white/65 font-bold text-ink/85 backdrop-blur-md")}>{label}</Link>
+      className={cn("shrink-0 rounded-full px-3.5 py-1.5 text-xs", on ? "bg-ink font-extrabold text-sand" : "bg-[#162024]/70 font-bold text-ink/90 backdrop-blur-md")}>{label}</Link>
   );
   return (
     <header className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-[#11181B]/85 via-[#11181B]/45 to-transparent px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)]">
       <div className="flex items-center justify-between gap-2">
         <Link href="/plus" className="flex shrink-0 items-center gap-1.5">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-ink/25 bg-[#1D353A] shadow"><PlusEmblem className="h-6 w-6" /></span>
+          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-coral shadow"><PlusEmblem className="h-9 w-9" /></span>
           <span className="font-display text-base font-bold tracking-tight">PAHAD+</span>
         </Link>
-        <nav aria-label="Feed" className="no-scrollbar flex items-center gap-3 overflow-x-auto px-1 text-xs">
-          {tab("For You", hrefWith(f, { tab: "foryou", region: undefined }), f.tab === "foryou" && !f.region)}
-          {tab("PAHAD", hrefWith(f, { tab: "pahad" }), f.tab === "pahad")}
-          {PLUS_REGIONS.map((r) => <span key={r} className="contents">{tab(r, hrefWith(f, { tab: "foryou", region: r }), f.region === r)}</span>)}
+        <nav aria-label="Feed" className="no-scrollbar flex items-center gap-3 overflow-x-auto px-1 text-[13px]">
+          {TABS.map((t) => (
+            <Link key={t.key} href={hrefWith(f, { tab: t.key })} scroll={false} aria-current={f.tab === t.key ? "true" : undefined}
+              className={cn("shrink-0 border-b-2 pb-1 drop-shadow", f.tab === t.key ? "border-teal font-extrabold text-ink" : "border-transparent font-semibold text-ink/65")}>{t.label}</Link>
+          ))}
         </nav>
-        <Link href="/plus/discover" aria-label="Search" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink/15 bg-[#1D353A]/70 backdrop-blur-md">
-          <Search className="h-4 w-4" aria-hidden />
+        <Link href={hrefWith(f, { tab: f.tab === "pahad" ? "community" : "pahad" })} aria-label="PAHAD's picks" aria-current={f.tab === "pahad" ? "true" : undefined}
+          className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl backdrop-blur-md", f.tab === "pahad" ? "bg-teal text-sand" : "bg-[#1D353A]/80 text-teal")}>
+          <Star className={cn("h-5 w-5", f.tab === "pahad" && "fill-current")} aria-hidden />
         </Link>
       </div>
-      <nav aria-label="Hubs" className="no-scrollbar mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
-        {pill("All hubs", hrefWith(f, { hub: undefined }), !f.hub)}
-        {HUB_KEYS.map((h) => <span key={h} className="contents">{pill(`${PLUS_HUBS[h].emoji} ${PLUS_HUBS[h].label}`, hrefWith(f, { hub: h }), f.hub === h)}</span>)}
+      <nav aria-label="Hubs" className="no-scrollbar mt-3 flex items-center gap-2 overflow-x-auto pb-0.5">
+        {pill("All", hrefWith(f, { hub: undefined }), !f.hub)}
+        {PILLS.map((h) => <span key={h.key} className="contents">{pill(h.label, hrefWith(f, { hub: h.key }), f.hub === h.key)}</span>)}
       </nav>
       {f.hub === "briefs" && (
         <nav aria-label="Brief types" className="no-scrollbar mt-1.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
           {pill("All briefs", hrefWith(f, { type: undefined }), !f.type)}
-          {(Object.keys(BRIEF_TYPES) as BriefType[]).map((t) => <span key={t} className="contents">{pill(`${BRIEF_TYPES[t].emoji} ${BRIEF_TYPES[t].label}`, hrefWith(f, { type: t }), f.type === t)}</span>)}
+          {(Object.keys(BRIEF_TYPES) as BriefType[]).filter((t) => t !== "job").map((t) => <span key={t} className="contents">{pill(`${BRIEF_TYPES[t].emoji} ${BRIEF_TYPES[t].label}`, hrefWith(f, { type: t }), f.type === t)}</span>)}
         </nav>
       )}
-      {f.q && (
-        <Link href={hrefWith(f, { q: undefined })} className="mt-2 inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold text-sand">
-          Results for “{f.q}” <X className="h-3.5 w-3.5" aria-label="Clear search" />
-        </Link>
+      {(f.q || f.region || f.tab === "pahad") && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {f.tab === "pahad" && <span className="rounded-full bg-teal px-3 py-1 text-[11px] font-extrabold text-sand">⭐ PAHAD&apos;s picks</span>}
+          {f.region && <Link href={hrefWith(f, { region: undefined })} className="inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold text-sand">{f.region} <X className="h-3.5 w-3.5" aria-label="Clear region" /></Link>}
+          {f.q && <Link href={hrefWith(f, { q: undefined })} className="inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold text-sand">Results for “{f.q}” <X className="h-3.5 w-3.5" aria-label="Clear search" /></Link>}
+        </div>
       )}
     </header>
   );
@@ -104,12 +127,16 @@ async function Feed({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const f = filtersFrom(sp);
   const viewer = await getPlusUser();
-  const [blocks, likes, saves] = viewer
-    ? await Promise.all([db.findBy("plus_blocks", "blocker_id", viewer.id), db.findBy("plus_likes", "user_id", viewer.id), db.findBy("plus_saves", "user_id", viewer.id)])
-    : [[], [], []];
-  const cards = await plusFeed(f, new Set(blocks.map((b) => b.blocked_id)));
+  const [blocks, likes, saves, follows, supports] = viewer
+    ? await Promise.all([
+        db.findBy("plus_blocks", "blocker_id", viewer.id), db.findBy("plus_likes", "user_id", viewer.id), db.findBy("plus_saves", "user_id", viewer.id),
+        db.findBy("plus_follows", "follower_id", viewer.id), (await db.all("plus_supports")).filter((x) => x.user_id === viewer.id),
+      ])
+    : [[], [], [], [], []];
+  const followed = new Set(follows.map((x) => x.followee_id));
+  const cards = await plusFeed(f, new Set(blocks.map((b) => b.blocked_id)), followed);
   const at = requestTime();
-  const liked = new Set(likes.map((l) => l.post_id)), saved = new Set(saves.map((s) => s.post_id));
+  const liked = new Set(likes.map((l) => l.post_id)), saved = new Set(saves.map((s) => s.post_id)), supported = new Set(supports.map((x) => x.post_id));
 
   return (
     <>
@@ -118,14 +145,15 @@ async function Feed({ searchParams }: { searchParams: Promise<SP> }) {
       {cards.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center p-8 text-center">
           <p className="text-4xl" aria-hidden>🏔️</p>
-          <h1 className="mt-3 font-display text-xl font-bold">{f.q ? "Nothing matches that search" : "Nothing here yet"}</h1>
-          <p className="mt-1.5 text-xs text-muted">{f.q ? "Try another word, or clear the search." : `Be the first to share something${f.region ? ` from ${f.region}` : ""}.`}</p>
+          <h1 className="mt-3 font-display text-xl font-bold">{f.q ? "Nothing matches that search" : f.tab === "following" ? (viewer ? "No posts from people you follow yet" : "Sign in to follow accounts") : "Nothing here yet"}</h1>
+          <p className="mt-1.5 text-xs text-muted">{f.q ? "Try another word, or clear the search." : f.tab === "following" ? "Tap + Follow on a post to see that account's posts here." : `Be the first to share something${f.region ? ` from ${f.region}` : ""}.`}</p>
           <Link href="/plus/new" className="btn btn-primary mt-4 !px-5 !py-2.5 text-xs">+ Post on PAHAD+</Link>
         </div>
       ) : (
         <>
           <h1 className="sr-only">PAHAD+ feed</h1>
-          <ReelsFeed reels={cards.map((c) => toReel(c, at, liked, saved))} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave} />
+          <ReelsFeed reels={cards.map((c) => toReel(c, at, liked, saved, supported, followed, viewer?.id ?? ""))} signedIn={Boolean(viewer)}
+            actions={{ like: toggleLike, save: toggleSave, support: toggleSupport, follow: toggleFollow, report: reportPlusPost }} flagsToHold={PLUS_RULES.flagsToHold} />
         </>
       )}
     </>

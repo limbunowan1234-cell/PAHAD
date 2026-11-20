@@ -64,11 +64,11 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     youtube_id, starts_at: "", ends_at: "",
     venue: str(fd, "venue", 160), organiser: str(fd, "organiser", 120), contact_phone: str(fd, "contact_phone", 30),
     contact_whatsapp: str(fd, "contact_whatsapp", 30), contact_email: str(fd, "contact_email", 160), address: str(fd, "address", 240),
-    website: links.website, link: links.link, map_link: links.map_link,
+    website: links.website, link: links.link, map_link: links.map_link, reg_id: "",
     best_season: str(fd, "best_season", 80), hours: str(fd, "hours", 120), valid_until: "", deadline: "",
     status: "unverified", flags: 0, verified_by_name: "", verified_at: "", reject_reason: "",
     author_id: u.id, author_name: u.name, author_type: u.account_type, author_member: Boolean(u.member_id),
-    pass_enabled: false, pass_capacity: 0, price: 0, likes: 0, created_at: now(), updated_at: now(),
+    pass_enabled: false, pass_capacity: 0, price: 0, likes: 0, supports: 0, created_at: now(), updated_at: now(),
   };
 
   if (hub === "events") {
@@ -98,6 +98,7 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     p.stage = stage;
   } else if (hub === "business") {
     p.kind = str(fd, "kind", 60);
+    p.reg_id = str(fd, "reg_id", 40); // shown only once verified, like the address
   } else {
     const type = str(fd, "brief_type", 20) as BriefType;
     // Policy & Assembly Summaries come only from PAHAD circulars approved as public.
@@ -211,4 +212,34 @@ export async function toggleSave(postId: string): Promise<ToggleState> {
   if (had) await db.remove("plus_saves", id);
   else await db.insert("plus_saves", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null);
   return { ok: true, message: had ? "Removed from Saved." : "Saved. Find it on Me → Saved.", on: !had };
+}
+
+/** "Support": vouch that a post is genuine. One per person per post; the count helps PAHAD's verifiers. */
+export async function toggleSupport(postId: string): Promise<ToggleState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Sign in to support posts." };
+  const p = await livePostFor(postId);
+  if (!p) return { ok: false, message: "This post is no longer available." };
+  if (p.author_id === u.id) return { ok: false, message: "You can't support your own post." };
+  const id = `${postId}:${u.id}`;
+  const had = Boolean(await db.get("plus_supports", id));
+  if (had) await db.remove("plus_supports", id);
+  else await db.insert("plus_supports", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null);
+  const count = (await db.findBy("plus_supports", "post_id", postId)).length;
+  await db.update("plus_posts", postId, { supports: count });
+  updateTag("plus");
+  return { ok: true, message: had ? "Support removed." : "Thanks for vouching for this post.", on: !had, count };
+}
+
+/** Follow an account: its posts appear in your Following tab. */
+export async function toggleFollow(authorId: string): Promise<ToggleState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Sign in to follow accounts." };
+  if (!authorId || authorId === u.id) return { ok: false, message: "You can't follow this account." };
+  if (!(await db.get("plus_users", authorId))) return { ok: false, message: "This account no longer exists." };
+  const id = `${u.id}:${authorId}`;
+  const had = Boolean(await db.get("plus_follows", id));
+  if (had) await db.remove("plus_follows", id);
+  else await db.insert("plus_follows", { id, follower_id: u.id, followee_id: authorId, created_at: now() }).catch(() => null);
+  return { ok: true, message: had ? "Unfollowed." : "Following. Their posts appear in your Following tab.", on: !had };
 }

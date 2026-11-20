@@ -10,7 +10,7 @@ export const metadata = { title: "Discover" };
 
 /** Search, a featured video (a verified PAHAD+ post with a video, or PAHAD's latest film), and the photo grid. */
 async function Explorer() {
-  const [cards, videos] = await Promise.all([plusFeed({ tab: "foryou" }), getPublishedVideos()]);
+  const [cards, videos] = await Promise.all([plusFeed({ tab: "community" }), getPublishedVideos()]);
   const items: DiscoverItem[] = cards.map((c) => ({
     id: c.id, href: c.href, title: c.title, region: c.region, summary: c.summary,
     hub: c.briefType ? BRIEF_TYPES[c.briefType].label : PLUS_HUBS[c.hub].label,

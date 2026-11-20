@@ -58,7 +58,9 @@ function Details({ p }: { p: PlusPost }) {
       <Row label="Valid until" value={p.valid_until ? formatDate(p.valid_until, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""} />
       <Row label="Last date" value={p.deadline} />
       <Row label="E-Passes" value={p.hub === "events" && p.pass_enabled ? `Free E-Passes${p.pass_capacity ? `, limit ${p.pass_capacity}` : ", no limit"}` : ""} />
+      <Row label="Registration ID" value={p.reg_id} />
       <Row label="Likes" value={p.likes ? String(p.likes) : ""} />
+      <Row label="Supports" value={p.supports ? `${p.supports} people vouch it is genuine` : ""} />
       {p.body && <p className="whitespace-pre-line pt-2 text-sm text-ink">{p.body}</p>}
     </dl>
   );
@@ -144,6 +146,7 @@ export default async function PlusQueuePage({ searchParams }: PageProps<"/admin/
                       <Badge>{hub?.emoji} {hub?.label}{p.brief_type ? `: ${BRIEF_TYPES[p.brief_type as BriefType]?.label}` : ""}</Badge>
                       <span className="text-xs text-muted">{p.region}{p.locality ? ` · ${p.locality}` : ""}</span>
                       {p.flags > 0 && <Badge tone="red">{p.flags} report{p.flags === 1 ? "" : "s"}</Badge>}
+                      {p.supports > 0 && <Badge tone="green">{p.supports} support{p.supports === 1 ? "" : "s"}</Badge>}
                     </div>
                     <p className="mt-2 font-semibold text-ink">{p.title}</p>
                     <p className="text-sm text-muted">{p.summary}</p>

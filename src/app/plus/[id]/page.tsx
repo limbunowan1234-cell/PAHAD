@@ -9,12 +9,12 @@ import { confirmPaidPass, startPaidPass } from "@/lib/plus/pay-actions";
 import { isApprovedOrganiser, placesHeld } from "@/lib/plus/payments";
 import { paymentsConfigured, rupees } from "@/lib/plus/razorpay";
 import { hubLabel, LockedBox, plusDate, timing, TrustBadge } from "@/components/plus/ui";
-import { blockPlusUser, deleteOwnPlusPost, reportPlusPost, toggleLike, toggleSave } from "@/lib/plus/post-actions";
+import { blockPlusUser, deleteOwnPlusPost, reportPlusPost, toggleFollow, toggleLike, toggleSave, toggleSupport } from "@/lib/plus/post-actions";
 import { registerPass } from "@/lib/plus/pass-actions";
 import { passesOpen, takenPlaces } from "@/lib/plus/passes";
 import { db } from "@/lib/db";
 import { ROAM_STAGES } from "@/lib/plus/config";
-import { getPlusPost, isLivePlus, toCard, requestTime } from "@/lib/plus/posts";
+import { getPlusPost, isLivePlus, toCard, requestTime, withAuthentic } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 
 export const metadata = { title: "Post", robots: { index: false } };
@@ -37,14 +37,17 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
   const mine = Boolean(viewer && post && post.author_id === viewer.id);
   if (!post || (!isLivePlus(post, at) && !mine)) notFound();
   // Never pass the raw post to the page: toCard leaves out the locked fields until it is verified.
-  const c = toCard(post);
+  const [c] = await withAuthentic([toCard(post)]);
+  const authentic = c.authentic;
   const when = timing(c, at);
   const l = c.locked;
   const live = isLivePlus(post, at);
   // Viewer's own like / save / E-Pass, and places left.
-  const [liked, saved, myPass, taken] = await Promise.all([
+  const [liked, saved, supported, followed, myPass, taken] = await Promise.all([
     viewer ? db.get("plus_likes", `${post.id}:${viewer.id}`) : null,
     viewer ? db.get("plus_saves", `${post.id}:${viewer.id}`) : null,
+    viewer ? db.get("plus_supports", `${post.id}:${viewer.id}`) : null,
+    viewer && post.author_id ? db.get("plus_follows", `${viewer.id}:${post.author_id}`) : null,
     viewer ? db.get("plus_passes", `${post.id}:${viewer.id}`) : null,
     c.passEnabled ? (post.price > 0 ? placesHeld(post.id, viewer?.id) : takenPlaces(post.id)) : Promise.resolve(0),
   ]);
@@ -78,6 +81,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-semibold text-ink">{hubLabel(c)}</span>
             <TrustBadge c={c} size="md" />
+            {authentic && <span className="rounded-full bg-sage px-3 py-1 text-xs font-extrabold text-sand">✓ Authentic</span>}
           </div>
           <h1 className="mt-3 font-display text-3xl leading-tight text-teal">{c.title}</h1>
           <p className="mt-2 flex items-center gap-1 text-sm text-muted"><MapPin className="h-4 w-4" aria-hidden /> {[c.locality, c.region].filter(Boolean).join(", ")}</p>
@@ -98,10 +102,11 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
 
           <div className="mt-6">
             {l && Object.values(l).some(Boolean) ? (
-              <section aria-label="Contact and details" className="space-y-2 rounded-2xl bg-sage-100 p-4 text-sm">
+              <section id="contact" aria-label="Contact and details" className="scroll-mt-20 space-y-2 rounded-2xl bg-sage-100 p-4 text-sm">
                 {l.venue && <p><span className="text-muted">Venue:</span> <strong>{l.venue}</strong></p>}
                 {l.organiser && <p><span className="text-muted">Organiser:</span> <strong>{l.organiser}</strong></p>}
                 {l.address && <p><span className="text-muted">Address:</span> <strong>{l.address}</strong></p>}
+                {l.regId && <p><span className="text-muted">Registration ID:</span> <strong className="font-mono">{l.regId}</strong></p>}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {l.phone && <a href={`tel:${l.phone}`} className="btn btn-primary !px-4 !py-2 text-sm"><Phone className="h-4 w-4" aria-hidden /> Call</a>}
                   {l.whatsapp && <a href={waLink(l.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn btn-primary !px-4 !py-2 text-sm">WhatsApp</a>}
@@ -150,7 +155,9 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
 
           {live && (
             <div className="mt-5">
-              <LikeSaveBar postId={post.id} likes={c.likes} liked={Boolean(liked)} saved={Boolean(saved)} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave} />
+              <LikeSaveBar postId={post.id} likes={c.likes} liked={Boolean(liked)} saved={Boolean(saved)} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave}
+                support={mine ? undefined : { count: c.supports, on: Boolean(supported), action: toggleSupport }}
+                follow={mine || !c.authorId ? undefined : { authorId: c.authorId, on: Boolean(followed), action: toggleFollow }} />
             </div>
           )}
 

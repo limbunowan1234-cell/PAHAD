@@ -47,7 +47,7 @@ export default function PrivacyPage() {
           <li><strong>Posts:</strong> what you post (title, summary, description, photo, place, dates, optional YouTube link) and any contact details you add (phone, WhatsApp, email, address, website, booking or registration link).</li>
           <li><strong>Safety:</strong> the reports you make and the accounts you block.</li>
           <li><strong>E-Passes:</strong> the events you take a free E-Pass for, the name on the pass, and when you were checked in. The organiser and PAHAD&apos;s verifiers see the names on the passes for their event; nobody else does.</li>
-          <li><strong>Likes and saves:</strong> the posts you like (only the total number is public) and the posts you save (only you see them).</li>
+          <li><strong>Likes, support, saves and follows:</strong> the posts you like or support (only the totals are public), the posts you save, and the accounts you follow (only you see these).</li>
           <li><strong>Notifications:</strong> if you turn them on, your browser&apos;s push subscription (a device address from Google, Apple or Mozilla) and the regions you chose. Turn them off in Me at any time.</li>
           <li><strong>Paid E-Passes:</strong> payments are made to PAHAD through Razorpay, which handles your card, UPI or bank details under its own privacy policy; PAHAD never sees or stores them. PAHAD keeps a record of each sale (event, amount, Razorpay payment reference, refunds) for its accounts.</li>
           <li><strong>Paid organisers:</strong> the name on the payout account and the UPI ID or bank account and IFSC you give PAHAD, seen only by PAHAD&apos;s President, to pay you for your ticket sales.</li>

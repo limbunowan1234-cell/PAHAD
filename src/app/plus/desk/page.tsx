@@ -66,12 +66,12 @@ async function Desk({ searchParams }: { searchParams: Promise<Record<string, str
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-extrabold uppercase text-muted">{p.region} • {p.brief_type ? BRIEF_TYPES[p.brief_type as BriefType]?.label : hub?.label}</p>
                     <Link href={`/plus/${p.id}`} className="block truncate text-sm font-bold">{p.title}</Link>
-                    <p className="text-[11px] text-muted">By {p.author_name} · {plusDate(p.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}{p.flags > 0 ? ` · ${p.flags} report${p.flags === 1 ? "" : "s"}` : ""}</p>
+                    <p className="text-[11px] text-muted">By {p.author_name} · {plusDate(p.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}{p.flags > 0 ? ` · ${p.flags} report${p.flags === 1 ? "" : "s"}` : ""}{p.supports > 0 ? ` · ${p.supports} support${p.supports === 1 ? "" : "s"}` : ""}</p>
                   </div>
                 </div>
                 <p className="mt-2 line-clamp-2 text-xs text-ink/85">{p.summary}</p>
-                {[p.venue, p.contact_phone, p.address, p.website, p.link].some(Boolean) && (
-                  <p className="mt-1 text-[11px] text-muted">Details to check: {[p.venue, p.contact_phone, p.address, p.website, p.link].filter(Boolean).join(" · ")}</p>
+                {[p.venue, p.contact_phone, p.address, p.reg_id, p.website, p.link].some(Boolean) && (
+                  <p className="mt-1 text-[11px] text-muted">Details to check: {[p.venue, p.contact_phone, p.address, p.reg_id && `ID ${p.reg_id}`, p.website, p.link].filter(Boolean).join(" · ")}</p>
                 )}
                 {p.reject_reason && <p className="mt-1 text-[11px] text-coral-700">Note: {p.reject_reason}</p>}
                 {!viewOnly && (

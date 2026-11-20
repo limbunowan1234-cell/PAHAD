@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
-import { Bell, BellOff, Bookmark, Camera, Compass, Heart, Home, Loader2, Search, ShieldCheck, Ticket } from "lucide-react";
+import { Bell, BellOff, Bookmark, Camera, Compass, Flame, Home, Loader2, Search, ShieldCheck, Ticket } from "lucide-react";
 import type { ActionState } from "@/lib/admin-helpers";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import { BRIEF_TYPES, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, ROAM_KINDS, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "@/lib/plus/config";
@@ -302,6 +302,7 @@ export function NewPostForm({
           {hub === "events" && <F label="Exact venue"><input name="venue" maxLength={160} className="field" /></F>}
           {hub === "events" && <F label="Organiser"><input name="organiser" maxLength={120} className="field" /></F>}
           {hub === "business" && <F label="Address" className="sm:col-span-2"><input name="address" maxLength={240} className="field" /></F>}
+          {hub === "business" && <F label="Registration / licence number" hint="Optional: trade licence, GST, Udyam or society registration."><input name="reg_id" maxLength={40} className="field" /></F>}
           {hub !== "briefs" && <F label="Phone"><input name="contact_phone" type="tel" maxLength={30} className="field" /></F>}
           {hub !== "briefs" && <F label="WhatsApp"><input name="contact_whatsapp" type="tel" maxLength={30} className="field" /></F>}
           {hub !== "briefs" && <F label="Email"><input name="contact_email" type="email" maxLength={160} className="field" /></F>}
@@ -320,29 +321,49 @@ export function NewPostForm({
 type Toggle = (postId: string) => Promise<{ ok: boolean; message: string; on?: boolean; count?: number }>;
 
 export function LikeSaveBar({
-  postId, likes, liked, saved, signedIn, like, save,
-}: { postId: string; likes: number; liked: boolean; saved: boolean; signedIn: boolean; like: Toggle; save: Toggle }) {
-  const [state, setState] = useState({ likes, liked, saved });
+  postId, likes, liked, saved, signedIn, like, save, support, follow,
+}: {
+  postId: string; likes: number; liked: boolean; saved: boolean; signedIn: boolean; like: Toggle; save: Toggle;
+  /** Optional: "Support" (vouch this is genuine) and following the poster. */
+  support?: { count: number; on: boolean; action: Toggle };
+  follow?: { authorId: string; on: boolean; action: Toggle };
+}) {
+  const [state, setState] = useState({ likes, liked, saved, supports: support?.count ?? 0, supported: support?.on ?? false, following: follow?.on ?? false });
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
-  const run = (fn: Toggle, kind: "like" | "save") =>
+  const run = (kind: "like" | "save" | "support" | "follow") =>
     start(async () => {
-      if (!signedIn) return setMsg(kind === "like" ? "Sign in to like posts." : "Sign in to save posts.");
-      const r = await fn(postId);
+      if (!signedIn) return setMsg({ like: "Sign in to like posts.", save: "Sign in to save posts.", support: "Sign in to support posts.", follow: "Sign in to follow accounts." }[kind]);
+      const r = kind === "like" ? await like(postId) : kind === "save" ? await save(postId) : kind === "support" ? await support!.action(postId) : await follow!.action(follow!.authorId);
       if (!r.ok) return setMsg(r.message);
-      setMsg(kind === "save" ? r.message : "");
-      setState((s) => (kind === "like" ? { ...s, liked: Boolean(r.on), likes: r.count ?? s.likes } : { ...s, saved: Boolean(r.on) }));
+      setMsg(kind === "like" ? "" : r.message);
+      setState((s) =>
+        kind === "like" ? { ...s, liked: Boolean(r.on), likes: r.count ?? s.likes }
+          : kind === "save" ? { ...s, saved: Boolean(r.on) }
+            : kind === "support" ? { ...s, supported: Boolean(r.on), supports: r.count ?? s.supports }
+              : { ...s, following: Boolean(r.on) });
     });
+  const btn = (on: boolean) => cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ring-1", on ? "bg-coral/20 text-coral-700 ring-coral" : "bg-white text-teal ring-line hover:bg-sand");
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" disabled={pending} onClick={() => run(like, "like")} aria-pressed={state.liked}
-        className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ring-1", state.liked ? "bg-coral/20 text-coral-700 ring-coral" : "bg-white text-teal ring-line hover:bg-sand")}>
-        <Heart className={cn("h-4 w-4", state.liked && "fill-current")} aria-hidden /> {state.liked ? "Liked" : "Like"}{state.likes > 0 && <span aria-label={`${state.likes} likes`}> · {state.likes}</span>}
+      <button type="button" disabled={pending} onClick={() => run("like")} aria-pressed={state.liked} className={btn(state.liked)}>
+        <Flame className={cn("h-4 w-4", state.liked && "fill-current")} aria-hidden /> {state.liked ? "Liked" : "Like"}{state.likes > 0 && <span aria-label={`${state.likes} likes`}> · {state.likes}</span>}
       </button>
-      <button type="button" disabled={pending} onClick={() => run(save, "save")} aria-pressed={state.saved}
+      {support && (
+        <button type="button" disabled={pending} onClick={() => run("support")} aria-pressed={state.supported} className={btn(state.supported)}>
+          <ShieldCheck className="h-4 w-4" aria-hidden /> {state.supported ? "Supported" : "Support"} ({state.supports})
+        </button>
+      )}
+      <button type="button" disabled={pending} onClick={() => run("save")} aria-pressed={state.saved}
         className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold ring-1", state.saved ? "bg-sage-100 text-teal ring-teal" : "bg-white text-teal ring-line hover:bg-sand")}>
         <Bookmark className={cn("h-4 w-4", state.saved && "fill-current")} aria-hidden /> {state.saved ? "Saved" : "Save"}
       </button>
+      {follow && (
+        <button type="button" disabled={pending} onClick={() => run("follow")} aria-pressed={state.following}
+          className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-extrabold", state.following ? "ring-1 ring-ink/40" : "bg-ink text-sand")}>
+          {state.following ? "Following" : "+ Follow"}
+        </button>
+      )}
       {msg && <span role="status" className="text-xs text-muted">{msg}</span>}
     </div>
   );

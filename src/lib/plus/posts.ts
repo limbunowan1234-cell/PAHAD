@@ -57,7 +57,12 @@ export type PlusCard = {
   authorId: string;
   /** The poster linked their PAHAD membership. */
   authorMember: boolean;
+  /** PAHAD has confirmed who the poster is: a linked PAHAD member or an approved paid organiser. */
+  authentic: boolean;
   likes: number;
+  supports: number;
+  /** Community reports so far (a post is held at PLUS_RULES.flagsToHold unless Flag-Proof). */
+  flags: number;
   /** Events offering E-Passes; price in paise (0 = free). */
   passEnabled: boolean;
   price: number;
@@ -65,7 +70,7 @@ export type PlusCard = {
   href: string;
   /** Only when verified. */
   locked: null | {
-    venue: string; organiser: string; phone: string; whatsapp: string; email: string; address: string; website: string; link: string; mapLink: string;
+    venue: string; organiser: string; phone: string; whatsapp: string; email: string; address: string; website: string; link: string; mapLink: string; regId: string;
   };
 };
 
@@ -78,10 +83,10 @@ export function toCard(p: PlusPost): PlusCard {
     body: verified || isAlert ? p.body : "",
     image: p.image, youtubeId: p.youtube_id, startsAt: p.starts_at, endsAt: p.ends_at, validUntil: p.valid_until, deadline: p.deadline,
     bestSeason: p.best_season, hours: p.hours, verified, flagProof: p.status === "flag_proof",
-    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, likes: p.likes,
+    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, authentic: p.author_member, likes: p.likes, supports: p.supports, flags: p.flags,
     passEnabled: p.hub === "events" && p.pass_enabled, price: p.price, createdAt: p.created_at, href: `/plus/${p.id}`,
     locked: verified
-      ? { venue: p.venue, organiser: p.organiser, phone: p.contact_phone, whatsapp: p.contact_whatsapp, email: p.contact_email, address: p.address, website: p.website, link: p.link, mapLink: p.map_link }
+      ? { venue: p.venue, organiser: p.organiser, phone: p.contact_phone, whatsapp: p.contact_whatsapp, email: p.contact_email, address: p.address, website: p.website, link: p.link, mapLink: p.map_link, regId: p.reg_id }
       : null,
   };
 }
@@ -92,7 +97,7 @@ function pahadPostCard(p: Post): PlusCard {
   return {
     id: `pahad-${p.id}`, source: "pahad", hub, briefType: hub === "briefs" ? "tip" : "", kind: "", stage: "", region: "Darjeeling", locality: p.location || "PAHAD",
     title: p.title, summary: p.excerpt, body: "", image: p.cover, youtubeId: "", startsAt: p.event_date, endsAt: "", validUntil: "", deadline: "",
-    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, likes: 0, passEnabled: false, price: 0, createdAt: p.published_at || p.created_at,
+    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, createdAt: p.published_at || p.created_at,
     href: `${POST_TYPE_PATH[p.type]}/${p.slug}`, locked: null,
   };
 }
@@ -104,7 +109,7 @@ function circularCard(c: Circular): PlusCard {
     id: `circular-${c.id}`, source: "pahad", hub: "briefs", briefType: "policy", kind: "", stage: "", region: "Darjeeling", locality: "PAHAD",
     title: c.title, summary: text.length > 220 ? `${text.slice(0, 219).replace(/\s+\S*$/, "")}…` : text, body: "", image: "", youtubeId: "",
     startsAt: "", endsAt: "", validUntil: "", deadline: "", bestSeason: "", hours: "", verified: true, flagProof: true,
-    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, likes: 0, passEnabled: false, price: 0, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
+    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
   };
 }
 
@@ -137,24 +142,49 @@ export async function getPublicCircular(id: string): Promise<Circular | null> {
   return c && c.visibility === "public" ? c : null;
 }
 
-export type PlusFilters = { tab: "foryou" | "pahad"; hub?: PlusHub; region?: string; type?: BriefType; q?: string };
+export type PlusTab = "community" | "following" | "foryou" | "pahad";
+export type PlusFilters = { tab: PlusTab; hub?: PlusHub | "jobs"; region?: string; type?: BriefType; q?: string };
+
+/** Approved paid organisers (their posts count as Authentic). */
+async function approvedOrganisers(): Promise<Set<string>> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("plus");
+  return new Set((await db.all("plus_organisers")).filter((o) => o.status === "approved").map((o) => o.id));
+}
+
+/** Marks posts from confirmed people as Authentic. */
+export async function withAuthentic(cards: PlusCard[]): Promise<PlusCard[]> {
+  const orgs = await approvedOrganisers();
+  return cards.map((c) => (c.source === "user" && !c.authentic && orgs.has(c.authorId) ? { ...c, authentic: true } : c));
+}
+
+/** For You: what the community is backing (likes, support, verification), favouring recent posts. */
+function forYouScore(c: PlusCard, at: number) {
+  const hours = Math.max(0, (at - Date.parse(c.createdAt)) / 3_600_000);
+  const weight = 1 + c.likes + 2 * c.supports + (c.verified ? 3 : 0) + (c.source === "pahad" ? 2 : 0);
+  return weight / Math.pow(hours + 6, 0.8);
+}
 
 /**
  * The feed: live user posts (minus authors the viewer blocked) plus PAHAD's approved content.
- * Alerts come first, then newest.
+ * Community: everything, newest first. Following: accounts the viewer follows. For You: ranked. PAHAD (⭐): official posts.
+ * Alerts always come first.
  */
-export async function plusFeed(f: PlusFilters, blocked: Set<string> = new Set()): Promise<PlusCard[]> {
-  const [posts, pahad] = await Promise.all([f.tab === "pahad" ? Promise.resolve([]) : getLivePlusPosts(), getPahadPlusCards()]);
+export async function plusFeed(f: PlusFilters, blocked: Set<string> = new Set(), following: Set<string> = new Set()): Promise<PlusCard[]> {
+  const [posts, pahad] = await Promise.all([f.tab === "pahad" ? Promise.resolve([]) : getLivePlusPosts(), f.tab === "following" ? Promise.resolve([]) : getPahadPlusCards()]);
   const q = f.q?.toLowerCase().trim();
-  const cards = [...posts.filter((p) => !blocked.has(p.author_id)).map(toCard), ...pahad].filter(
+  const cards = await withAuthentic([...posts.filter((p) => !blocked.has(p.author_id) && (f.tab !== "following" || following.has(p.author_id))).map(toCard), ...pahad].filter(
     (c) =>
-      (!f.hub || c.hub === f.hub) &&
+      (!f.hub || (f.hub === "jobs" ? c.briefType === "job" : c.hub === f.hub)) &&
       (!f.region || c.source === "pahad" || c.region === f.region) &&
       (!f.type || c.briefType === f.type) &&
-      (!q || `${c.title} ${c.summary} ${c.locality} ${c.region} ${PLUS_HUBS[c.hub].label} ${c.briefType ? BRIEF_TYPES[c.briefType].label : ""}`.toLowerCase().includes(q)),
-  );
+      (!q || `${c.title} ${c.summary} ${c.locality} ${c.region} ${c.kind} ${PLUS_HUBS[c.hub].label} ${c.briefType ? BRIEF_TYPES[c.briefType].label : ""}`.toLowerCase().includes(q)),
+  ));
   const alertFirst = (c: PlusCard) => (c.briefType === "alert" ? 0 : 1);
-  return cards.sort((a, b) => alertFirst(a) - alertFirst(b) || b.createdAt.localeCompare(a.createdAt));
+  // Only For You needs the clock (other feeds can be prerendered).
+  const at = f.tab === "foryou" ? Date.now() : 0;
+  return cards.sort((a, b) => alertFirst(a) - alertFirst(b) || (f.tab === "foryou" ? forYouScore(b, at) - forYouScore(a, at) : b.createdAt.localeCompare(a.createdAt)));
 }
 
 /** One user post, whatever its status (callers decide what to show). */

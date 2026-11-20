@@ -346,6 +346,8 @@ export type PlusPost = {
   /** Register / apply / source link. */
   link: string;
   map_link: string;
+  /** Business: registration / licence number (optional). */
+  reg_id: string;
   // ↑
   best_season: string;
   hours: string;
@@ -367,6 +369,8 @@ export type PlusPost = {
   /** Paid E-Pass price in paise (0 = free). Only approved paid organisers, fixed when posted. */
   price: number;
   likes: number;
+  /** People who vouch the post is genuine ("Support"). Helps verifiers. */
+  supports: number;
   created_at: string;
   updated_at: string;
 };
@@ -423,6 +427,10 @@ export type PlusOrder = {
 };
 /** A payout PAHAD made to an organiser for an event (bank transfer / UPI done outside the app). */
 export type PlusPayout = { id: string; post_id: string; organiser_id: string; amount: number; reference: string; paid_by_name: string; paid_at: string };
+/** id = `${follower_id}:${followee_id}`. */
+export type PlusFollow = { id: string; follower_id: string; followee_id: string; created_at: string };
+/** One per user per post: id = `${post_id}:${user_id}`. */
+export type PlusSupport = { id: string; post_id: string; user_id: string; created_at: string };
 /** id = `${post_id}:${user_id}`. */
 export type PlusLike = { id: string; post_id: string; user_id: string; created_at: string };
 export type PlusSave = { id: string; post_id: string; user_id: string; created_at: string };
@@ -655,6 +663,8 @@ export type Tables = {
   plus_organisers: PlusOrganiser;
   plus_orders: PlusOrder;
   plus_payouts: PlusPayout;
+  plus_follows: PlusFollow;
+  plus_supports: PlusSupport;
   pages: CustomPage;
   translations: Translation;
 };
