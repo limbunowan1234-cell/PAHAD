@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { NewPostForm } from "@/components/plus/client";
+import { CloseLink, NewPostForm } from "@/components/plus/client";
 import { createPlusPost } from "@/lib/plus/post-actions";
 import { HUB_KEYS, type PlusHub } from "@/lib/plus/config";
 import { getPlusUser } from "@/lib/plus/session";
@@ -52,8 +52,13 @@ async function Composer({ searchParams }: { searchParams: Promise<Record<string,
 export default function NewPlusPostPage({ searchParams }: PageProps<"/plus/new">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="text-xs font-extrabold uppercase tracking-wider text-coral-700">Publish to feed</p>
-      <h1 className="font-display text-2xl font-bold">New Community Post</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-wider text-coral-700">Publish to feed</p>
+          <h1 className="font-display text-2xl font-bold">New Community Post</h1>
+        </div>
+        <CloseLink />
+      </div>
       <p className="mb-4 mt-1 text-sm text-muted">
         Your post goes live straight away as <strong>Unverified</strong>. Contact, booking and registration details show once a PAHAD verifier checks it.
         Please follow the <Link href="/plus/terms" className="font-semibold text-teal underline">community guidelines</Link>.

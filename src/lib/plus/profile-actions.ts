@@ -158,6 +158,7 @@ export async function blockFromPicker(_prev: ActionState, fd: FormData): Promise
   const id = str(fd, "account", 64);
   const other = id && id !== u.id ? await db.get("plus_users", id) : null;
   if (!other) return { ok: false, message: "Choose an account to block." };
+  if (other.admin_user_id) return { ok: false, message: "Official PAHAD accounts cannot be blocked. Report a post instead." };
   const key = `${u.id}:${id}`;
   if (!(await db.get("plus_blocks", key))) await db.insert("plus_blocks", { id: key, blocker_id: u.id, blocked_id: id, created_at: new Date().toISOString() });
   updateTag("plus");

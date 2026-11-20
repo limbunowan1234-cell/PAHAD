@@ -632,7 +632,7 @@ export function ShareButton({ path, title, label = "Share", className }: { path:
   const [msg, setMsg] = useState("");
   return (
     <span className="inline-flex flex-col items-start">
-      <button type="button" className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold ring-1 ring-ink/20", className)}
+      <button type="button" className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-extrabold ring-1 ring-ink/20", className)}
         onClick={async () => {
           const url = new URL(path, location.origin).toString();
           try {
@@ -700,5 +700,43 @@ export function PlusSplash() {
       <p className="plus-splash-tag mt-2 text-xs font-extrabold uppercase tracking-[0.25em] text-[#D9A75A]">Events · Places · Entertainment</p>
       <p className="plus-splash-tag absolute bottom-10 text-[11px] text-[#F4F1EA]/50">Tap to skip</p>
     </div>
+  );
+}
+
+/** The ✕ in the corner of full-screen pages (Profile, Desk, New post): back to the feed. */
+export function CloseLink({ href = "/plus" }: { href?: string }) {
+  return (
+    <Link href={href} aria-label="Close" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-lg font-bold ring-1 ring-line">✕</Link>
+  );
+}
+
+const PASS_CACHE = "pahad-plus-passes-v1";
+/**
+ * Keeps the viewer's ready E-Passes on the phone so they open at the gate with no signal ("Offline OK").
+ * The service worker serves these copies when the network is down; older copies are dropped here.
+ */
+export function OfflinePasses({ urls }: { urls: string[] }) {
+  const key = urls.join("|");
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("caches" in window)) return;
+    navigator.serviceWorker.register("/plus-sw.js", { scope: "/plus" }).catch(() => null);
+    const want = new Set(key ? key.split("|").map((u) => new URL(u, location.origin).toString()) : []);
+    (async () => {
+      try {
+        const c = await caches.open(PASS_CACHE);
+        for (const r of await c.keys()) if (!want.has(r.url)) await c.delete(r);
+        for (const u of want) if (!(await c.match(u))) await c.add(new Request(u, { credentials: "same-origin" }));
+      } catch { /* storage full or blocked: passes still work online */ }
+    })();
+  }, [key]);
+  return null;
+}
+
+/** Log out, and remove this person's saved E-Passes from the phone first. */
+export function LogoutButton({ action, className, children }: { action: () => Promise<void>; className?: string; children: ReactNode }) {
+  return (
+    <form action={action} onSubmit={() => { try { void caches.delete(PASS_CACHE); } catch { /* no cache API */ } }}>
+      <button type="submit" className={className}>{children}</button>
+    </form>
   );
 }

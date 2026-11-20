@@ -30,11 +30,11 @@ async function Explorer() {
   // Spotlight: PAHAD's Executive Spotlight picks first, then verified posts with video, then PAHAD's latest film.
   const withVideo = cards.filter((c) => c.youtubeId && c.verified).sort((a, b) => Number(b.spotlight) - Number(a.spotlight));
   const spotlights: SpotlightItem[] = withVideo.slice(0, 3).map((c) => ({
-    youtubeId: c.youtubeId, title: c.title, text: c.summary, href: c.href, external: false, executive: c.spotlight,
+    youtubeId: c.youtubeId, title: c.title, text: c.summary, href: c.href, external: false, executive: c.spotlight, by: c.official ? "PAHAD Official" : c.authorName,
     label: `${c.spotlight ? "Featured" : PLUS_HUBS[c.hub].label} • ${c.region}`,
   }));
   const film = [...videos].sort((a, b) => a.sort - b.sort || b.created_at.localeCompare(a.created_at))[0];
-  if (spotlights.length < 3 && film) spotlights.push({ youtubeId: film.youtube_id, title: film.title, text: film.description, href: `/films#film-${film.id}`, external: true, executive: false, label: "PAHAD film" });
+  if (spotlights.length < 3 && film) spotlights.push({ youtubeId: film.youtube_id, title: film.title, text: film.description, href: `/films#film-${film.id}`, external: true, executive: false, label: "PAHAD film", by: "PAHAD" });
   // Creators & guilds: accounts with the most support on live posts (business and organisation accounts first).
   const score = new Map<string, number>(), hubOf = new Map<string, string>();
   for (const c of cards) if (c.source === "user" && c.authorId && c.authorId !== viewer?.id) { score.set(c.authorId, (score.get(c.authorId) ?? 0) + 1 + c.supports + c.likes); if (!hubOf.has(c.authorId)) hubOf.set(c.authorId, PLUS_HUBS[c.hub].label); }

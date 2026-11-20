@@ -12,7 +12,7 @@ export type DiscoverItem = {
   id: string; href: string; title: string; region: string; hub: string; hubKey: string; image: string; summary: string;
   author: string; verified: boolean; authentic: boolean; supports: number; saved: boolean; userPost: boolean;
 };
-export type SpotlightItem = { youtubeId: string; title: string; text: string; href: string; external: boolean; label: string; executive: boolean };
+export type SpotlightItem = { youtubeId: string; title: string; text: string; href: string; external: boolean; label: string; executive: boolean; by: string };
 export type Creator = { id: string; name: string; hub: string; following: boolean };
 type Toggle = (id: string) => Promise<{ ok: boolean; message: string; on?: boolean }>;
 
@@ -127,7 +127,10 @@ export function DiscoverExplorer({ items, spotlights, creators, signedIn, follow
               src={`https://www.youtube-nocookie.com/embed/${spot.youtubeId}?autoplay=1&mute=${muted ? 1 : 0}&loop=1&playlist=${spot.youtubeId}&controls=0&modestbranding=1&playsinline=1&rel=0`}
               allow="autoplay; encrypted-media" />
             <Link href={spot.href} target={spot.external ? "_blank" : undefined} className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4">
-              <span className="mb-1 w-fit rounded-full bg-teal px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-sand">{spot.label}</span>
+              <span className="mb-1 flex flex-wrap gap-1.5">
+                <span className="w-fit rounded-full bg-teal px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-sand">{spot.label}</span>
+                {spot.by && <span className="w-fit rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-bold ring-1 ring-white/15">🛡️ {spot.by}</span>}
+              </span>
               <span className="text-base font-extrabold leading-tight">{spot.title}</span>
               {spot.text && <span className="mt-1 line-clamp-2 text-xs text-ink/80">{spot.text}</span>}
             </Link>

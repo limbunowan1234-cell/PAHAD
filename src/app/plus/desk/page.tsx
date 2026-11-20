@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import { PlusButton, PlusForm, PlusSwitch } from "@/components/plus/client";
+import { CloseLink, PlusButton, PlusForm, PlusSwitch } from "@/components/plus/client";
 import { plusDate } from "@/components/plus/ui";
 import { db } from "@/lib/db";
 import { canApprovePublic, canGrantFlagProof, canModeratePlus, canVerifyPlusPost } from "@/lib/plus/access";
@@ -57,10 +57,13 @@ async function Desk({ searchParams }: { searchParams: Promise<Record<string, str
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-xs font-extrabold uppercase tracking-wider text-teal">Trust &amp; moderation</p>
-        <h1 className="font-display text-2xl font-bold">+ Verified Desk</h1>
-        <p className="text-xs text-muted">{user.name}{user.plus_region ? ` · verifies ${user.plus_region}` : ""}{viewOnly ? " · view only" : ""}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-wider text-teal">Trust &amp; moderation</p>
+          <h1 className="font-display text-2xl font-bold">+ Verified Desk</h1>
+          <p className="text-xs text-muted">{user.name}{user.plus_region ? ` · verifies ${user.plus_region}` : ""}{viewOnly ? " · view only" : ""}</p>
+        </div>
+        <CloseLink />
       </div>
       <ul className="space-y-1.5 rounded-2xl bg-white p-4 text-[13px] leading-relaxed text-ink/85 ring-1 ring-line">
         <li>• <b>+ Verified</b> appears only when a PAHAD verifier checks the post. Booking and apply links unlock then.</li>

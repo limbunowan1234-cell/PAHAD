@@ -210,6 +210,7 @@ export async function blockPlusUser(authorId: string): Promise<ActionState> {
   const u = await getPlusUser();
   if (!u) return { ok: false, message: "Please sign in to block someone." };
   if (!authorId || authorId === u.id) return { ok: false, message: "You can't block this account." };
+  if ((await db.get("plus_users", authorId))?.admin_user_id) return { ok: false, message: "Official PAHAD accounts cannot be blocked. Report a post instead." };
   const id = `${u.id}:${authorId}`;
   if (!(await db.get("plus_blocks", id))) await db.insert("plus_blocks", { id, blocker_id: u.id, blocked_id: authorId, created_at: now() });
   return { ok: true, message: "Blocked. You won't see their posts any more." };

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { PlusButton, PlusForm, PlusSwitch, PushToggle, ShareButton } from "@/components/plus/client";
+import { CloseLink, LogoutButton, OfflinePasses, PlusButton, PlusForm, PlusSwitch, PushToggle, ShareButton } from "@/components/plus/client";
 import { hubLabel, plusDate } from "@/components/plus/ui";
 import { deletePlusAccount, requestMemberLink, resendVerification, signOutPlus, unlinkMember, updatePlusProfile } from "@/lib/plus/account-actions";
 import { removePushSubscription, savePushSubscription } from "@/lib/plus/push-actions";
@@ -36,7 +36,23 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   rejected: { label: "Not approved", cls: "bg-red-50 text-red-800" },
   removed: { label: "Removed", cls: "bg-sand text-muted" },
 };
-const PASS_LABEL: Record<string, string> = { pending: "Waiting for approval", active: "Ready", checked_in: "Checked in", revoked: "Revoked" };
+const PASS_LABEL: Record<string, string> = { pending: "Pending", active: "Offline OK", checked_in: "Checked in", revoked: "Revoked" };
+const KIND: Record<string, string> = { verify: "Verification", support: "Support", events: "Events", account: "Account" };
+
+/** What a linked admin may do in the app, from their dashboard role. */
+function privileges(a: PublicUser) {
+  return ["Digital Identity", ...(canModeratePlus(a) ? ["Gate Scan", "Media Curator"] : []), ...(canApprovePublic(a) ? ["Content Approver"] : []), ...(canGrantFlagProof(a) ? ["Flag-Proof"] : [])];
+}
+const adminId = (a: PublicUser) => `ADMIN-PAHAD-${a.id.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase()}`;
+function ago(iso: string, at: number) {
+  const m = Math.max(0, Math.round((at - Date.parse(iso)) / 60_000));
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  return d < 7 ? `${d}d ago` : plusDate(iso, { day: "numeric", month: "short" });
+}
 
 function Card({ id, title, kicker, right, children, className }: { id?: string; title: string; kicker?: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -91,9 +107,12 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
       <header className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-wider text-muted">Member account</p>
-          <h1 className="text-2xl font-extrabold leading-tight">Profile &amp; E-Passes</h1>
+          <h1 className="whitespace-nowrap text-xl font-extrabold leading-tight">Profile &amp; E-Passes</h1>
         </div>
-        <ShareButton path={`/plus/u/${viewer.id}`} title={`${viewer.name} on PAHAD+`} label="Share Account" />
+        <div className="flex items-center gap-2">
+          <ShareButton path={`/plus/u/${viewer.id}`} title={`${viewer.name} on PAHAD+`} label="Share Account" />
+          <CloseLink />
+        </div>
       </header>
       <nav aria-label="Profile sections" className="grid grid-cols-2 gap-1 rounded-full bg-white p-1 ring-1 ring-line">
         {([["overview", "Profile Overview"], ["settings", "Settings, Privacy & QR"]] as const).map(([k, l]) => (
@@ -143,8 +162,9 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
             {viewer.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("")}
           </span>
           <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#D9A75A]">{viewer.account_type === "individual" ? "Individual / Personal account" : `${ACCOUNT_TYPES[viewer.account_type as PlusAccountType]} account`}</p>
             <p className="truncate text-lg font-extrabold">{viewer.name}</p>
-            <p className="text-xs text-ink/70">ID: {plusAccountId(viewer)}{adminOn && admin ? ` · ADMIN-${admin.id.slice(-4).toUpperCase()}` : ""}</p>
+            <p className="font-mono text-xs text-[#D9A75A]">{adminOn && admin ? `ADMIN-ID: ${adminId(admin)}` : `ID: ${plusAccountId(viewer)}`}</p>
             <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-extrabold">
               <span className="rounded-full bg-white px-2 py-0.5 ring-1 ring-line">{ACCOUNT_TYPES[viewer.account_type as PlusAccountType]}</span>
               {viewer.member_id && <span className="rounded-full bg-sage px-2 py-0.5 text-sand">PAHAD member</span>}
@@ -153,7 +173,7 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
           </div>
         </div>
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-          {([["Posts", mine.length], ["Total support", supports], ["Total likes", likes]] as const).map(([l, n]) => (
+          {([["Posts made", mine.length], ["Total support", supports], ["Total likes", likes]] as const).map(([l, n]) => (
             <div key={l} className="rounded-2xl bg-black/30 p-2.5"><dd className="text-xl font-extrabold">{n}</dd><dt className="text-[10px] font-bold uppercase text-ink/70">{l}</dt></div>
           ))}
         </dl>
@@ -184,6 +204,7 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
                 {canApprovePublic(admin) && <li>• Publish official circulars and choose the Executive Spotlight</li>}
               </ul>
             </div>
+            <p className="text-xs text-ink/80">Admin Privileges ({roleLabel(admin.role)}): <strong>{privileges(admin).join(" • ")}</strong></p>
             <p className="text-xs text-muted">Linked to {admin.name}&apos;s PAHAD dashboard account. Permissions always come from that account.</p>
             <PlusButton confirm="Unlink your PAHAD dashboard account? This becomes an app user account." action={unlinkAdminAccess}>Unlink admin access</PlusButton>
           </div>
@@ -207,7 +228,7 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
         <p className="mt-2 text-xs text-muted">The switch sets whether new posts show these publicly by default. Each post can still change it.</p>
       </Card>
 
-      <Card title="Latest post" right={<Link href="/plus/new" className="rounded-full bg-coral px-3 py-1.5 text-xs font-extrabold text-sand">+ Post</Link>}>
+      <Card title="Last Post You Posted" kicker="Latest activity" right={<Link href="/plus/new" className="rounded-full bg-coral px-3 py-1.5 text-xs font-extrabold text-sand">+ Post</Link>}>
         {latest ? (
           <div>
             <Link href={`/plus/${latest.id}`} className="font-bold hover:underline">{latest.title}</Link>
@@ -219,7 +240,9 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
         ) : <p className="text-sm text-muted">You haven&apos;t posted anything yet.</p>}
       </Card>
 
-      <Card id="passes" title="My E-Passes" kicker={`${passRows.filter((r) => r.pass.status === "pending").length} pending · ${passRows.filter((r) => r.pass.status === "active").length} ready`}>
+      <Card id="passes" title="My E-Passes" kicker="Wallet"
+        right={<span className="rounded-full bg-sage-100 px-2.5 py-1 text-[11px] font-extrabold text-sage">{passRows.filter((r) => r.pass.status === "active" || r.pass.status === "pending").length} Active</span>}>
+        <OfflinePasses urls={passRows.filter((r) => r.pass.status === "active" && isLivePlus(r.post, at)).map((r) => `/plus/pass/${r.pass.code}`)} />
         {passRows.length === 0 ? <p className="text-sm text-muted">No E-Passes yet. Look for events with an E-Pass.</p> : (
           <ul className="divide-y divide-line">
             {passRows.map(({ pass, post }) => {
@@ -227,8 +250,9 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
               return (
                 <li key={pass.id} className="flex items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
+                    <p className="font-mono text-[10px] font-bold uppercase text-coral-700">Events · {pass.code.slice(0, 5)}-{pass.code.slice(5)}</p>
                     <Link href={`/plus/pass/${pass.code}`} className="font-semibold hover:underline">{post.title}</Link>
-                    <p className="text-xs text-muted">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {post.region}</p>
+                    <p className="text-xs text-muted">{pass.holder_name} · {plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {post.region}</p>
                   </div>
                   <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
                     past ? "bg-sand text-muted" : pass.status === "active" ? "bg-green-600 text-white" : pass.status === "pending" ? "bg-cream text-teal-900" : pass.status === "revoked" ? "bg-red-50 text-red-800" : "bg-teal text-white")}>
@@ -241,7 +265,8 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
         )}
       </Card>
 
-      <Card id="saved" title="Saved posts" kicker={viewer.hide_saved ? "Only you can see these" : "Shown on your public profile"}>
+      <Card id="saved" title="Saved Posts" kicker={viewer.hide_saved ? "Bookmarks · only you see these" : "Bookmarks · shown on your profile"}
+        right={<span className="rounded-full bg-sage-100 px-2.5 py-1 text-[11px] font-extrabold text-sage">{savedPosts.length} Saved</span>}>
         {savedPosts.length === 0 ? <p className="text-sm text-muted">Tap the star on a post to keep it here.</p> : (
           <ul className="divide-y divide-line">
             {savedPosts.map((p) => (
@@ -257,16 +282,18 @@ async function Overview({ viewer, admin, dashboard }: { viewer: PlusUser; admin:
         )}
       </Card>
 
-      <Card id="notifications" title="Profile notifications" kicker={`${unread} unread`}
-        right={unread > 0 ? <PlusButton action={markPlusNotificationsRead} className="text-xs">Mark all read</PlusButton> : undefined}>
+      <Card id="notifications" title="Profile Notifications" kicker="Activity & alerts"
+        right={unread > 0 ? <span className="flex items-center gap-2"><span className="rounded-full bg-coral/20 px-2 py-0.5 text-[11px] font-extrabold text-coral-700">{unread} New</span><PlusButton action={markPlusNotificationsRead} className="text-xs">Mark all read</PlusButton></span> : undefined}>
         {recent.length === 0 ? <p className="text-sm text-muted">Nothing yet. You&apos;ll hear here when someone supports or follows you, and about your posts and E-Passes.</p> : (
           <ul className="divide-y divide-line">
             {recent.map((n) => (
               <li key={n.id} className="py-2.5">
                 <Link href={n.url || "/plus/me"} className="flex gap-2">
                   {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-coral" aria-label="Unread" />}
-                  <span className="min-w-0"><span className="block text-sm font-bold">{n.title}</span>{n.body && <span className="block text-xs text-muted">{n.body}</span>}
-                    <span className="text-[10px] text-muted">{plusDate(n.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex justify-between gap-2 text-[10px] font-extrabold uppercase"><span className="text-coral-700">{KIND[n.kind] ?? "PAHAD+"}</span><span className="font-semibold normal-case text-muted">{ago(n.created_at, at)}</span></span>
+                    <span className="block text-sm font-bold">{n.title}</span>{n.body && <span className="block text-xs text-muted">{n.body}</span>}
+                  </span>
                 </Link>
               </li>
             ))}
@@ -350,46 +377,46 @@ async function Settings({ viewer, admin }: { viewer: PlusUser; admin: PublicUser
   const byId = new Map(users.map((u) => [u.id, u]));
   const blocked = blocks.map((b) => ({ id: b.blocked_id, name: byId.get(b.blocked_id)?.name ?? "Deleted account" }));
   const blockedIds = new Set(blocked.map((b) => b.id));
-  const pickable = users.filter((u) => u.id !== viewer.id && u.status === "active" && !blockedIds.has(u.id)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 200);
+  const pickable = users.filter((u) => u.id !== viewer.id && u.status === "active" && !u.admin_user_id && !blockedIds.has(u.id)).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 200);
   const mine = posts.filter((p) => p.status !== "removed").sort((a, b) => b.created_at.localeCompare(a.created_at));
   const adminOn = Boolean(admin && viewer.admin_mode);
   const qr = await qrSvg(`${site.url}/plus/u/${viewer.id}`);
 
   return (
     <>
-      <Card id="qr" title="Digital identity QR" kicker={adminOn ? "Admin identity" : "Member identity"}>
-        <div className="flex items-center gap-4">
-          <div className="w-32 shrink-0 overflow-hidden rounded-2xl bg-white p-1.5 [&_svg]:h-auto [&_svg]:w-full" role="img" aria-label="QR code for your public profile" dangerouslySetInnerHTML={{ __html: qr }} />
-          <div className="min-w-0 space-y-1 text-sm">
-            <p className="font-extrabold">{viewer.name}</p>
-            <p className="text-xs text-muted">{plusAccountId(viewer)} · {ACCOUNT_TYPES[viewer.account_type as PlusAccountType]}</p>
-            {adminOn && admin && <p className="text-xs"><strong>{roleLabel(admin.role)}</strong>{canGrantFlagProof(admin) ? " · Flag-Proof" : ""}{canModeratePlus(admin) ? " · Verifier" : ""}</p>}
-            <ShareButton path={`/plus/u/${viewer.id}`} title={`${viewer.name} on PAHAD+`} label="Share profile" />
-          </div>
+      <section id="qr" aria-labelledby="qr-h" className="rounded-3xl bg-gradient-to-b from-[#1D353A] to-white p-4 text-center ring-1 ring-line">
+        <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#D9A75A]">{adminOn ? "Digital identity & gate scan · Admin pass" : "Digital identity · Member pass"}</p>
+        <h2 id="qr-h" className="mt-1 text-lg font-extrabold">{viewer.name}</h2>
+        <p className="font-mono text-xs text-[#D9A75A]">{adminOn && admin ? `Admin ID: ${adminId(admin)}` : `ID: ${plusAccountId(viewer)} · ${ACCOUNT_TYPES[viewer.account_type as PlusAccountType]}`}</p>
+        {adminOn && admin && <p className="mx-auto mt-2 w-fit rounded-full bg-[#D9A75A]/15 px-3 py-1 text-[11px] font-extrabold text-[#D9A75A] ring-1 ring-[#D9A75A]/40">Privileges ({roleLabel(admin.role)}): {privileges(admin).filter((x) => x !== "Digital Identity").join(" • ") || "View only"}</p>}
+        <div className="mx-auto mt-3 w-44 overflow-hidden rounded-3xl bg-white p-2.5 [&_svg]:h-auto [&_svg]:w-full" role="img" aria-label="QR code for your public profile" dangerouslySetInnerHTML={{ __html: qr }} />
+        <p className="mx-auto mt-3 max-w-xs text-xs text-muted">{adminOn ? "Admin digital pass: people scan it to confirm you are a PAHAD admin. Gate check-in, verification and circulars follow your dashboard role." : "Others scan this to open your public profile and follow you."}</p>
+        <div className="mt-3 flex justify-center">
+          <ShareButton path={`/plus/u/${viewer.id}`} title={`${viewer.name} on PAHAD+`} label={adminOn ? "Share Admin Digital Pass & QR" : "Share profile & QR"}
+            className="w-full justify-center !bg-coral !py-3 !text-sand !ring-0 uppercase tracking-wide" />
         </div>
-        <p className="mt-2 text-xs text-muted">Others scan this to open your public profile and follow you.</p>
+      </section>
+
+      <Card title="Account Visibility & Sharing" kicker="Visibility & privacy">
+        <div className="divide-y divide-line">
+          <SwitchRow label="Private Account Mode" hint={viewer.private_mode ? "Private · your profile hides your posts list and saved posts" : "Public · anyone in PAHAD+ can view your profile & posts"}><PlusSwitch on={viewer.private_mode} action={setPlusPreference.bind(null, "private_mode")} label="Private mode" /></SwitchRow>
+          <SwitchRow label="Public Collaboration Contacts" hint="Show WhatsApp, Instagram & email on new listings by default"><PlusSwitch on={!viewer.hide_contacts} action={setPlusPreference.bind(null, "public_contacts")} label="Public contacts" /></SwitchRow>
+          <SwitchRow label="Show Saved Posts on Profile" hint="Keep bookmarked listings visible on your public profile"><PlusSwitch on={!viewer.hide_saved} action={setPlusPreference.bind(null, "show_saved")} label="Show saved posts on profile" /></SwitchRow>
+        </div>
       </Card>
 
-      <Card title="Visibility & privacy">
+      <Card id="alerts" title="Manage Notifications" kicker="Alerts">
         <div className="divide-y divide-line">
-          <SwitchRow label="Private mode" hint="Your profile hides your posts list and saved posts from others."><PlusSwitch on={viewer.private_mode} action={setPlusPreference.bind(null, "private_mode")} label="Private mode" /></SwitchRow>
-          <SwitchRow label="Public contacts" hint="New posts show your contacts by default."><PlusSwitch on={!viewer.hide_contacts} action={setPlusPreference.bind(null, "public_contacts")} label="Public contacts" /></SwitchRow>
-          <SwitchRow label="Show saved posts on profile"><PlusSwitch on={!viewer.hide_saved} action={setPlusPreference.bind(null, "show_saved")} label="Show saved posts on profile" /></SwitchRow>
-        </div>
-      </Card>
-
-      <Card id="alerts" title="Notifications">
-        <div className="divide-y divide-line">
-          <SwitchRow label="Supports & followers"><PlusSwitch on={!viewer.mute_support} action={setPlusPreference.bind(null, "notify_support")} label="Notify me about supports and followers" /></SwitchRow>
-          <SwitchRow label="E-Passes & events"><PlusSwitch on={!viewer.mute_events} action={setPlusPreference.bind(null, "notify_events")} label="Notify me about E-Passes and events" /></SwitchRow>
+          <SwitchRow label="Support & Verification Alerts" hint="When members support, follow or verify your posts"><PlusSwitch on={!viewer.mute_support} action={setPlusPreference.bind(null, "notify_support")} label="Notify me about supports and followers" /></SwitchRow>
+          <SwitchRow label="Events, Jobs & Admin Circular Alerts" hint="E-Pass requests and approvals, and updates on your listings"><PlusSwitch on={!viewer.mute_events} action={setPlusPreference.bind(null, "notify_events")} label="Notify me about E-Passes and events" /></SwitchRow>
         </div>
         <div className="mt-3 border-t border-line pt-3">
           <PushToggle publicKey={vapidPublicKey} regions={PLUS_REGIONS} saveSub={savePushSubscription} removeSub={removePushSubscription} />
         </div>
       </Card>
 
-      <Card id="manage" title="Manage posts" kicker={`${mine.length} post${mine.length === 1 ? "" : "s"}`}>
-        {mine.length === 0 ? <p className="text-sm text-muted">No posts yet.</p> : (
+      <Card id="manage" title="Manage Your Posts" kicker="Content" right={<span className="rounded-full bg-[#2b3a3f] px-2.5 py-1 text-[11px] font-extrabold">{mine.length} Post{mine.length === 1 ? "" : "s"}</span>}>
+        {mine.length === 0 ? <p className="text-sm text-muted">No posts created under this account yet.</p> : (
           <ul className="divide-y divide-line">
             {mine.map((p) => {
               const expired = ["unverified", "verified", "flag_proof"].includes(p.status) && !isLivePlus(p, at);
@@ -413,18 +440,18 @@ async function Settings({ viewer, admin }: { viewer: PlusUser; admin: PublicUser
         )}
       </Card>
 
-      <Card id="blocked" title="Blocked accounts">
+      <Card id="blocked" title="Blocked Accounts" kicker="Safety" right={<span className="rounded-full bg-coral/20 px-2.5 py-1 text-[11px] font-extrabold text-coral-700">{blocked.length} Blocked</span>}>
         {pickable.length > 0 && (
-          <PlusForm action={blockFromPicker} submitLabel="Block account">
-            <label className="block"><span className="label">Choose an account</span>
+          <PlusForm action={blockFromPicker} submitLabel="Block" className="flex items-start gap-2 !space-y-0 [&>button[type=submit]]:!w-auto [&>button[type=submit]]:!bg-coral [&>button[type=submit]]:!text-sand [&>p]:basis-full">
+            <label className="min-w-0 flex-1"><span className="sr-only">Choose an account to block</span>
               <select name="account" required defaultValue="" className="field">
-                <option value="" disabled>Select…</option>
+                <option value="" disabled>Choose an account…</option>
                 {pickable.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </label>
           </PlusForm>
         )}
-        {blocked.length === 0 ? <p className="mt-2 text-sm text-muted">You haven&apos;t blocked anyone.</p> : (
+        {blocked.length === 0 ? <p className="mt-2 text-xs text-muted">No blocked accounts. Official PAHAD accounts cannot be blocked.</p> : (
           <ul className="mt-3 space-y-2">
             {blocked.map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-3 text-sm">
@@ -444,13 +471,14 @@ async function Settings({ viewer, admin }: { viewer: PlusUser; admin: PublicUser
         <p className="mt-2 text-xs text-muted">Signed in as {viewer.email}.</p>
       </Card>
 
-      <Card title="Support & About">
+      <Card title="Support & About" kicker="Governance & info" right={<span className="rounded-full bg-sage-100 px-2.5 py-1 text-[11px] font-extrabold text-sage">Logged In</span>}>
         <ul className="divide-y divide-line text-sm font-bold">
-          <li><Link href="/plus/help" className="flex justify-between py-2.5">Help center <span aria-hidden>→</span></Link></li>
-          <li><Link href="/plus/terms" className="flex justify-between py-2.5">Terms &amp; community guidelines <span aria-hidden>→</span></Link></li>
-          <li><Link href="/privacy#pahad-plus" className="flex justify-between py-2.5">Privacy <span aria-hidden>→</span></Link></li>
+          <li><Link href="/plus/help" className="flex justify-between py-2.5">❓ Help Center <span aria-hidden>›</span></Link></li>
+          <li><Link href="/privacy#pahad-plus" className="flex justify-between py-2.5">🛡️ Privacy Center <span aria-hidden>›</span></Link></li>
+          <li><Link href="/plus/terms" className="flex justify-between py-2.5">📜 Terms and Policy <span aria-hidden>›</span></Link></li>
           <li><a href="#delete" className="flex justify-between py-2.5 text-red-700">Delete account <span aria-hidden>↓</span></a></li>
         </ul>
+        <div className="mt-3"><LogoutButton action={signOutPlus} className="w-full rounded-2xl bg-coral/15 py-3 text-sm font-extrabold text-coral-700 ring-1 ring-coral/30">Log Out of PAHAD+</LogoutButton></div>
       </Card>
 
       <section id="delete" className="rounded-3xl bg-white p-4 ring-1 ring-red-200">
@@ -466,7 +494,6 @@ async function Settings({ viewer, admin }: { viewer: PlusUser; admin: PublicUser
         </div>
       </section>
 
-      <form action={signOutPlus}><button type="submit" className="w-full rounded-full bg-white py-3 text-sm font-extrabold text-red-700 ring-1 ring-line">Log out</button></form>
     </>
   );
 }

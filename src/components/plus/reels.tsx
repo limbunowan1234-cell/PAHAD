@@ -251,7 +251,7 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
                 {r.category && <span className="rounded-full bg-[#162024]/75 px-3 py-1 text-[11px] font-bold backdrop-blur-md">{r.category}</span>}
               </div>
               <p className="mt-2 pr-20 text-[13px] font-semibold text-ink/85 drop-shadow">
-                {[r.locality, r.region].filter(Boolean).join(", ")}{r.trust !== "unverified" ? ` • ${r.trust === "pahad" ? "PAHAD Official" : r.hubKey === "business" ? "Verified Enterprise" : r.category || "Verified"}` : ""}
+                {!bgOrVideo(r) && r.canEditMedia ? "Blank Media • Needs Admin Help" : <>{[r.locality, r.region].filter(Boolean).join(", ")}{r.trust !== "unverified" ? ` • ${r.trust === "pahad" ? "PAHAD Official" : r.hubKey === "business" ? "Verified Enterprise" : r.category || "Verified"}` : ""}</>}
               </p>
               {(r.address || r.regId) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 pr-20 text-[12px] font-bold">
