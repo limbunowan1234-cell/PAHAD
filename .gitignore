@@ -47,3 +47,14 @@ next-env.d.ts
 
 # local tool settings
 /.claude
+
+# Android builds and signing keys: never commit these
+/keys/
+*.keystore
+*.jks
+keystore-password.txt
+*.apk
+!/public/downloads/*.apk
+*.aab
+*.idsig
+/android/pahad-plus/dist/

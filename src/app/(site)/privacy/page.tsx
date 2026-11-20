@@ -43,12 +43,14 @@ export default function PrivacyPage() {
         <h2 id="pahad-plus" className="scroll-mt-24">PAHAD+ app</h2>
         <p>PAHAD+ is PAHAD&apos;s community app (at <Link href="/plus" className="underline">/plus</Link> and on Google Play). PAHAD+ accounts are separate from PAHAD member and administrator accounts.</p>
         <ul>
-          <li><strong>Account:</strong> your name, email address, optional phone number, account type (individual, business or organisation), a securely hashed password, when you accepted the terms, and sign-in times.</li>
-          <li><strong>Posts:</strong> what you post (title, summary, description, photo, place, dates, optional YouTube link) and any contact details you add (phone, WhatsApp, email, address, website, booking or registration link).</li>
+          <li><strong>Account:</strong> your name, email address, optional phone number, account type (individual, business or organisation), a securely hashed password, when you accepted the terms, and sign-in times. Optionally, an Instagram handle and a collaboration email you choose to add, and your privacy and notification settings (private mode, public contacts, saved posts on profile).</li>
+          <li><strong>Posts:</strong> what you post (title, summary, description, photo or photo link, place, dates, optional YouTube or video link) and the contact details you add (WhatsApp or phone, Instagram, email, address, website, booking or registration link). A WhatsApp or phone number is needed for most posts.</li>
           <li><strong>Safety:</strong> the reports you make and the accounts you block.</li>
           <li><strong>E-Passes:</strong> the events you take a free E-Pass for, the name on the pass, and when you were checked in. The organiser and PAHAD&apos;s verifiers see the names on the passes for their event; nobody else does.</li>
           <li><strong>Likes, support, saves and follows:</strong> the posts you like or support (only the totals are public), the posts you save, and the accounts you follow (only you see these).</li>
-          <li><strong>Notifications:</strong> if you turn them on, your browser&apos;s push subscription (a device address from Google, Apple or Mozilla) and the regions you chose. Turn them off in Me at any time.</li>
+          <li><strong>Notifications:</strong> if you turn them on, your browser&apos;s push subscription (a device address from Google, Apple or Mozilla) and the regions you chose. Turn them off in Profile → Settings at any time. PAHAD+ also keeps in-app notifications for you (supports, new followers, E-Pass requests and decisions, verification), which you can switch off there too.</li>
+          <li><strong>On your phone:</strong> your ready E-Passes are saved on your device so they open at the gate without a signal; logging out removes them. If you scan E-Passes at a gate, the camera is used only to read the QR code and nothing is recorded.</li>
+          <li><strong>PAHAD admins:</strong> if you hold a PAHAD dashboard account and link it to your PAHAD+ account (Admin mode), we store that link.</li>
           <li><strong>Paid E-Passes:</strong> payments are made to PAHAD through Razorpay, which handles your card, UPI or bank details under its own privacy policy; PAHAD never sees or stores them. PAHAD keeps a record of each sale (event, amount, Razorpay payment reference, refunds) for its accounts.</li>
           <li><strong>Paid organisers:</strong> the name on the payout account and the UPI ID or bank account and IFSC you give PAHAD, seen only by PAHAD&apos;s President, to pay you for your ticket sales.</li>
           <li><strong>PAHAD membership link:</strong> if you link your membership, which membership it is, so your posts show a PAHAD member badge.</li>
@@ -56,15 +58,17 @@ export default function PrivacyPage() {
           <li><strong>Videos:</strong> posts can include YouTube videos. In the feed, the video on screen plays silently through YouTube&apos;s privacy-enhanced mode (not when your phone is on Data Saver). When a video plays, YouTube&apos;s own privacy policy applies.</li>
         </ul>
         <p>
-          <strong>Who sees what:</strong> anyone can see a post&apos;s title, photo, place, summary and your display name. Contact, booking and registration
-          details are shown only after a PAHAD verifier checks the post. PAHAD&apos;s President and the verifiers he assigns can see everything you post,
-          to verify it. Your email address and phone number on your account are never shown publicly. We don&apos;t sell or share your data for advertising.
+          <strong>Who sees what:</strong> anyone can see a post&apos;s title, photo, place, summary and your display name. A post&apos;s contact details are shown
+          publicly only if you switch on &ldquo;Show publicly&rdquo; for that post (with a note that it isn&apos;t verified yet), or once a PAHAD verifier checks it.
+          Booking, apply and map links and registration IDs are shown only after verification. Your public profile shows your name, account type, badges,
+          live posts and follower counts; turn on private mode to hide your posts list and saved posts. PAHAD&apos;s President and the verifiers he assigns can
+          see everything you post, to verify it. The email address and phone number on your account are never shown publicly unless you put them on a post. We don&apos;t sell or share your data for advertising.
         </p>
         <p>
           <strong>Emails:</strong> we email you only to confirm your address and to reset your password (sent through Google).
         </p>
         <p>
-          <strong>Deleting your data:</strong> delete your account at any time in the app (Me → Delete my account). Your account and sign-in data are deleted
+          <strong>Deleting your data:</strong> delete your account at any time in the app (Profile → Settings → Delete account). Your account and sign-in data are deleted
           at once, along with your E-Passes, likes, saves, notification subscriptions and payout details (records of paid E-Passes are kept for PAHAD&apos;s accounts, without your name), and your posts are removed with their contact details erased. See <Link href="/plus/delete-account" className="underline">how account deletion works</Link>.
         </p>
       </section>

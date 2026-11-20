@@ -20,9 +20,19 @@ Founder's decisions on version 2: icon **A** (PAHAD emblem + “+”), an animat
 - **Category:** Entertainment
 - **Package:** `org.pahad.plus`, developer PAHAD (same Play account as the PAHAD and PAHAD Admin apps)
 
-## After sign-off
+## Building the app (on the PAHAD laptop)
 
-1. The Bubblewrap build project for `org.pahad.plus` is set up here, signed with the same PAHAD key as the PAHAD and PAHAD Admin apps (its fingerprint is already in `public/.well-known/assetlinks.json`).
-2. The app is built and signed on a PC, and the `.aab` / `.apk` saved to `D:\PAHAD`.
+The PAHAD key, its password file and the build tools live in `C:\Users\G J\pahad-apk` (the same folder that built `PAHAD.apk` and `PAHAD-Admin.apk`). Keep a backup of `pahad-release.keystore` and `keystore-password.txt` on a pen drive: without them the PAHAD apps can never be updated. They are never committed (see `.gitignore`).
+
+```
+git -C D:\PAHAD pull origin main
+copy D:\PAHAD\android\pahad-plus\build-plus.js "C:\Users\G J\pahad-apk\"
+cd "C:\Users\G J\pahad-apk"
+node build-plus.js
+```
+
+It makes `D:\PAHAD\android\pahad-plus\dist\PAHAD-Plus.aab` (upload to Google Play) and `PAHAD-Plus.apk` (install on a phone to test). For each later release, raise `VERSION_CODE` in `build-plus.js` by 1.
+
+What to fill in on Google Play (listing, content rating, Data safety, release steps): `PLAY-STORE.md`.
 
 The screenshots use sample posts written for the purpose (the café, clubs and people are made up; the places are real public places). Photos are from PAHAD's own gallery.
