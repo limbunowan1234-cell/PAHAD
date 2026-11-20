@@ -26,6 +26,10 @@ const pages: [path: string, priority: number, changeFrequency: Freq][] = [
   ["/results", 0.5, "monthly"],
   ["/gallery", 0.6, "weekly"],
   ["/films", 0.7, "weekly"],
+  // PAHAD+ (the community app). Individual PAHAD+ posts are not listed.
+  ["/plus", 0.7, "daily"],
+  ["/plus/terms", 0.2, "yearly"],
+  ["/plus/delete-account", 0.2, "yearly"],
   ["/partners", 0.6, "monthly"],
   ["/contact", 0.5, "yearly"],
   ["/privacy", 0.2, "yearly"],

@@ -132,6 +132,10 @@ export const PERMISSIONS = {
   // Every signed-in account can open Voting; only eligible members (per poll) can vote.
   "polls.manage": [P, GS], // create, edit, open, pause, close, archive, results, export
   "polls.publish_results": [P], // authorise public results on the website
+
+  // PAHAD+ (public app). Verifiers and approvers are per-member switches the President sets on Admin Team.
+  "plus.permission": [P], // grant / revoke "PAHAD+ verifier" and "Approve for public / PAHAD+"
+  "plus.flagproof": [P], // mark a PAHAD+ post Flag-Proof
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

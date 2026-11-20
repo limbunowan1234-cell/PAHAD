@@ -17,6 +17,7 @@ function columns(menu: NavGroup[]) {
   const more: (readonly [string, string])[] = menu.filter((g) => !g.items?.length).map((g) => [g.label, g.href] as const);
   const all = JSON.stringify(menu);
   if (!all.includes('"/results"')) more.push(["Voting results", "/results"]);
+  if (!all.includes('"/plus"')) more.push(["PAHAD+ app", "/plus"]);
   if (more.length) cols.push({ title: "More", links: more });
   return cols;
 }

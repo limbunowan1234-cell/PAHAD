@@ -99,7 +99,7 @@ export function seedPosts(): Post[] {
     {
       id: "post-seed-1",
       type: "news",
-      visibility: "public", audience: "",
+      visibility: "public", plus_approved: false, audience: "",
       ...SHARED_HISTORY_POST,
       cover: "/images/first-meet-gdns.jpg",
       category: "Announcement",

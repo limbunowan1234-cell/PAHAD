@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createAdmin, deleteAdmin, setFinanceAccess, updateAdmin } from "../../actions";
 import { setVideoPermission } from "../../video-actions";
+import { setPlusVerifier, setPublicApprover } from "../../plus-actions";
+import { PLUS_REGIONS } from "@/lib/plus/config";
 import { setMenuPermission } from "../../menu-actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
 import { ScopePicker } from "@/components/admin/ScopePicker";
@@ -58,6 +60,7 @@ export default async function TeamPage() {
   const manage = can(user.role, "team.manage");
   const financeManage = can(user.role, "finance.access.manage");
   const videoPermission = can(user.role, "videos.permission");
+  const plusPermission = can(user.role, "plus.permission");
   const menuPermission = can(user.role, "menu.permission");
   const s = await loadStructure();
   const pickable = s.units.filter((u) => u.kind !== "designation" && u.kind !== "project");
@@ -147,6 +150,8 @@ export default async function TeamPage() {
                     {!u.active && <Badge tone="red">Deactivated</Badge>}
                     {fin !== "none" && <Badge>Finance: {fin}</Badge>}
                     {u.can_submit_videos && !can(u.role, "videos.manage") && <Badge tone="green">YouTube submission: ON</Badge>}
+                    {u.can_verify_plus && u.role !== "super_admin" && <Badge tone="green">PAHAD+ verifier{u.plus_region ? `: ${u.plus_region}` : ""}</Badge>}
+                    {u.can_approve_public && u.role !== "super_admin" && <Badge tone="green">Approves public / PAHAD+</Badge>}
                     {u.can_manage_menu && !can(u.role, "menu.manage") && <Badge tone="green">Menu &amp; pages: ON</Badge>}
                   </div>
                   <p className="text-sm text-muted">{[u.email, u.designation, where].filter(Boolean).join(" · ")}</p>
@@ -166,6 +171,27 @@ export default async function TeamPage() {
                   <ActionButton variant="danger" confirm={`Remove ${u.name}'s admin access permanently?`} action={deleteAdmin.bind(null, u.id)}>Remove access</ActionButton>
                 )}
               </div>
+              {plusPermission && u.role !== "super_admin" && u.role !== "sysadmin" && u.active && (
+                <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl bg-sand/60 p-3">
+                  <AdminForm action={setPlusVerifier} submitLabel={u.can_verify_plus ? "Save PAHAD+ verifier" : "Make PAHAD+ verifier"}>
+                    <input type="hidden" name="user_id" value={u.id} />
+                    <div className="flex flex-wrap items-end gap-3">
+                      <label className="flex items-center gap-2 pb-3 text-sm">
+                        <input type="checkbox" name="on" defaultChecked className="h-4 w-4 accent-teal" /> {u.can_verify_plus ? "PAHAD+ verifier (untick and save to turn off)" : "PAHAD+ verifier"}
+                      </label>
+                      <Field label="Region (optional)" hint="Leave as All for any region.">
+                        <select name="region" defaultValue={u.plus_region} className="field">
+                          <option value="">All regions</option>
+                          {PLUS_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+                  </AdminForm>
+                  <ActionButton variant={u.can_approve_public ? "ghost" : "primary"} action={setPublicApprover.bind(null, u.id, !u.can_approve_public)}>
+                    {u.can_approve_public ? "Approve for public / PAHAD+: turn OFF" : "Approve for public / PAHAD+: turn ON"}
+                  </ActionButton>
+                </div>
+              )}
               {(manage || (financeManage && u.id !== user.id)) && (
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                   {manage && (

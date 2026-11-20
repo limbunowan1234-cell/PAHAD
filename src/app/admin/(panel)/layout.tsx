@@ -6,6 +6,7 @@ import { db, usingPostgres } from "@/lib/db";
 import { can, canEditBanners, canManageMenu, canView, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
 import { phaseOf } from "@/lib/polls";
 import { usingCloudStorage } from "@/lib/storage";
+import { canApprovePublic, canModeratePlus, canVerifyPlusPost } from "@/lib/plus/access";
 
 const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "dashboard", label: "Dashboard", href: "/admin", perm: "dashboard.view" },
@@ -27,6 +28,8 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "voting", label: "Voting", href: "/admin/voting", perm: "dashboard.view" },
   { key: "circulars", label: "Circulars", href: "/admin/circulars", perm: "circulars.view" },
   { key: "structure", label: "Structure", href: "/admin/structure", perm: "structure.view" },
+  { key: "plus", label: "PAHAD+", href: "/admin/plus", perm: "dashboard.view" }, // President, assigned verifiers; SYS views
+  { key: "approvals", label: "Approvals", href: "/admin/approvals", perm: "dashboard.view" }, // President, assigned approvers; SYS views
   { key: "team", label: "Admin Team", href: "/admin/team", perm: "team.view" },
   { key: "activity", label: "Activity Log", href: "/admin/activity", perm: "activity.view" },
   { key: "account", label: "My Account", href: "/admin/account", perm: "dashboard.view" },
@@ -34,7 +37,7 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
 
 async function Shell({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [tasks, submissions, posts, members, notes, finance, videos, myBallots, myReceipts] = await Promise.all([
+  const [tasks, submissions, posts, members, notes, finance, videos, myBallots, myReceipts, plusQueue, approvals] = await Promise.all([
     db.findBy("tasks", "assigned_to", user.id),
     can(user.role, "submissions.view") ? db.findBy("submissions", "status", "new") : Promise.resolve([]),
     can(user.role, "content.publish") ? db.findBy("posts", "status", "pending") : Promise.resolve([]),
@@ -44,6 +47,8 @@ async function Shell({ children }: { children: React.ReactNode }) {
     can(user.role, "videos.manage") ? db.findBy("videos", "status", "pending") : Promise.resolve([]),
     db.findBy("poll_voters", "user_id", user.id),
     db.findBy("poll_receipts", "user_id", user.id),
+    canModeratePlus(user) ? db.findBy("plus_posts", "status", "unverified") : Promise.resolve([]),
+    canApprovePublic(user) ? db.findBy("approvals", "status", "pending") : Promise.resolve([]),
   ]);
   // Open polls this member can still vote in.
   const votedIn = new Set(myReceipts.map((r) => r.poll_id));
@@ -58,9 +63,14 @@ async function Shell({ children }: { children: React.ReactNode }) {
     finance: finance.length,
     videos: videos.length,
     voting: openBallots,
+    plus: plusQueue.filter((p) => canVerifyPlusPost(user, p)).length,
+    approvals: approvals.length,
   };
+  const sys = user.role === "sysadmin";
+  const showPlus = canModeratePlus(user) || sys;
+  const showApprovals = canApprovePublic(user) || sys;
   const showVideos = canView(user.role, "videos.manage") || user.can_submit_videos;
-  const items = NAV.filter((n) => canView(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos) && (!["menu", "translations"].includes(n.key) || canManageMenu(user) || user.role === "sysadmin") && (n.key !== "heroes" || canEditBanners(user) || user.role === "sysadmin")).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
+  const items = NAV.filter((n) => canView(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos) && (!["menu", "translations"].includes(n.key) || canManageMenu(user) || user.role === "sysadmin") && (n.key !== "heroes" || canEditBanners(user) || user.role === "sysadmin") && (n.key !== "plus" || showPlus) && (n.key !== "approvals" || showApprovals)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
 
   return (
     <div className="lg:flex">

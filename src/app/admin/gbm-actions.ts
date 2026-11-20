@@ -116,7 +116,7 @@ export async function issueNotice(_prev: ActionState, fd: FormData): Promise<Act
     await db.update("meetings", m.id, { notice, notice_issued_at: now(), updated_at: now() });
     await db.insert("circulars", {
       id: newId(), number: await nextNumber("circulars", "PC"), title: `Notice: ${m.title} (${m.meeting_date})`, body: `${notice}\n\n## Agenda\n\n${m.agenda}`,
-      audience: "governing_body", geo: "", meeting_id: m.id, issued_by: user.id, issued_by_name: user.name, created_at: now(),
+      audience: "governing_body", visibility: "", geo: "", meeting_id: m.id, issued_by: user.id, issued_by_name: user.name, created_at: now(),
     });
     for (const gb of await governingBody()) await notify(gb.id, `Notice issued: ${m.title} on ${m.meeting_date}${m.start_time ? ` at ${m.start_time}` : ""}${m.venue ? `, ${m.venue}` : ""}.`, `/admin/meetings/${m.id}`);
     await log(user, "issued notice", "meeting", m.id, m.title);
@@ -200,7 +200,7 @@ export async function issueCircular(_prev: ActionState, fd: FormData): Promise<A
     const geo = geoRow && GEO_KINDS.includes(geoRow.kind) ? geoRow.id : "";
     const number = await nextNumber("circulars", "PC");
     const id = newId();
-    await db.insert("circulars", { id, number, title, body, audience, geo, meeting_id: "", issued_by: user.id, issued_by_name: user.name, created_at: now() });
+    await db.insert("circulars", { id, number, title, body, audience, visibility: "", geo, meeting_id: "", issued_by: user.id, issued_by_name: user.name, created_at: now() });
 
     // Notify everyone in the audience (and, for an area circular, inside that area).
     const [users, members] = await Promise.all([db.all("users"), db.all("members")]);

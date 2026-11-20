@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { deletePost, setPostStatus } from "../../actions";
+import { removePlusFeature, requestPlusFeature } from "../../plus-actions";
+import { isPublicPost } from "@/lib/data";
+import { canApprovePublic } from "@/lib/plus/access";
 import { ActionButton } from "@/components/admin/client";
 import { Badge, Empty, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
@@ -26,6 +29,10 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
   // Directorate Heads see their own directorate's content and their own items only.
   const s = await loadStructure();
   const visible = all.filter((p) => p.author_id === user.id || inScope(s, user, p));
+  const pending = (await db.findBy("approvals", "status", "pending")).filter((a) => a.entity === "post");
+  const plusPending = new Set(pending.filter((a) => a.kind === "plus_feature").map((a) => a.entity_id));
+  const publicPending = new Set(pending.filter((a) => a.kind === "make_public").map((a) => a.entity_id));
+  const approver = canApprovePublic(user);
   const rows = visible.filter((p) => (!type || p.type === type) && (!status || p.status === status));
 
   const chip = (label: string, params: Record<string, string>, active: boolean) => (
@@ -41,7 +48,7 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
     <>
       <PageHeader
         title="Content"
-        description="News, events, programmes, knowledge resources and official documents."
+        description="News, events, programmes, knowledge resources and official documents. Public items show on pahad.org; to show one in the PAHAD+ app as well, use “Request for PAHAD+” (the President approves)."
         actions={
           can(user.role, "content.create") ? (
             <Link href="/admin/content/new" className="btn btn-primary !py-2.5">
@@ -94,7 +101,12 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted">{POST_TYPE_LABEL[p.type]}</td>
-                    <td className="px-4 py-3"><Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>{p.visibility === "members" && <span className="ml-1.5"><Badge>Members only</Badge></span>}</td>
+                    <td className="px-4 py-3"><Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>{p.visibility === "members" && <span className="ml-1.5"><Badge>Members only</Badge></span>}
+                      {p.visibility === "internal" && <span className="ml-1.5"><Badge tone="red">Internal</Badge></span>}
+                      {p.plus_approved && <span className="ml-1.5"><Badge tone="teal">PAHAD+</Badge></span>}
+                      {!p.plus_approved && plusPending.has(p.id) && <span className="ml-1.5"><Badge tone="amber">PAHAD+ requested</Badge></span>}
+                      {p.visibility === "internal" && publicPending.has(p.id) && <span className="ml-1.5"><Badge tone="amber">Public requested</Badge></span>}
+                    </td>
                     <td className="px-4 py-3 text-muted">
                       {p.author_name}
                       {(p.unit || p.directorate) && <span className="block text-xs">{s.byId.get(p.unit || p.directorate)?.name}</span>}
@@ -109,6 +121,10 @@ export default async function ContentPage({ searchParams }: PageProps<"/admin/co
                         {publishable && p.status === "published" && (
                           <ActionButton action={setPostStatus.bind(null, p.id, "draft")}>Unpublish</ActionButton>
                         )}
+                        {editable && can(user.role, "content.create") && isPublicPost(p) && p.type !== "document" && p.type !== "training" && !p.plus_approved && !plusPending.has(p.id) && (
+                          <ActionButton action={requestPlusFeature.bind(null, p.id)}>{approver ? "Show in PAHAD+" : "Request for PAHAD+"}</ActionButton>
+                        )}
+                        {approver && p.plus_approved && <ActionButton action={removePlusFeature.bind(null, p.id)}>Remove from PAHAD+</ActionButton>}
                         {can(user.role, "content.delete") && (
                           <ActionButton variant="danger" confirm={`Delete “${p.title}”? This cannot be undone.`} action={deletePost.bind(null, p.id)}>
                             Delete

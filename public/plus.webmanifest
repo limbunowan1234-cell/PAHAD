@@ -1,0 +1,22 @@
+{
+  "id": "/plus",
+  "name": "PAHAD+: Events, places, local business and briefs from the hills",
+  "short_name": "PAHAD+",
+  "description": "The community app for Darjeeling, Kalimpong, Siliguri and Sikkim: events, places to roam, local businesses, alerts, jobs and opportunities.",
+  "start_url": "/plus",
+  "scope": "/plus",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf5ee",
+  "theme_color": "#164d58",
+  "categories": ["social", "travel", "news", "lifestyle"],
+  "icons": [
+    { "src": "/icons/plus-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/plus-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/plus-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Post something", "url": "/plus/new", "icons": [{ "src": "/icons/plus-192.png", "sizes": "192x192" }] },
+    { "name": "Alerts", "url": "/plus?hub=briefs&type=alert", "icons": [{ "src": "/icons/plus-192.png", "sizes": "192x192" }] }
+  ]
+}

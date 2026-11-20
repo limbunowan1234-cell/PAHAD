@@ -11,7 +11,8 @@ import type { PublicUser, User } from "../types";
 const COOKIE = "pahad_session";
 const MAX_AGE = 60 * 60 * 12; // 12 hours
 
-function secret(): string {
+/** Signing secret, shared with the PAHAD+ session (which signs with its own context). */
+export function secret(): string {
   const s = process.env.AUTH_SECRET;
   if (s && s.length >= 32) return s;
   if (process.env.NODE_ENV === "production" && process.env.DATABASE_URL) {

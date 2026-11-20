@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { site } from "@/lib/site";
 import { PageHero } from "@/components/site/ui";
@@ -38,6 +39,27 @@ export default function PrivacyPage() {
         </p>
         <h2>Third-party services</h2>
         <p>Links to social platforms and partner websites are governed by their own terms and privacy practices.</p>
+
+        <h2 id="pahad-plus" className="scroll-mt-24">PAHAD+ app</h2>
+        <p>PAHAD+ is PAHAD&apos;s community app (at <Link href="/plus" className="underline">/plus</Link> and on Google Play). PAHAD+ accounts are separate from PAHAD member and administrator accounts.</p>
+        <ul>
+          <li><strong>Account:</strong> your name, email address, optional phone number, account type (individual, business or organisation), a securely hashed password, when you accepted the terms, and sign-in times.</li>
+          <li><strong>Posts:</strong> what you post (title, summary, description, photo, place, dates, optional YouTube link) and any contact details you add (phone, WhatsApp, email, address, website, booking or registration link).</li>
+          <li><strong>Safety:</strong> the reports you make and the accounts you block.</li>
+          <li><strong>Cookie:</strong> one essential cookie keeps you signed in for up to 30 days. No advertising or analytics trackers.</li>
+        </ul>
+        <p>
+          <strong>Who sees what:</strong> anyone can see a post&apos;s title, photo, place, summary and your display name. Contact, booking and registration
+          details are shown only after a PAHAD verifier checks the post. PAHAD&apos;s President and the verifiers he assigns can see everything you post,
+          to verify it. Your email address and phone number on your account are never shown publicly. We don&apos;t sell or share your data for advertising.
+        </p>
+        <p>
+          <strong>Emails:</strong> we email you only to confirm your address and to reset your password (sent through Google).
+        </p>
+        <p>
+          <strong>Deleting your data:</strong> delete your account at any time in the app (Me → Delete my account). Your account and sign-in data are deleted
+          at once and your posts are removed with their contact details erased. See <Link href="/plus/delete-account" className="underline">how account deletion works</Link>.
+        </p>
       </section>
     </>
   );
