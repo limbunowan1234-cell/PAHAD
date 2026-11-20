@@ -102,8 +102,9 @@ export async function signOutPlus() {
 }
 
 // ------------------------------------------------------------------ email verification
-export async function verifyPlusEmail(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  const token = str(fd, "token", 200);
+/** The token is bound on the server (verifyPlusEmail.bind(null, token)), not sent in a form field. */
+export async function verifyPlusEmail(rawToken: string): Promise<ActionState> {
+  const token = String(rawToken ?? "").slice(0, 200);
   const row = token ? await db.get("plus_tokens", hash(token)) : null;
   if (!row || row.kind !== "verify" || row.used || Date.parse(row.expires_at) <= Date.now()) {
     return { ok: false, message: "This link is invalid or has expired. Sign in and ask for a new one." };
@@ -141,9 +142,9 @@ export async function requestPlusReset(_prev: ActionState, fd: FormData): Promis
   return { ok: true, message: SENT };
 }
 
-export async function resetPlusPassword(_prev: ActionState, fd: FormData): Promise<ActionState> {
+export async function resetPlusPassword(rawToken: string, _prev: ActionState, fd: FormData): Promise<ActionState> {
   const invalid = { ok: false, message: "This reset link is invalid or has expired. Ask for a new one." };
-  const token = str(fd, "token", 200);
+  const token = String(rawToken ?? "").slice(0, 200);
   const row = token ? await db.get("plus_tokens", hash(token)) : null;
   if (!row || row.kind !== "reset" || row.used || Date.parse(row.expires_at) <= Date.now()) return invalid;
   const password = String(fd.get("password") ?? "");
