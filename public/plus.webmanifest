@@ -7,16 +7,54 @@
   "scope": "/plus",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fdf5ee",
-  "theme_color": "#164d58",
-  "categories": ["social", "travel", "news", "lifestyle"],
+  "background_color": "#11181B",
+  "theme_color": "#11181B",
+  "categories": [
+    "social",
+    "travel",
+    "news",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "/icons/plus-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/plus-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/plus-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/plus-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/plus-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/plus-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Post something", "url": "/plus/new", "icons": [{ "src": "/icons/plus-192.png", "sizes": "192x192" }] },
-    { "name": "Alerts", "url": "/plus?hub=briefs&type=alert", "icons": [{ "src": "/icons/plus-192.png", "sizes": "192x192" }] }
+    {
+      "name": "Post something",
+      "url": "/plus/new",
+      "icons": [
+        {
+          "src": "/icons/plus-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "url": "/plus?hub=briefs&type=alert",
+      "icons": [
+        {
+          "src": "/icons/plus-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

@@ -33,12 +33,12 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <Link href={`/plus/${id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-teal"><ArrowLeft className="h-4 w-4" aria-hidden /> Event</Link>
-      <header className="rounded-[var(--radius-card)] bg-teal p-5 text-white">
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Check-in</p>
+      <header className="rounded-[var(--radius-card)] bg-[#1D353A] p-5 text-ink">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink/70">Check-in</p>
         <h1 className="mt-1 font-display text-2xl leading-tight">{post.title}</h1>
-        <p className="mt-1 text-sm text-white/85">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-        <p className="mt-3 text-3xl font-bold">{inCount} <span className="text-base font-normal text-white/80">checked in of {passes.length}{post.pass_capacity ? ` (limit ${post.pass_capacity})` : ""}</span></p>
-        <p className="mt-1 text-xs text-white/70">You: {who.name}</p>
+        <p className="mt-1 text-sm text-ink/85">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+        <p className="mt-3 text-3xl font-bold">{inCount} <span className="text-base font-normal text-ink/80">checked in of {passes.length}{post.pass_capacity ? ` (limit ${post.pass_capacity})` : ""}</span></p>
+        <p className="mt-1 text-xs text-ink/70">You: {who.name}</p>
       </header>
       {money && (
         <section aria-label="Sales" className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] bg-white p-5 text-sm ring-1 ring-line sm:grid-cols-4">

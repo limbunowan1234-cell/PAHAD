@@ -177,3 +177,87 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * PAHAD+ app theme (dark, from the approved prototype). Scoped to the app: the palette variables are remapped
+ * inside .plus-dark, so the same utility classes render the dark look there and the normal look on pahad.org.
+ * Contrast (WCAG): ivory on pine 15:1 · ochre on pine 8.5:1 · pine on ochre 8.5:1 · pine on clay 4.9:1.
+ */
+.plus-dark {
+  --color-white: #182327; /* cards and panels */
+  --color-sand: #11181b; /* page */
+  --color-ink: #f4f1ea; /* text */
+  --color-muted: #b9bdb6;
+  --color-line: #2b3a3f;
+  --color-teal: #d9a75a; /* accent (ochre) */
+  --color-teal-700: #6fa399; /* glacier sage */
+  --color-teal-900: #f4f1ea;
+  --color-teal-950: #0b1113;
+  --color-sage: #6fa399;
+  --color-sage-100: #1f3936;
+  --color-cream: #3b3124;
+  --color-coral: #c86d51; /* clay */
+  --color-coral-700: #e8a48c;
+  --color-peach: #d9a75a;
+  --color-red-50: #3a1f1a;
+  --color-red-200: #6b3328;
+  --color-red-700: #f09a82;
+  --color-red-800: #f3b4a3;
+  --color-green-600: #6fa399;
+  background: var(--color-sand);
+  color: var(--color-ink);
+  color-scheme: dark;
+}
+.plus-dark .field {
+  background: #11181b;
+  border-color: var(--color-line);
+  color: var(--color-ink);
+}
+.plus-dark .field::placeholder {
+  color: #8d948f;
+}
+.plus-dark .btn-primary {
+  background: #d9a75a;
+  color: #11181b;
+}
+.plus-dark .btn-primary:hover {
+  background: #e6bb78;
+}
+.plus-dark .btn-accent {
+  background: #c86d51;
+  color: #11181b;
+}
+.plus-dark .btn-accent:hover {
+  background: #d8836a;
+}
+.plus-dark ::selection {
+  background: #d9a75a;
+  color: #11181b;
+}
+/* Full-screen vertical feed */
+.plus-reels {
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+.plus-reels::-webkit-scrollbar {
+  display: none;
+}
+.plus-reel {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+@keyframes plus-heart {
+  0% { transform: scale(0.4); opacity: 0; }
+  30% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.plus-heart-burst {
+  animation: plus-heart 0.8s ease-out forwards;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

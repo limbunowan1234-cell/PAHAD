@@ -117,7 +117,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
           </div>
 
           {c.passEnabled && (
-            <section aria-label="E-Pass" className="mt-4 rounded-2xl border border-teal/30 bg-white p-4 text-sm">
+            <section id="epass" aria-label="E-Pass" className="mt-4 scroll-mt-20 rounded-2xl border border-teal/30 bg-white p-4 text-sm">
               <p className="flex items-center gap-2 font-semibold text-teal"><Ticket className="h-5 w-5" aria-hidden /> {paid ? `E-Pass ${rupees(post.price)}` : "Free E-Pass"}</p>
               {holding ? (
                 <Link href={`/plus/pass/${holding.code}`} className="btn btn-primary mt-3"><QrCode className="h-4 w-4" aria-hidden /> {holding.status === "checked_in" ? "Checked in · view E-Pass" : "View my E-Pass"}</Link>

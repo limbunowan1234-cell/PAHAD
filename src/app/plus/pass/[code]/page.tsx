@@ -43,11 +43,11 @@ async function Pass({ params, searchParams }: { params: Promise<{ code: string }
       <Link href={`/plus/${post.id}`} className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-teal"><ArrowLeft className="h-4 w-4" aria-hidden /> Event</Link>
       {sp.new === "1" && <p role="status" className="mb-4 rounded-2xl bg-sage-100 p-4 text-sm text-teal">Your free E-Pass is ready. Show this QR at the entrance. It&apos;s also under Me → My E-Passes.</p>}
       <article className="overflow-hidden rounded-[var(--radius-card)] bg-white shadow-sm ring-1 ring-line">
-        <div className="bg-teal p-5 text-white">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">PAHAD+ E-Pass · {order ? `Paid ${rupees(order.amount)}` : "Free entry"}</p>
+        <div className="bg-[#1D353A] p-5 text-ink">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink/70">PAHAD+ E-Pass · {order ? `Paid ${rupees(order.amount)}` : "Free entry"}</p>
           <h1 className="mt-1 font-display text-2xl leading-tight">{post.title}</h1>
-          <p className="mt-2 flex items-center gap-1 text-sm text-white/85"><CalendarDays className="h-4 w-4" aria-hidden /> {plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-          <p className="mt-1 flex items-center gap-1 text-sm text-white/85"><MapPin className="h-4 w-4" aria-hidden /> {[post.venue, post.locality, post.region].filter(Boolean).join(", ")}</p>
+          <p className="mt-2 flex items-center gap-1 text-sm text-ink/85"><CalendarDays className="h-4 w-4" aria-hidden /> {plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+          <p className="mt-1 flex items-center gap-1 text-sm text-ink/85"><MapPin className="h-4 w-4" aria-hidden /> {[post.venue, post.locality, post.region].filter(Boolean).join(", ")}</p>
         </div>
         <div className="p-5 text-center">
           <span className={cn("inline-block rounded-full px-3 py-1 text-xs font-bold", s.cls)}>{s.label}</span>

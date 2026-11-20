@@ -83,6 +83,30 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
         </p>
       </section>
 
+      <section id="passes" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+        <h2 className="font-display text-xl text-teal">My E-Passes</h2>
+        {passRows.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">No E-Passes yet. Look for events with a free E-Pass.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line">
+            {passRows.map(({ pass, post }) => {
+              const past = !isLivePlus(post, at);
+              return (
+                <li key={pass.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <Link href={`/plus/pass/${pass.code}`} className="font-semibold text-ink hover:underline">{post.title}</Link>
+                    <p className="text-xs text-muted">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {post.region}</p>
+                  </div>
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", pass.status === "checked_in" ? "bg-teal text-white" : past ? "bg-sand text-muted" : "bg-green-600 text-white")}>
+                    {pass.status === "checked_in" ? "Checked in" : past ? "Ended" : "Valid"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
       <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-xl text-teal">My posts</h2>
@@ -104,30 +128,6 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
                     <span className={cn("rounded-full px-2 py-0.5 font-semibold", expired ? "bg-sand text-muted" : s.cls)}>{expired ? "Ended / expired" : s.label}</span>
                   </div>
                   {(p.status === "rejected" || p.status === "hold") && p.reject_reason && <p className="mt-1 text-sm text-red-800">Reason: {p.reject_reason}</p>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section id="passes" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
-        <h2 className="font-display text-xl text-teal">My E-Passes</h2>
-        {passRows.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No E-Passes yet. Look for events with a free E-Pass.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-line">
-            {passRows.map(({ pass, post }) => {
-              const past = !isLivePlus(post, at);
-              return (
-                <li key={pass.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <Link href={`/plus/pass/${pass.code}`} className="font-semibold text-ink hover:underline">{post.title}</Link>
-                    <p className="text-xs text-muted">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {post.region}</p>
-                  </div>
-                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", pass.status === "checked_in" ? "bg-teal text-white" : past ? "bg-sand text-muted" : "bg-green-600 text-white")}>
-                    {pass.status === "checked_in" ? "Checked in" : past ? "Ended" : "Valid"}
-                  </span>
                 </li>
               );
             })}

@@ -3,54 +3,78 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
-import { Bell, BellOff, Bookmark, Camera, Compass, Heart, Home, Loader2, PlusCircle, UserRound } from "lucide-react";
+import { Bell, BellOff, Bookmark, Camera, Compass, Heart, Home, Loader2, Search, ShieldCheck, Ticket } from "lucide-react";
 import type { ActionState } from "@/lib/admin-helpers";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
 import { BRIEF_TYPES, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, ROAM_KINDS, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "@/lib/plus/config";
 import { cn } from "@/lib/utils";
 
-// ------------------------------------------------------------------ bottom navigation (phone) / top links (desktop)
-const TABS = [
-  { href: "/plus", label: "Home", icon: Home, match: (p: string) => p === "/plus" || /^\/plus\/(?!new|me|discover|signup|login)/.test(p) },
-  { href: "/plus/discover", label: "Discover", icon: Compass, match: (p: string) => p.startsWith("/plus/discover") },
-  { href: "/plus/new", label: "Post", icon: PlusCircle, match: (p: string) => p.startsWith("/plus/new") },
-  { href: "/plus/me", label: "Me", icon: UserRound, match: (p: string) => p.startsWith("/plus/me") || p.startsWith("/plus/login") || p.startsWith("/plus/signup") },
-];
-
-export function PlusNav({ variant }: { variant: "bottom" | "top" }) {
-  return <PlusNavView variant={variant} pathname={usePathname()} />;
+// ------------------------------------------------------------------ app chrome: emblem, top bar, bottom bar
+/** The PAHAD+ emblem: clay disc, ivory ridge and a pine peak (from the approved prototype). */
+export function PlusEmblem({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} aria-hidden>
+      <circle cx="20" cy="20" r="18" fill="#C86D51" />
+      <path d="M5 29 L15 14 L22 23 L28 16 L36 29 Z" fill="#F4F1EA" />
+      <path d="M12 29 L20 18 L29 29 Z" fill="#1D353A" />
+    </svg>
+  );
 }
 
-/** Also rendered without a path as the prerendered fallback (see the PAHAD+ layout). */
-export function PlusNavView({ variant, pathname }: { variant: "bottom" | "top"; pathname: string }) {
-  if (variant === "top") {
-    return (
-      <nav aria-label="PAHAD+" className="hidden items-center gap-1 md:flex">
-        {TABS.map((t) => (
-          <Link key={t.href} href={t.href} aria-current={t.match(pathname) ? "page" : undefined}
-            className={cn("rounded-full px-3 py-1.5 text-sm font-semibold", t.match(pathname) ? "bg-white text-teal" : "text-white/90 hover:bg-white/10")}>
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-    );
-  }
+/** Slim top bar on every screen except the full-screen feed, which draws its own over the picture. */
+export function PlusTopBar() {
+  const pathname = usePathname();
+  if (pathname === "/plus") return null;
+  return <PlusTopBarView />;
+}
+export function PlusTopBarView() {
   return (
-    <nav aria-label="PAHAD+" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      <ul className="mx-auto grid max-w-md grid-cols-4">
-        {TABS.map((t) => {
-          const active = t.match(pathname);
-          const Icon = t.icon;
-          return (
-            <li key={t.href}>
-              <Link href={t.href} aria-current={active ? "page" : undefined}
-                className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold", active ? "text-teal" : "text-muted")}>
-                <Icon className={cn("h-6 w-6", t.href === "/plus/new" && "text-coral-700")} aria-hidden />
-                {t.label}
-              </Link>
-            </li>
-          );
-        })}
+    <header className="sticky top-0 z-30 border-b border-line bg-sand/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+      <div className="flex h-14 items-center justify-between px-4">
+        <Link href="/plus" className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-ink/25 bg-[#1D353A]"><PlusEmblem className="h-6 w-6" /></span>
+          <span className="font-display text-lg font-bold tracking-tight">PAHAD+</span>
+        </Link>
+        <Link href="/plus/discover" aria-label="Search" className="flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 bg-white">
+          <Search className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+type NavInfo = { passes: number; desk: boolean };
+
+export function PlusNav(info: NavInfo) {
+  return <PlusNavView pathname={usePathname()} {...info} />;
+}
+
+/** Bottom bar: Home · Discover · + · Desk (PAHAD verifiers only) · Pass. Also the prerendered fallback (no path, no counts). */
+export function PlusNavView({ pathname, passes, desk }: NavInfo & { pathname: string }) {
+  const item = (href: string, label: ReactNode, Icon: typeof Home, active: boolean, extra?: ReactNode) => (
+    <li>
+      <Link href={href} aria-current={active ? "page" : undefined}
+        className={cn("relative flex flex-col items-center gap-0.5 py-2 text-[10px]", active ? "font-extrabold text-teal" : "font-semibold text-muted hover:text-ink")}>
+        <Icon className="h-5 w-5" aria-hidden />
+        {label}
+        {extra}
+      </Link>
+    </li>
+  );
+  const onPost = pathname.startsWith("/plus/new");
+  return (
+    <nav aria-label="PAHAD+" className="fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 border-t border-ink/10 bg-[#141C1F]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+      <ul className={cn("grid items-center px-2", desk ? "grid-cols-5" : "grid-cols-4")}>
+        {item("/plus", "Home", Home, pathname === "/plus" || /^\/plus\/(?!new|me|discover|desk|signup|login|pass)/.test(pathname))}
+        {item("/plus/discover", "Discover", Compass, pathname.startsWith("/plus/discover"))}
+        <li className="flex justify-center">
+          <Link href="/plus/new" aria-label="Post" aria-current={onPost ? "page" : undefined}
+            className="rounded-xl bg-ink px-4 py-1.5 text-lg font-black leading-none text-sand shadow-[3px_0_0_#C86D51,-3px_0_0_#6FA399] transition active:scale-95">
+            +
+          </Link>
+        </li>
+        {desk && item("/plus/desk", "Desk", ShieldCheck, pathname.startsWith("/plus/desk"))}
+        {item("/plus/me", <span>Pass{passes > 0 ? ` (${passes})` : ""}</span>, Ticket, pathname.startsWith("/plus/me") || pathname.startsWith("/plus/pass") || pathname.startsWith("/plus/login") || pathname.startsWith("/plus/signup"))}
       </ul>
     </nav>
   );
@@ -480,7 +504,7 @@ export function GateScanner({ action }: { action: (prev: GateResult, fd: FormDat
         <div>
           {scanning ? (
             <div className="space-y-2">
-              <video ref={video} playsInline muted className="aspect-square w-full rounded-2xl bg-ink object-cover" />
+              <video ref={video} playsInline muted className="aspect-square w-full rounded-2xl bg-black object-cover" />
               <button type="button" onClick={() => setScanning(false)} className="btn w-full bg-white text-teal ring-1 ring-line">Stop camera</button>
             </div>
           ) : (

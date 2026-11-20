@@ -53,6 +53,7 @@ export default function PrivacyPage() {
           <li><strong>Paid organisers:</strong> the name on the payout account and the UPI ID or bank account and IFSC you give PAHAD, seen only by PAHAD&apos;s President, to pay you for your ticket sales.</li>
           <li><strong>PAHAD membership link:</strong> if you link your membership, which membership it is, so your posts show a PAHAD member badge.</li>
           <li><strong>Cookie:</strong> one essential cookie keeps you signed in for up to 30 days. No advertising or analytics trackers.</li>
+          <li><strong>Videos:</strong> posts can include YouTube videos. In the feed, the video on screen plays silently through YouTube&apos;s privacy-enhanced mode (not when your phone is on Data Saver). When a video plays, YouTube&apos;s own privacy policy applies.</li>
         </ul>
         <p>
           <strong>Who sees what:</strong> anyone can see a post&apos;s title, photo, place, summary and your display name. Contact, booking and registration

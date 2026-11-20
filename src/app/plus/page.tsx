@@ -1,12 +1,13 @@
-import Form from "next/form";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search } from "lucide-react";
-import { InstallAppButton } from "@/components/site/InstallApp";
-import { PlusCardView } from "@/components/plus/ui";
+import { Search, X } from "lucide-react";
+import { PlusEmblem } from "@/components/plus/client";
+import { ReelsFeed, type Reel } from "@/components/plus/reels";
+import { timing } from "@/components/plus/ui";
 import { db } from "@/lib/db";
 import { BRIEF_TYPES, HUB_KEYS, PLUS_HUBS, PLUS_REGIONS, type BriefType, type PlusHub } from "@/lib/plus/config";
-import { plusFeed, type PlusFilters, requestTime } from "@/lib/plus/posts";
+import { toggleLike, toggleSave } from "@/lib/plus/post-actions";
+import { plusFeed, requestTime, type PlusCard, type PlusFilters } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ function filtersFrom(sp: SP): PlusFilters {
 function hrefWith(f: PlusFilters, change: Partial<PlusFilters>) {
   const next = { ...f, ...change };
   if (next.hub !== "briefs") next.type = undefined;
+  if (next.tab === "pahad") next.region = undefined;
   const q: Record<string, string> = {};
   if (next.tab === "pahad") q.tab = "pahad";
   if (next.hub) q.hub = next.hub;
@@ -40,12 +42,61 @@ function hrefWith(f: PlusFilters, change: Partial<PlusFilters>) {
   return { pathname: "/plus", query: q };
 }
 
-function Chip({ href, active, children }: { href: ReturnType<typeof hrefWith>; active: boolean; children: React.ReactNode }) {
+function toReel(c: PlusCard, at: number, liked: Set<string>, saved: Set<string>): Reel {
+  return {
+    id: c.id, href: c.href, userPost: c.source === "user",
+    hubLabel: c.briefType ? BRIEF_TYPES[c.briefType].label : PLUS_HUBS[c.hub].label,
+    emoji: c.briefType ? BRIEF_TYPES[c.briefType].emoji : PLUS_HUBS[c.hub].emoji,
+    region: c.region, locality: c.locality, title: c.title, summary: c.summary, image: c.image, youtubeId: c.youtubeId,
+    trust: c.source === "pahad" ? "pahad" : c.flagProof ? "flag_proof" : c.verified ? "verified" : "unverified",
+    author: c.authorName, authorMember: c.authorMember, likes: c.likes, liked: liked.has(c.id), saved: saved.has(c.id),
+    pass: c.passEnabled && c.verified ? (c.price > 0 ? `E-Pass ₹${c.price / 100}` : "Free E-Pass") : "",
+    when: timing(c, at), alert: c.briefType === "alert",
+  };
+}
+
+/** Header drawn over the picture: tabs (For You, PAHAD, regions), search, hub pills and Brief types. */
+function ReelsHeader({ f }: { f: PlusFilters }) {
+  const tab = (label: string, href: ReturnType<typeof hrefWith>, on: boolean) => (
+    <Link href={href} scroll={false} aria-current={on ? "true" : undefined}
+      className={cn("shrink-0 border-b-2 pb-1 drop-shadow", on ? "border-teal font-extrabold text-teal" : "border-transparent font-semibold text-ink/70")}>{label}</Link>
+  );
+  const pill = (label: string, href: ReturnType<typeof hrefWith>, on: boolean) => (
+    <Link href={href} scroll={false} aria-current={on ? "true" : undefined}
+      className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px]", on ? "bg-teal font-extrabold text-sand" : "border border-ink/15 bg-white/65 font-bold text-ink/85 backdrop-blur-md")}>{label}</Link>
+  );
   return (
-    <Link href={href} aria-current={active ? "true" : undefined} scroll={false}
-      className={cn("shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold", active ? "bg-teal text-white" : "bg-white text-teal ring-1 ring-line hover:bg-cream")}>
-      {children}
-    </Link>
+    <header className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-[#11181B]/85 via-[#11181B]/45 to-transparent px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)]">
+      <div className="flex items-center justify-between gap-2">
+        <Link href="/plus" className="flex shrink-0 items-center gap-1.5">
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-ink/25 bg-[#1D353A] shadow"><PlusEmblem className="h-6 w-6" /></span>
+          <span className="font-display text-base font-bold tracking-tight">PAHAD+</span>
+        </Link>
+        <nav aria-label="Feed" className="no-scrollbar flex items-center gap-3 overflow-x-auto px-1 text-xs">
+          {tab("For You", hrefWith(f, { tab: "foryou", region: undefined }), f.tab === "foryou" && !f.region)}
+          {tab("PAHAD", hrefWith(f, { tab: "pahad" }), f.tab === "pahad")}
+          {PLUS_REGIONS.map((r) => <span key={r} className="contents">{tab(r, hrefWith(f, { tab: "foryou", region: r }), f.region === r)}</span>)}
+        </nav>
+        <Link href="/plus/discover" aria-label="Search" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink/15 bg-[#1D353A]/70 backdrop-blur-md">
+          <Search className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
+      <nav aria-label="Hubs" className="no-scrollbar mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+        {pill("All hubs", hrefWith(f, { hub: undefined }), !f.hub)}
+        {HUB_KEYS.map((h) => <span key={h} className="contents">{pill(`${PLUS_HUBS[h].emoji} ${PLUS_HUBS[h].label}`, hrefWith(f, { hub: h }), f.hub === h)}</span>)}
+      </nav>
+      {f.hub === "briefs" && (
+        <nav aria-label="Brief types" className="no-scrollbar mt-1.5 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {pill("All briefs", hrefWith(f, { type: undefined }), !f.type)}
+          {(Object.keys(BRIEF_TYPES) as BriefType[]).map((t) => <span key={t} className="contents">{pill(`${BRIEF_TYPES[t].emoji} ${BRIEF_TYPES[t].label}`, hrefWith(f, { type: t }), f.type === t)}</span>)}
+        </nav>
+      )}
+      {f.q && (
+        <Link href={hrefWith(f, { q: undefined })} className="mt-2 inline-flex items-center gap-1 rounded-full bg-ink px-3 py-1 text-[11px] font-extrabold text-sand">
+          Results for “{f.q}” <X className="h-3.5 w-3.5" aria-label="Clear search" />
+        </Link>
+      )}
+    </header>
   );
 }
 
@@ -53,84 +104,40 @@ async function Feed({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const f = filtersFrom(sp);
   const viewer = await getPlusUser();
-  const blocked = new Set(viewer ? (await db.findBy("plus_blocks", "blocker_id", viewer.id)).map((b) => b.blocked_id) : []);
-  const cards = await plusFeed(f, blocked);
+  const [blocks, likes, saves] = viewer
+    ? await Promise.all([db.findBy("plus_blocks", "blocker_id", viewer.id), db.findBy("plus_likes", "user_id", viewer.id), db.findBy("plus_saves", "user_id", viewer.id)])
+    : [[], [], []];
+  const cards = await plusFeed(f, new Set(blocks.map((b) => b.blocked_id)));
   const at = requestTime();
+  const liked = new Set(likes.map((l) => l.post_id)), saved = new Set(saves.map((s) => s.post_id));
 
   return (
     <>
-      {one(sp.deleted) === "1" && <p role="status" className="mb-4 rounded-2xl bg-sage-100 p-4 text-sm text-teal">Your PAHAD+ account and its details have been deleted.</p>}
-
-      <Form action="/plus" className="relative mb-4">
-        {f.tab === "pahad" && <input type="hidden" name="tab" value="pahad" />}
-        {f.hub && <input type="hidden" name="hub" value={f.hub} />}
-        {f.region && <input type="hidden" name="region" value={f.region} />}
-        <label htmlFor="plus-q" className="sr-only">Search PAHAD+</label>
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" aria-hidden />
-        <input id="plus-q" name="q" type="search" defaultValue={f.q} placeholder="Search events, places, cafés, jobs…" className="field !rounded-full !py-3 !pl-12" />
-      </Form>
-
-      <div role="tablist" aria-label="Feed" className="mb-4 grid grid-cols-2 rounded-full bg-white p-1 ring-1 ring-line sm:inline-grid sm:w-80">
-        {(["foryou", "pahad"] as const).map((t) => (
-          <Link key={t} role="tab" aria-selected={f.tab === t} href={hrefWith(f, { tab: t })} scroll={false}
-            className={cn("rounded-full py-2 text-center text-sm font-semibold", f.tab === t ? "bg-teal text-white" : "text-teal")}>
-            {t === "foryou" ? "For You" : "PAHAD"}
-          </Link>
-        ))}
-      </div>
-
-      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Hubs">
-        <Chip href={hrefWith(f, { hub: undefined })} active={!f.hub}>All</Chip>
-        {HUB_KEYS.map((h) => <Chip key={h} href={hrefWith(f, { hub: h })} active={f.hub === h}>{PLUS_HUBS[h].emoji} {PLUS_HUBS[h].label}</Chip>)}
-      </div>
-      {f.hub === "briefs" && (
-        <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Brief types">
-          <Chip href={hrefWith(f, { type: undefined })} active={!f.type}>All briefs</Chip>
-          {(Object.keys(BRIEF_TYPES) as BriefType[]).map((t) => <Chip key={t} href={hrefWith(f, { type: t })} active={f.type === t}>{BRIEF_TYPES[t].emoji} {BRIEF_TYPES[t].label}</Chip>)}
-        </div>
-      )}
-      {f.tab === "foryou" && (
-        <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Regions">
-          <Chip href={hrefWith(f, { region: undefined })} active={!f.region}>All regions</Chip>
-          {PLUS_REGIONS.map((r) => <Chip key={r} href={hrefWith(f, { region: r })} active={f.region === r}>{r}</Chip>)}
-        </div>
-      )}
-
+      <ReelsHeader f={f} />
+      {one(sp.deleted) === "1" && <p role="status" className="absolute inset-x-4 top-32 z-40 rounded-2xl bg-ink p-3 text-center text-xs font-bold text-sand">Your PAHAD+ account and its details have been deleted.</p>}
       {cards.length === 0 ? (
-        <div className="rounded-[var(--radius-card)] bg-white p-8 text-center ring-1 ring-line">
-          <p className="font-display text-xl text-teal">Nothing here yet</p>
-          <p className="mt-1 text-sm text-muted">{f.q ? "Try another search." : "Be the first to share something from your area."}</p>
-          <Link href="/plus/new" className="btn btn-primary mt-4">Post on PAHAD+</Link>
+        <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+          <p className="text-4xl" aria-hidden>🏔️</p>
+          <h1 className="mt-3 font-display text-xl font-bold">{f.q ? "Nothing matches that search" : "Nothing here yet"}</h1>
+          <p className="mt-1.5 text-xs text-muted">{f.q ? "Try another word, or clear the search." : `Be the first to share something${f.region ? ` from ${f.region}` : ""}.`}</p>
+          <Link href="/plus/new" className="btn btn-primary mt-4 !px-5 !py-2.5 text-xs">+ Post on PAHAD+</Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((c) => <PlusCardView key={c.id} c={c} at={at} />)}
-        </div>
+        <>
+          <h1 className="sr-only">PAHAD+ feed</h1>
+          <ReelsFeed reels={cards.map((c) => toReel(c, at, liked, saved))} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave} />
+        </>
       )}
     </>
-  );
-}
-
-function FeedSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="status" aria-label="Loading">
-      {Array.from({ length: 6 }, (_, i) => <div key={i} className="aspect-[4/5] animate-pulse rounded-[var(--radius-card)] bg-white" />)}
-    </div>
   );
 }
 
 export default function PlusHome({ searchParams }: PageProps<"/plus">) {
   return (
-    <>
-      <h1 className="sr-only">PAHAD+</h1>
-      <Suspense fallback={<FeedSkeleton />}>
+    <div className="fixed inset-y-0 left-1/2 z-10 w-full max-w-[430px] -translate-x-1/2 bg-sand">
+      <Suspense fallback={<div className="h-full animate-pulse bg-white" role="status" aria-label="Loading" />}>
         <Feed searchParams={searchParams} />
       </Suspense>
-      <div className="mt-10 rounded-[var(--radius-card)] bg-teal p-5 text-white">
-        <p className="font-display text-lg">Get the PAHAD+ app</p>
-        <p className="mt-1 text-sm text-white/80">Events, places, local business and alerts from Darjeeling, Kalimpong, Siliguri and Sikkim.</p>
-        <InstallAppButton label="Install PAHAD+" className="btn btn-accent mt-3" />
-      </div>
-    </>
+    </div>
   );
 }

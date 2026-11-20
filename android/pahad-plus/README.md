@@ -5,7 +5,7 @@ Status: **waiting for the Founder's approval of the images** (see `approval/`). 
 | Folder | What's in it |
 | --- | --- |
 | `approval/PAHAD-Plus-Images-for-Approval.pdf` | Every image for the app and its Google Play page, with tick boxes and a sign-off page. Share it with the Founder. |
-| `store-assets/` | The same images as files, at the sizes Google Play asks for: icon options A and B (512 × 512, plus a maskable version of B), splash previews, feature graphic (1024 × 500) and eight phone screenshots (1080 × 1920). |
+| `store-assets/` | The same images as files, at the sizes Google Play asks for: icon options A, B and C (512 × 512, plus maskable versions of B and C; C, the app's emblem, is recommended), splash previews on the app's dark background, feature graphic (1024 × 500) and eight phone screenshots (1080 × 1920) of the dark, full-screen design. |
 
 After approval:
 
