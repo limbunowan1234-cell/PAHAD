@@ -21,6 +21,13 @@ export default function PlusTermsPage() {
         <li>Verification means PAHAD checked that the post is genuine at the time. It is not an endorsement or guarantee. Use your own judgement before paying anyone.</li>
       </ul>
 
+      <h2>E-Passes</h2>
+      <ul>
+        <li>E-Passes are free, one per person per event, and open only once PAHAD verifies the event. Organisers can set a limit.</li>
+        <li>Your E-Pass is your ticket: don&apos;t share or copy its QR code. Each pass can be checked in once.</li>
+        <li>The organiser runs the event and may refuse entry. Cancel your E-Pass if you can&apos;t go, so someone else can.</li>
+      </ul>
+
       <h2>Community guidelines</h2>
       <ul>
         <li>Post only true, current information about the hills region, and only what you have the right to share (including photos).</li>

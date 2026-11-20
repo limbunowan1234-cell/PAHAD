@@ -1,10 +1,12 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { PLUS_REGIONS, type PlusStatus } from "@/lib/plus/config";
 import { canApprovePublic, canGrantFlagProof, canModeratePlus, canVerifyPlusPost } from "@/lib/plus/access";
+import { pushToRegion, pushToUser } from "@/lib/plus/push";
 import { openApprovalRequest } from "@/lib/plus/approvals";
 import type { PublicUser } from "@/lib/types";
 
@@ -50,6 +52,17 @@ export async function moderatePlusPost(_prev: ActionState, fd: FormData): Promis
       before: { status: p.status }, after: { status: to },
     });
     updateTag("plus");
+    // Phone notifications (when switched on): tell the poster, and for a newly verified alert, everyone following that region.
+    const wasVerified = p.status === "verified" || p.status === "flag_proof";
+    if ((verifying && !wasVerified) || to === "rejected") {
+      after(() => pushToUser(p.author_id, verifying
+        ? { title: "Your post is verified ✅", body: `“${p.title}” now shows its full details on PAHAD+.`, url: `/plus/${p.id}`, tag: `post-${p.id}` }
+        : { title: "Your post wasn't approved", body: reason ? `“${p.title}”: ${reason}` : `“${p.title}”`, url: "/plus/me", tag: `post-${p.id}` }).then(() => undefined));
+    }
+    const liveAlert = p.hub === "briefs" && p.brief_type === "alert" && (!p.valid_until || Date.parse(p.valid_until) > Date.now());
+    if (verifying && !wasVerified && liveAlert) {
+      after(() => pushToRegion(p.region, { title: `⚠️ ${p.region}: ${p.title}`, body: p.summary, url: `/plus/${p.id}`, tag: `alert-${p.id}` }, p.author_id).then(() => undefined));
+    }
     return `“${p.title}” is now ${LABEL[to]}.`;
   });
 }

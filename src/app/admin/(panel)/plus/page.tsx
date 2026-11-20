@@ -56,6 +56,8 @@ function Details({ p }: { p: PlusPost }) {
       <Row label="Hours" value={p.hours} />
       <Row label="Valid until" value={p.valid_until ? formatDate(p.valid_until, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""} />
       <Row label="Last date" value={p.deadline} />
+      <Row label="E-Passes" value={p.hub === "events" && p.pass_enabled ? `Free E-Passes${p.pass_capacity ? `, limit ${p.pass_capacity}` : ", no limit"}` : ""} />
+      <Row label="Likes" value={p.likes ? String(p.likes) : ""} />
       {p.body && <p className="whitespace-pre-line pt-2 text-sm text-ink">{p.body}</p>}
     </dl>
   );
@@ -127,6 +129,9 @@ export default async function PlusQueuePage({ searchParams }: PageProps<"/admin/
                       By {p.author_name} ({p.author_type}) · {formatDate(p.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       {p.verified_by_name && ` · verified by ${p.verified_by_name}`}
                       {" · "}<a href={`/plus/${p.id}`} target="_blank" className="text-teal underline">Open in PAHAD+</a>
+                      {p.hub === "events" && p.pass_enabled && (p.status === "verified" || p.status === "flag_proof") && (
+                        <>{" · "}<a href={`/plus/checkin/${p.id}`} target="_blank" className="font-semibold text-teal underline">E-Pass check-in</a></>
+                      )}
                     </p>
                     {p.reject_reason && <p className="mt-1 text-sm text-red-800">Reason: {p.reject_reason}</p>}
                     {reasons.get(p.id) && <p className="mt-1 text-sm text-red-800">Reports: {reasons.get(p.id)!.join(" · ")}</p>}

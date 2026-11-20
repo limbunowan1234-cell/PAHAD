@@ -65,7 +65,8 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     website: links.website, link: links.link, map_link: links.map_link,
     best_season: str(fd, "best_season", 80), hours: str(fd, "hours", 120), valid_until: "", deadline: "",
     status: "unverified", flags: 0, verified_by_name: "", verified_at: "", reject_reason: "",
-    author_id: u.id, author_name: u.name, author_type: u.account_type, created_at: now(), updated_at: now(),
+    author_id: u.id, author_name: u.name, author_type: u.account_type, author_member: Boolean(u.member_id),
+    pass_enabled: false, pass_capacity: 0, likes: 0, created_at: now(), updated_at: now(),
   };
 
   if (hub === "events") {
@@ -76,6 +77,9 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     if (ends && (!DATETIME.test(ends) || ends < starts)) return { ok: false, message: "The end time must be after the start." };
     p.starts_at = starts;
     p.ends_at = ends;
+    // Free E-Passes: open once the event is verified (registration is locked until then).
+    p.pass_enabled = fd.get("pass_enabled") === "on";
+    p.pass_capacity = p.pass_enabled ? Math.min(Math.max(Math.round(Number(str(fd, "pass_capacity", 7)) || 0), 0), 100_000) : 0;
   } else if (hub === "roam") {
     const kind = str(fd, "kind", 60);
     const stage = str(fd, "stage", 20);
@@ -164,4 +168,38 @@ export async function unblockPlusUser(authorId: string): Promise<ActionState> {
   const id = `${u.id}:${authorId}`;
   if (await db.get("plus_blocks", id)) await db.remove("plus_blocks", id);
   return { ok: true, message: "Unblocked." };
+}
+
+// ------------------------------------------------------------------ likes and saves (user posts that are live)
+export type ToggleState = { ok: boolean; message: string; on?: boolean; count?: number };
+
+async function livePostFor(postId: string) {
+  const p = await db.get("plus_posts", postId);
+  return p && ["unverified", "verified", "flag_proof"].includes(p.status) ? p : null;
+}
+
+export async function toggleLike(postId: string): Promise<ToggleState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Sign in to like posts." };
+  const p = await livePostFor(postId);
+  if (!p) return { ok: false, message: "This post is no longer available." };
+  const id = `${postId}:${u.id}`;
+  const had = Boolean(await db.get("plus_likes", id));
+  if (had) await db.remove("plus_likes", id);
+  else await db.insert("plus_likes", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null); // a double tap
+  const count = (await db.findBy("plus_likes", "post_id", postId)).length;
+  await db.update("plus_posts", postId, { likes: count });
+  updateTag("plus");
+  return { ok: true, message: had ? "Like removed." : "Liked.", on: !had, count };
+}
+
+export async function toggleSave(postId: string): Promise<ToggleState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Sign in to save posts." };
+  if (!(await livePostFor(postId))) return { ok: false, message: "This post is no longer available." };
+  const id = `${postId}:${u.id}`;
+  const had = Boolean(await db.get("plus_saves", id));
+  if (had) await db.remove("plus_saves", id);
+  else await db.insert("plus_saves", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null);
+  return { ok: true, message: had ? "Removed from Saved." : "Saved. Find it on Me → Saved.", on: !had };
 }

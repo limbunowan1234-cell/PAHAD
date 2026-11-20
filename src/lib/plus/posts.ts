@@ -55,6 +55,11 @@ export type PlusCard = {
   authorName: string;
   authorType: string;
   authorId: string;
+  /** The poster linked their PAHAD membership. */
+  authorMember: boolean;
+  likes: number;
+  /** Events offering free E-Passes. */
+  passEnabled: boolean;
   createdAt: string;
   href: string;
   /** Only when verified. */
@@ -72,7 +77,8 @@ export function toCard(p: PlusPost): PlusCard {
     body: verified || isAlert ? p.body : "",
     image: p.image, youtubeId: p.youtube_id, startsAt: p.starts_at, endsAt: p.ends_at, validUntil: p.valid_until, deadline: p.deadline,
     bestSeason: p.best_season, hours: p.hours, verified, flagProof: p.status === "flag_proof",
-    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, createdAt: p.created_at, href: `/plus/${p.id}`,
+    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, likes: p.likes,
+    passEnabled: p.hub === "events" && p.pass_enabled, createdAt: p.created_at, href: `/plus/${p.id}`,
     locked: verified
       ? { venue: p.venue, organiser: p.organiser, phone: p.contact_phone, whatsapp: p.contact_whatsapp, email: p.contact_email, address: p.address, website: p.website, link: p.link, mapLink: p.map_link }
       : null,
@@ -85,7 +91,7 @@ function pahadPostCard(p: Post): PlusCard {
   return {
     id: `pahad-${p.id}`, source: "pahad", hub, briefType: hub === "briefs" ? "tip" : "", kind: "", stage: "", region: "Darjeeling", locality: p.location || "PAHAD",
     title: p.title, summary: p.excerpt, body: "", image: p.cover, youtubeId: "", startsAt: p.event_date, endsAt: "", validUntil: "", deadline: "",
-    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", createdAt: p.published_at || p.created_at,
+    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, likes: 0, passEnabled: false, createdAt: p.published_at || p.created_at,
     href: `${POST_TYPE_PATH[p.type]}/${p.slug}`, locked: null,
   };
 }
@@ -97,7 +103,7 @@ function circularCard(c: Circular): PlusCard {
     id: `circular-${c.id}`, source: "pahad", hub: "briefs", briefType: "policy", kind: "", stage: "", region: "Darjeeling", locality: "PAHAD",
     title: c.title, summary: text.length > 220 ? `${text.slice(0, 219).replace(/\s+\S*$/, "")}…` : text, body: "", image: "", youtubeId: "",
     startsAt: "", endsAt: "", validUntil: "", deadline: "", bestSeason: "", hours: "", verified: true, flagProof: true,
-    authorName: "PAHAD", authorType: "organisation", authorId: "", createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
+    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, likes: 0, passEnabled: false, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
   };
 }
 

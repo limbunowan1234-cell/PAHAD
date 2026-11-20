@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, Clock, Lock, MapPin, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Clock, Heart, Lock, MapPin, ShieldCheck, Ticket } from "lucide-react";
 import { BRIEF_TYPES, PLUS_HUBS, type PlusHub } from "@/lib/plus/config";
 import type { PlusCard } from "@/lib/plus/posts";
 import { cn } from "@/lib/utils";
@@ -77,7 +77,12 @@ export function PlusCardView({ c, at }: { c: PlusCard; at: number }) {
           <Link href={c.href} className="after:absolute after:inset-0">{c.title}</Link>
         </h3>
         <p className="mt-1 line-clamp-3 text-sm text-ink/80">{c.summary}</p>
-        {when && <p className={cn("mt-auto pt-3 text-xs font-semibold", alert ? "text-coral-700" : "text-teal-700")}>{when}</p>}
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-xs">
+          {when && <span className={cn("font-semibold", alert ? "text-coral-700" : "text-teal-700")}>{when}</span>}
+          {c.passEnabled && c.verified && <span className="inline-flex items-center gap-1 font-semibold text-teal"><Ticket className="h-3.5 w-3.5" aria-hidden /> Free E-Pass</span>}
+          {c.likes > 0 && <span className="inline-flex items-center gap-1 text-muted"><Heart className="h-3.5 w-3.5" aria-hidden /> {c.likes}</span>}
+          {c.authorMember && <span className="inline-flex items-center gap-1 text-teal"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> PAHAD member</span>}
+        </div>
       </div>
     </article>
   );

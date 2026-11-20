@@ -167,7 +167,7 @@ function fileBackend(): Backend {
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
       notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [], pages: [], translations: [],
       videos: [], featured: [], polls: [], poll_voters: [], poll_receipts: [], ballots: [], password_resets: [],
-      plus_users: [], plus_tokens: [], plus_posts: [], plus_flags: [], plus_blocks: [], approvals: [],
+      plus_users: [], plus_tokens: [], plus_posts: [], plus_flags: [], plus_blocks: [], approvals: [], plus_passes: [], plus_likes: [], plus_saves: [], plus_push: [],
     };
   }
   function load(): DbShape {

@@ -28,10 +28,10 @@ function tooMany(key: string, max: number, windowMs: number) {
 /** Only paths inside PAHAD+ (never another site). */
 const safeNext = (next: string) => (/^\/plus(\/[\w\-./?=&%#]*)?$/.test(next) ? next : "/plus");
 
-async function issueToken(userId: string, kind: "verify" | "reset") {
+async function issueToken(userId: string, kind: "verify" | "reset" | "link", data = "") {
   const token = randomBytes(32).toString("base64url");
-  const ttl = kind === "verify" ? PLUS_RULES.verifyLinkHours * 3_600_000 : PLUS_RULES.resetLinkMinutes * 60_000;
-  await db.insert("plus_tokens", { id: hash(token), user_id: userId, kind, expires_at: new Date(Date.now() + ttl).toISOString(), used: false, created_at: now() });
+  const ttl = kind === "reset" ? PLUS_RULES.resetLinkMinutes * 60_000 : PLUS_RULES.verifyLinkHours * 3_600_000;
+  await db.insert("plus_tokens", { id: hash(token), user_id: userId, kind, expires_at: new Date(Date.now() + ttl).toISOString(), used: false, created_at: now(), data });
   return token;
 }
 
@@ -78,7 +78,7 @@ export async function signUpPlus(_prev: ActionState, fd: FormData): Promise<Acti
   const id = newId();
   await db.insert("plus_users", {
     id, email, name, phone, account_type, password_hash: hashPassword(password), email_verified: false,
-    terms_accepted_at: now(), status: "active", created_at: now(), last_login: now(),
+    terms_accepted_at: now(), status: "active", created_at: now(), last_login: now(), member_id: "",
   });
   sendVerifyEmail(email, name, await issueToken(id, "verify"));
   await setPlusSession(id);
@@ -185,6 +185,13 @@ export async function deletePlusAccount(_prev: ActionState, fd: FormData): Promi
     });
   }
   for (const t of await db.findBy("plus_tokens", "user_id", u.id)) await db.remove("plus_tokens", t.id);
+  // E-Passes, likes, saves and notification subscriptions go too (like counts are recounted).
+  for (const p of await db.findBy("plus_passes", "user_id", u.id)) await db.remove("plus_passes", p.id);
+  const liked = (await db.all("plus_likes")).filter((l) => l.user_id === u.id);
+  for (const l of liked) await db.remove("plus_likes", l.id);
+  for (const postId of new Set(liked.map((l) => l.post_id))) await db.update("plus_posts", postId, { likes: (await db.findBy("plus_likes", "post_id", postId)).length });
+  for (const s of await db.findBy("plus_saves", "user_id", u.id)) await db.remove("plus_saves", s.id);
+  for (const s of await db.findBy("plus_push", "user_id", u.id)) await db.remove("plus_push", s.id);
   for (const b of (await db.all("plus_blocks")).filter((x) => x.blocker_id === u.id || x.blocked_id === u.id)) await db.remove("plus_blocks", b.id);
   for (const f of await db.findBy("plus_flags", "user_id", u.id)) await db.remove("plus_flags", f.id);
   await db.remove("plus_users", u.id);
@@ -195,4 +202,69 @@ export async function deletePlusAccount(_prev: ActionState, fd: FormData): Promi
   updateTag("plus");
   await clearPlusSession();
   redirect("/plus?deleted=1");
+}
+
+// ------------------------------------------------------------------ link a PAHAD membership (badge only)
+const LINK_SENT = "If that email belongs to an active PAHAD member, we sent it a link to confirm. It works for 48 hours.";
+
+async function setMemberLink(userId: string, memberId: string) {
+  await db.update("plus_users", userId, { member_id: memberId });
+  for (const p of await db.findBy("plus_posts", "author_id", userId)) await db.update("plus_posts", p.id, { author_member: Boolean(memberId) });
+  updateTag("plus");
+}
+
+/**
+ * Members can link their PAHAD+ account to their membership: their posts then carry a "PAHAD member" badge.
+ * It gives no member access in PAHAD+ (Members Only content stays on the website, behind the member sign-in).
+ * Proof: the membership's email address. If it is the account's own confirmed email, linking is immediate;
+ * otherwise a confirmation link goes to the membership email. The reply never says whether an email is a member.
+ */
+export async function requestMemberLink(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Please sign in again." };
+  if (!u.email_verified) return { ok: false, message: "Please confirm your PAHAD+ email first." };
+  if (u.member_id) return { ok: true, message: "Your account is already linked to your PAHAD membership." };
+  const email = (str(fd, "member_email", 160) || u.email).toLowerCase();
+  if (!EMAIL.test(email)) return { ok: false, message: "Please enter a valid email address." };
+  if (tooMany(`link:${u.id}`, 3, 60 * 60_000)) return { ok: false, message: "Please wait a while before trying again." };
+  const member = (await db.findBy("members", "email", email)).find((m) => m.status === "active");
+  const taken = member && (await db.all("plus_users")).some((x) => x.member_id === member.id && x.id !== u.id);
+  if (!member || taken) return { ok: true, message: LINK_SENT };
+  if (email === u.email.toLowerCase()) {
+    await setMemberLink(u.id, member.id);
+    return { ok: true, message: "Linked. Your posts now show a PAHAD member badge." };
+  }
+  const token = await issueToken(u.id, "link", member.id);
+  after(() =>
+    sendEmail(email, "Link your PAHAD membership to PAHAD+", [
+      `Namaste ${member.name},`, "", `${u.name} (${u.email}) asked to link this PAHAD membership to their PAHAD+ account.`,
+      "If that is you, open this link within 48 hours and press Confirm:", "", `${site.url}/plus/link?token=${token}`, "",
+      "If it isn't you, ignore this email: nothing changes.", "", "PAHAD+",
+    ].join("\n")).then(() => undefined),
+  );
+  return { ok: true, message: LINK_SENT };
+}
+
+/** Bound on the server: confirmMemberLink.bind(null, token). */
+export async function confirmMemberLink(rawToken: string): Promise<ActionState> {
+  const token = String(rawToken ?? "").slice(0, 200);
+  const row = token ? await db.get("plus_tokens", hash(token)) : null;
+  if (!row || row.kind !== "link" || row.used || Date.parse(row.expires_at) <= Date.now()) {
+    return { ok: false, message: "This link is invalid or has expired. Ask for a new one from PAHAD+ → Me." };
+  }
+  const [user, member] = await Promise.all([db.get("plus_users", row.user_id), db.get("members", row.data)]);
+  if (!user || !member || member.status !== "active") return { ok: false, message: "This membership or account is no longer active." };
+  if ((await db.all("plus_users")).some((x) => x.member_id === member.id && x.id !== user.id)) {
+    return { ok: false, message: "This membership is already linked to another PAHAD+ account." };
+  }
+  await db.update("plus_tokens", row.id, { used: true });
+  await setMemberLink(user.id, member.id);
+  return { ok: true, message: "Linked. The PAHAD+ account now shows a PAHAD member badge." };
+}
+
+export async function unlinkMember(): Promise<ActionState> {
+  const u = await getPlusUser();
+  if (!u) return { ok: false, message: "Please sign in again." };
+  await setMemberLink(u.id, "");
+  return { ok: true, message: "Unlinked from your PAHAD membership." };
 }

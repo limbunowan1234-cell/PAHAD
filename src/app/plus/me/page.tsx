@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { PlusButton, PlusForm } from "@/components/plus/client";
+import { PlusButton, PlusForm, PushToggle } from "@/components/plus/client";
 import { hubLabel, plusDate } from "@/components/plus/ui";
-import { deletePlusAccount, resendVerification, signOutPlus, updatePlusProfile } from "@/lib/plus/account-actions";
+import { deletePlusAccount, requestMemberLink, resendVerification, signOutPlus, unlinkMember, updatePlusProfile } from "@/lib/plus/account-actions";
+import { removePushSubscription, savePushSubscription } from "@/lib/plus/push-actions";
+import { vapidPublicKey } from "@/lib/plus/push";
+import { PLUS_REGIONS } from "@/lib/plus/config";
 import { unblockPlusUser } from "@/lib/plus/post-actions";
 import { ACCOUNT_TYPES, PLUS_RULES, type PlusAccountType } from "@/lib/plus/config";
 import { isLivePlus, toCard, requestTime } from "@/lib/plus/posts";
@@ -39,6 +42,16 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
   const [posts, blocks] = await Promise.all([db.findBy("plus_posts", "author_id", viewer.id), db.findBy("plus_blocks", "blocker_id", viewer.id)]);
   const blockedUsers = (await Promise.all(blocks.map(async (b) => ({ id: b.blocked_id, name: (await db.get("plus_users", b.blocked_id))?.name ?? "Deleted account" })))).filter(Boolean);
   const mine = posts.filter((p) => p.status !== "removed").sort((a, b) => b.created_at.localeCompare(a.created_at));
+  // E-Passes (soonest first) and saved posts that are still live.
+  const [myPasses, mySaves, member] = await Promise.all([
+    db.findBy("plus_passes", "user_id", viewer.id),
+    db.findBy("plus_saves", "user_id", viewer.id),
+    viewer.member_id ? db.get("members", viewer.member_id) : null,
+  ]);
+  const passRows = (await Promise.all(myPasses.filter((p) => p.status !== "cancelled").map(async (p) => ({ pass: p, post: await db.get("plus_posts", p.post_id) }))))
+    .filter((r): r is { pass: typeof r.pass; post: NonNullable<typeof r.post> } => Boolean(r.post))
+    .sort((a, b) => a.post.starts_at.localeCompare(b.post.starts_at));
+  const savedPosts = (await Promise.all(mySaves.map((s) => db.get("plus_posts", s.post_id)))).filter((p): p is NonNullable<typeof p> => Boolean(p && isLivePlus(p, at)));
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -89,6 +102,76 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
               );
             })}
           </ul>
+        )}
+      </section>
+
+      <section id="passes" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+        <h2 className="font-display text-xl text-teal">My E-Passes</h2>
+        {passRows.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">No E-Passes yet. Look for events with a free E-Pass.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line">
+            {passRows.map(({ pass, post }) => {
+              const past = !isLivePlus(post, at);
+              return (
+                <li key={pass.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <Link href={`/plus/pass/${pass.code}`} className="font-semibold text-ink hover:underline">{post.title}</Link>
+                    <p className="text-xs text-muted">{plusDate(post.starts_at, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · {post.region}</p>
+                  </div>
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", pass.status === "checked_in" ? "bg-teal text-white" : past ? "bg-sand text-muted" : "bg-green-600 text-white")}>
+                    {pass.status === "checked_in" ? "Checked in" : past ? "Ended" : "Valid"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section id="saved" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+        <h2 className="font-display text-xl text-teal">Saved</h2>
+        {savedPosts.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">Tap Save on a post to keep it here.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line">
+            {savedPosts.map((p) => (
+              <li key={p.id} className="py-3">
+                <Link href={`/plus/${p.id}`} className="font-semibold text-ink hover:underline">{p.title}</Link>
+                <p className="text-xs text-muted">{hubLabel(toCard(p))} · {[p.locality, p.region].filter(Boolean).join(", ")}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section id="notifications" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+        <h2 className="font-display text-xl text-teal">Notifications</h2>
+        <div className="mt-3">
+          <PushToggle publicKey={vapidPublicKey} regions={PLUS_REGIONS} saveSub={savePushSubscription} removeSub={removePushSubscription} />
+        </div>
+      </section>
+
+      <section id="membership" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+        <h2 className="font-display text-xl text-teal">PAHAD membership</h2>
+        {viewer.member_id ? (
+          <div className="mt-2 space-y-3 text-sm">
+            <p>Linked{member ? ` to membership ${member.member_no || ""}`.trimEnd() : ""}. Your posts show a <strong>PAHAD member</strong> badge.</p>
+            <PlusButton confirm="Unlink your PAHAD membership?" action={unlinkMember}>Unlink</PlusButton>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <p className="text-sm text-muted">Are you a PAHAD member? Link your membership to show a PAHAD member badge on your posts. (Members Only content stays on the PAHAD website.)</p>
+            <div className="mt-3">
+              <PlusForm action={requestMemberLink} submitLabel="Link my membership">
+                <label className="block">
+                  <span className="label">Email on your PAHAD membership</span>
+                  <input name="member_email" type="email" defaultValue={viewer.email} maxLength={160} className="field" />
+                  <span className="mt-1 block text-xs text-muted">If it&apos;s different from this account&apos;s email, we&apos;ll send a confirmation link to it.</span>
+                </label>
+              </PlusForm>
+            </div>
+          </div>
         )}
       </section>
 

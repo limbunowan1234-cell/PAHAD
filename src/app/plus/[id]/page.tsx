@@ -2,11 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, CalendarDays, ExternalLink, Globe, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, ExternalLink, Globe, Mail, MapPin, Phone, QrCode, Ticket } from "lucide-react";
 import { VideoPlayer } from "@/components/site/VideoPlayer";
-import { PlusButton, PlusForm } from "@/components/plus/client";
+import { LikeSaveBar, PlusButton, PlusForm } from "@/components/plus/client";
 import { hubLabel, LockedBox, plusDate, timing, TrustBadge } from "@/components/plus/ui";
-import { blockPlusUser, deleteOwnPlusPost, reportPlusPost } from "@/lib/plus/post-actions";
+import { blockPlusUser, deleteOwnPlusPost, reportPlusPost, toggleLike, toggleSave } from "@/lib/plus/post-actions";
+import { registerPass } from "@/lib/plus/pass-actions";
+import { passesOpen, takenPlaces } from "@/lib/plus/passes";
+import { db } from "@/lib/db";
 import { ROAM_STAGES } from "@/lib/plus/config";
 import { getPlusPost, isLivePlus, toCard, requestTime } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
@@ -34,6 +37,17 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
   const c = toCard(post);
   const when = timing(c, at);
   const l = c.locked;
+  const live = isLivePlus(post, at);
+  // Viewer's own like / save / E-Pass, and places left.
+  const [liked, saved, myPass, taken] = await Promise.all([
+    viewer ? db.get("plus_likes", `${post.id}:${viewer.id}`) : null,
+    viewer ? db.get("plus_saves", `${post.id}:${viewer.id}`) : null,
+    viewer ? db.get("plus_passes", `${post.id}:${viewer.id}`) : null,
+    c.passEnabled ? takenPlaces(post.id) : Promise.resolve(0),
+  ]);
+  const open = passesOpen(post, at);
+  const left = post.pass_capacity > 0 ? Math.max(post.pass_capacity - taken, 0) : null;
+  const holding = myPass && myPass.status !== "cancelled" ? myPass : null;
 
   return (
     <article className="mx-auto max-w-2xl">
@@ -97,9 +111,41 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
             )}
           </div>
 
-          <p className="mt-6 text-xs text-muted">
-            Posted by {c.authorName} · {plusDate(c.createdAt)}
-            {post.verified_by_name && c.verified && ` · verified by PAHAD`}
+          {c.passEnabled && (
+            <section aria-label="E-Pass" className="mt-4 rounded-2xl border border-teal/30 bg-white p-4 text-sm">
+              <p className="flex items-center gap-2 font-semibold text-teal"><Ticket className="h-5 w-5" aria-hidden /> Free E-Pass</p>
+              {holding ? (
+                <Link href={`/plus/pass/${holding.code}`} className="btn btn-primary mt-3"><QrCode className="h-4 w-4" aria-hidden /> {holding.status === "checked_in" ? "Checked in · view E-Pass" : "View my E-Pass"}</Link>
+              ) : !c.verified ? (
+                <p className="mt-1 text-muted">E-Passes open once PAHAD verifies this event.</p>
+              ) : !open ? (
+                <p className="mt-1 text-muted">E-Passes are closed: the event has ended.</p>
+              ) : left === 0 ? (
+                <p className="mt-1 text-muted">All E-Passes have gone.</p>
+              ) : viewer ? (
+                <div className="mt-2">
+                  <PlusButton action={registerPass.bind(null, post.id)} className="!bg-teal !px-4 !py-2 !text-white">Get my free E-Pass</PlusButton>
+                  {left !== null && <p className="mt-2 text-xs text-muted">{left} of {post.pass_capacity} left</p>}
+                </div>
+              ) : (
+                <p className="mt-1"><Link href={`/plus/login?next=/plus/${post.id}`} className="font-semibold text-teal underline">Sign in</Link> to get your free E-Pass{left !== null ? ` (${left} left)` : ""}.</p>
+              )}
+              {mine && c.verified && (
+                <Link href={`/plus/checkin/${post.id}`} className="mt-3 inline-flex items-center gap-1 font-semibold text-teal underline">Check-in &amp; registrations ({taken})</Link>
+              )}
+            </section>
+          )}
+
+          {live && (
+            <div className="mt-5">
+              <LikeSaveBar postId={post.id} likes={c.likes} liked={Boolean(liked)} saved={Boolean(saved)} signedIn={Boolean(viewer)} like={toggleLike} save={toggleSave} />
+            </div>
+          )}
+
+          <p className="mt-6 flex flex-wrap items-center gap-x-1 text-xs text-muted">
+            <span>Posted by {c.authorName}</span>
+            {c.authorMember && <span className="inline-flex items-center gap-0.5 rounded-full bg-sage-100 px-2 py-0.5 font-semibold text-teal"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> PAHAD member</span>}
+            <span>· {plusDate(c.createdAt)}{post.verified_by_name && c.verified ? " · verified by PAHAD" : ""}</span>
           </p>
         </div>
       </div>
