@@ -25,12 +25,16 @@ const OUT = process.env.PAHAD_PLUS_OUT || "D:\\PAHAD\\android\\pahad-plus\\dist"
 
 const HOME = process.env.USERPROFILE;
 // Android SDK: ANDROID_HOME if set, otherwise where Android Studio / Bubblewrap put it.
-const SDK = [process.env.ANDROID_HOME, process.env.ANDROID_SDK_ROOT, path.join(process.env.LOCALAPPDATA || "", "Android", "Sdk"), path.join(HOME, ".bubblewrap", "android_sdk"), "D:\\Android\\Sdk"]
+const LOCAL = process.env.LOCALAPPDATA || path.join(HOME, "AppData", "Local");
+const CLAUDE_LOCAL = path.join(LOCAL, "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Local");
+const SDK = [process.env.ANDROID_HOME, process.env.ANDROID_SDK_ROOT, "D:\\Dev\\Android\\Sdk", path.join(LOCAL, "Android", "Sdk"), path.join(CLAUDE_LOCAL, "Android", "Sdk"), path.join(HOME, ".bubblewrap", "android_sdk")]
   .find((p) => p && fs.existsSync(path.join(p, "build-tools")));
-const JDK = [process.env.JAVA_HOME, path.join(HOME, ".jdks", "jdk-17.0.21+9"), path.join(HOME, ".bubblewrap", "jdk")]
+// Java 17: JAVA_HOME, or any jdk-17 folder in the usual places.
+const jdkIn = (dir) => { try { return fs.readdirSync(dir).filter((n) => /^(jdk-?)?17/i.test(n)).map((n) => path.join(dir, n)); } catch { return []; } };
+const JDK = [process.env.JAVA_HOME, ...jdkIn(path.join(HOME, ".jdks")), ...jdkIn("D:\\Dev"), ...jdkIn("D:\\Dev\\Java"), ...jdkIn("D:\\Dev\\jdks"), ...jdkIn("C:\\Program Files\\Java"), ...jdkIn("C:\\Program Files\\Eclipse Adoptium"), path.join(HOME, ".bubblewrap", "jdk")]
   .find((p) => p && fs.existsSync(path.join(p, "bin", "java.exe")));
 if (!SDK) { console.error("Android SDK not found. Run: dir \"%LOCALAPPDATA%\\Android\\Sdk\" and tell Claude what it shows."); process.exit(1); }
-if (!JDK) { console.error("Java (JDK 17) not found in %USERPROFILE%\\.jdks. Tell Claude."); process.exit(1); }
+if (!JDK) { console.error("Java 17 not found. Run: where /r D:\\Dev java.exe   and tell Claude what it shows."); process.exit(1); }
 console.log("Android SDK:", SDK, "\nJava:", JDK);
 const config = new Config(JDK, SDK);
 const log = new ConsoleLog("pahad-plus");
