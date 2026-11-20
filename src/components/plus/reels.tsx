@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { isOptimisable } from "@/lib/plus/media";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { Flag, Flame, MapPin, Send, ShieldCheck, Volume2, VolumeX, X } from "lucide-react";
@@ -40,6 +41,11 @@ export type Reel = {
   regId: string;
   pass: string;
   cta: string;
+  ctaHref: string;
+  ctaExternal: boolean;
+  videoUrl: string;
+  canEditMedia: boolean;
+  contactsUnverified: boolean;
   when: string;
   alert: boolean;
 };
@@ -62,6 +68,7 @@ function useAutoplay() {
     return !c?.saveData && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, () => false);
 }
+const bgOrVideo = (r: Reel) => Boolean(r.image || r.youtubeId || r.videoUrl);
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((n) => n[0]!.toUpperCase()).join("");
 const short = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k` : String(n));
 
@@ -151,18 +158,28 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
       {reels.map((r, i) => {
         const s = state[r.id];
         const playing = autoplay && i === active && Boolean(r.youtubeId);
+        const playingFile = autoplay && i === active && Boolean(r.videoUrl);
         const bg = r.image || (r.youtubeId ? `https://i.ytimg.com/vi/${r.youtubeId}/hqdefault.jpg` : "");
         return (
           <article key={r.id} data-index={i} className="plus-reel relative h-full w-full overflow-hidden bg-white"
             onDoubleClick={() => { if (r.userPost) { counter(r, "like", true); setBurst(r.id); setTimeout(() => setBurst(null), 800); } }}>
             {bg ? (
-              <Image src={bg} alt="" fill priority={i === 0} sizes="430px" className="object-cover" />
+              <Image src={bg} unoptimized={!isOptimisable(bg)} alt="" fill priority={i === 0} sizes="430px" className="object-cover" />
+            ) : r.videoUrl ? (
+              <div className="absolute inset-0 bg-black" aria-hidden />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1D353A] via-[#162024] to-[#11181B] text-7xl" aria-hidden>{r.emoji}</div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#1D353A] via-[#162024] to-[#11181B] px-10 pb-40 text-center">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-3xl shadow" aria-hidden>{r.emoji}</span>
+                <p className="mt-3 text-sm font-extrabold text-ink/75">No Media Attached Yet</p>
+                {r.canEditMedia && <p className="mt-1 text-xs text-muted">Tap Add Media on the right to attach a photo, YouTube or video link.</p>}
+              </div>
+            )}
+            {playingFile && (
+              <video className="absolute inset-0 h-full w-full object-cover" src={r.videoUrl} autoPlay loop playsInline muted={muted} aria-hidden />
             )}
             {playing && (
               <div className="absolute inset-0 overflow-hidden bg-black" aria-hidden>
-                {bg && <Image src={bg} alt="" fill sizes="430px" className="object-cover opacity-50" />}
+                {bg && <Image src={bg} unoptimized={!isOptimisable(bg)} alt="" fill sizes="430px" className="object-cover opacity-50" />}
                 <iframe className="pointer-events-none absolute -left-full -top-[10%] h-[120%] w-[300%]"
                   src={`https://www.youtube-nocookie.com/embed/${r.youtubeId}?autoplay=1&mute=${muted ? 1 : 0}&loop=1&playlist=${r.youtubeId}&controls=0&modestbranding=1&playsinline=1&rel=0`}
                   title={r.title} tabIndex={-1} allow="autoplay; encrypted-media" />
@@ -195,7 +212,13 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
                 <RailButton label="Share" onClick={() => share(r)}><Send className="h-6 w-6" aria-hidden /></RailButton>
                 <p className="mt-1 text-xs font-extrabold drop-shadow">Share</p>
               </div>
-              {r.youtubeId && autoplay && (
+              {r.canEditMedia && (
+                <div>
+                  <Link href={`${r.href}/media`} aria-label="Add or change media" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal text-sand shadow-lg">✎</Link>
+                  <p className="mt-1 text-[11px] font-extrabold text-teal drop-shadow">{bgOrVideo(r) ? "Edit Media" : "Add Media"}</p>
+                </div>
+              )}
+              {(r.youtubeId || r.videoUrl) && autoplay && (
                 <div>
                   <RailButton label={muted ? "Turn sound on" : "Mute"} onClick={() => setMuted((m) => !m)}>{muted ? <VolumeX className="h-5 w-5" aria-hidden /> : <Volume2 className="h-5 w-5" aria-hidden />}</RailButton>
                   <p className="mt-1 text-[11px] font-extrabold drop-shadow">{muted ? "Muted" : "Sound"}</p>
@@ -206,7 +229,7 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
             {/* Caption */}
             <div className="absolute bottom-20 left-4 right-4 z-20">
               <div className="flex items-center gap-2.5 pr-20">
-                <Link href={r.href} aria-label={r.author} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-coral text-base font-extrabold text-sand">{initials(r.author)}</Link>
+                <Link href={r.authorId ? `/plus/u/${r.authorId}` : r.href} aria-label={`${r.author}: profile`} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-coral text-base font-extrabold text-sand">{initials(r.author)}</Link>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-[15px] font-extrabold drop-shadow">{r.author}</p>
@@ -228,7 +251,7 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
                 {r.category && <span className="rounded-full bg-[#162024]/75 px-3 py-1 text-[11px] font-bold backdrop-blur-md">{r.category}</span>}
               </div>
               <p className="mt-2 pr-20 text-[13px] font-semibold text-ink/85 drop-shadow">
-                {[r.locality, r.region].filter(Boolean).join(", ")}{r.trust !== "unverified" ? ` • ${r.trust === "pahad" ? "PAHAD" : r.hubKey === "business" ? "Verified Enterprise" : "Verified"}` : ""}
+                {[r.locality, r.region].filter(Boolean).join(", ")}{r.trust !== "unverified" ? ` • ${r.trust === "pahad" ? "PAHAD Official" : r.hubKey === "business" ? "Verified Enterprise" : r.category || "Verified"}` : ""}
               </p>
               {(r.address || r.regId) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 pr-20 text-[12px] font-bold">
@@ -236,12 +259,13 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
                   {r.regId && <span className="rounded-md border border-teal/40 bg-[#11181B]/70 px-2 py-0.5 font-mono text-[11px] text-teal">ID: {r.regId}</span>}
                 </div>
               )}
+              {r.contactsUnverified && <p className="mt-1.5 w-fit rounded-md bg-cream/90 px-2 py-0.5 text-[11px] font-bold">◷ Not yet verified by PAHAD: check before you pay</p>}
               <h2 className="mt-2 pr-20 text-[22px] font-extrabold leading-tight drop-shadow"><Link href={r.href}>{r.title}</Link></h2>
               <p className="mt-1 line-clamp-2 pr-20 text-[13px] leading-relaxed text-ink/80 drop-shadow">{r.summary}</p>
               {r.when && <p className={cn("mt-1 text-xs font-bold drop-shadow", r.alert ? "text-coral-700" : "text-teal")}>{r.when}</p>}
               <div className="mt-3 flex items-center gap-2">
-                <Link href={r.pass ? `${r.href}#epass` : r.hubKey === "business" && r.trust !== "unverified" ? `${r.href}#contact` : r.href}
-                  className="rounded-full bg-ink px-6 py-3 text-sm font-extrabold text-sand shadow">{r.cta}</Link>
+                <a href={r.ctaHref} {...(r.ctaExternal ? { target: "_blank", rel: "noopener noreferrer nofollow" } : {})}
+                  className="rounded-full bg-ink px-6 py-3 text-sm font-extrabold text-sand shadow">{r.cta}</a>
                 <Link href={r.href} className="rounded-full border border-ink/25 bg-[#11181B]/80 px-5 py-3 text-sm font-extrabold">Details</Link>
               </div>
             </div>

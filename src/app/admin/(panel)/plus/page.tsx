@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isOptimisable } from "@/lib/plus/media";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { bulkModeratePlus, moderatePlusPost } from "../../plus-actions";
@@ -134,7 +135,7 @@ export default async function PlusQueuePage({ searchParams }: PageProps<"/admin/
                 <div className="flex flex-col gap-4 sm:flex-row">
                   {p.image && (
                     <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-sand sm:w-48">
-                      <Image src={p.image} alt="" fill sizes="192px" className="object-cover" />
+                      <Image src={p.image} unoptimized={!isOptimisable(p.image)} alt="" fill sizes="192px" className="object-cover" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">

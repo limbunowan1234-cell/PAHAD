@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isOptimisable } from "@/lib/plus/media";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -74,7 +75,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
       <div className="overflow-hidden rounded-[var(--radius-card)] bg-white ring-1 ring-line">
         {c.image && (
           <div className="relative aspect-[16/10] bg-sand">
-            <Image src={c.image} alt="" fill priority sizes="(min-width:672px) 672px, 100vw" className="object-cover" />
+            <Image src={c.image} unoptimized={!isOptimisable(c.image)} alt="" fill priority sizes="(min-width:672px) 672px, 100vw" className="object-cover" />
           </div>
         )}
         <div className="p-5 sm:p-6">
@@ -99,10 +100,12 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
 
           {c.body && <p className="mt-5 whitespace-pre-line leading-relaxed text-ink">{c.body}</p>}
           {c.youtubeId && <div className="mt-5"><VideoPlayer id={c.youtubeId} title={c.title} /></div>}
+          {c.videoUrl && <video className="mt-5 aspect-video w-full rounded-[var(--radius-card)] bg-black" src={c.videoUrl} controls playsInline preload="metadata" />}
 
           <div className="mt-6">
             {l && Object.values(l).some(Boolean) ? (
               <section id="contact" aria-label="Contact and details" className="scroll-mt-20 space-y-2 rounded-2xl bg-sage-100 p-4 text-sm">
+                {c.contactsUnverified && <p className="rounded-xl bg-cream p-2.5 text-xs font-bold">◷ The poster chose to show these before PAHAD verified the post. Check before you pay or share personal details.</p>}
                 {l.venue && <p><span className="text-muted">Venue:</span> <strong>{l.venue}</strong></p>}
                 {l.organiser && <p><span className="text-muted">Organiser:</span> <strong>{l.organiser}</strong></p>}
                 {l.address && <p><span className="text-muted">Address:</span> <strong>{l.address}</strong></p>}
@@ -111,14 +114,14 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
                   {l.phone && <a href={`tel:${l.phone}`} className="btn btn-primary !px-4 !py-2 text-sm"><Phone className="h-4 w-4" aria-hidden /> Call</a>}
                   {l.whatsapp && <a href={waLink(l.whatsapp)} target="_blank" rel="noopener noreferrer" className="btn btn-primary !px-4 !py-2 text-sm">WhatsApp</a>}
                   {l.email && <a href={`mailto:${l.email}`} className="btn btn-primary !px-4 !py-2 text-sm"><Mail className="h-4 w-4" aria-hidden /> Email</a>}
+                  {l.instagram && <a href={`https://instagram.com/${encodeURIComponent(l.instagram.replace(/^@/, ""))}`} target="_blank" rel="noopener noreferrer nofollow" className="btn btn-primary !px-4 !py-2 text-sm">Instagram {l.instagram}</a>}
                   {l.link && <a href={l.link} target="_blank" rel="noopener noreferrer nofollow" className="btn btn-accent !px-4 !py-2 text-sm"><ExternalLink className="h-4 w-4" aria-hidden /> {c.hub === "events" ? "Register" : c.hub === "briefs" ? "Apply / source" : "Book"}</a>}
                   {l.website && <a href={l.website} target="_blank" rel="noopener noreferrer nofollow" className="btn bg-white !px-4 !py-2 text-sm text-teal ring-1 ring-line"><Globe className="h-4 w-4" aria-hidden /> Website</a>}
                   {l.mapLink && <a href={l.mapLink} target="_blank" rel="noopener noreferrer nofollow" className="btn bg-white !px-4 !py-2 text-sm text-teal ring-1 ring-line"><MapPin className="h-4 w-4" aria-hidden /> Map</a>}
                 </div>
               </section>
-            ) : !l ? (
-              <LockedBox hub={c.hub} />
             ) : null}
+            {!c.verified && <div className="mt-3"><LockedBox hub={c.hub} /></div>}
           </div>
 
           {c.passEnabled && (
@@ -141,7 +144,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
                 </div>
               ) : viewer ? (
                 <div className="mt-2">
-                  <PlusButton action={registerPass.bind(null, post.id)} className="!bg-teal !px-4 !py-2 !text-white">Get my free E-Pass</PlusButton>
+                  <PlusButton action={registerPass.bind(null, post.id)} className="!bg-teal !px-4 !py-2 !text-white">{post.pass_mode === "approval" ? "Request an E-Pass" : "Get my free E-Pass"}</PlusButton>
                   {left !== null && <p className="mt-2 text-xs text-muted">{left} of {post.pass_capacity} left</p>}
                 </div>
               ) : (
@@ -162,7 +165,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
           )}
 
           <p className="mt-6 flex flex-wrap items-center gap-x-1 text-xs text-muted">
-            <span>Posted by {c.authorName}</span>
+            <span>Posted by {c.source === "user" && c.authorId ? <Link href={`/plus/u/${c.authorId}`} className="underline">{c.authorName}</Link> : c.authorName}</span>
             {c.authorMember && <span className="inline-flex items-center gap-0.5 rounded-full bg-sage-100 px-2 py-0.5 font-semibold text-teal"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> PAHAD member</span>}
             <span>· {plusDate(c.createdAt)}{post.verified_by_name && c.verified ? " · verified by PAHAD" : ""}</span>
           </p>

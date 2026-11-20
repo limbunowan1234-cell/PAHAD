@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createAdmin, deleteAdmin, setFinanceAccess, updateAdmin } from "../../actions";
 import { setVideoPermission } from "../../video-actions";
-import { setPlusVerifier, setPublicApprover } from "../../plus-actions";
+import { setFlagProofPermission, setPlusVerifier, setPublicApprover } from "../../plus-actions";
 import { PLUS_REGIONS } from "@/lib/plus/config";
 import { setMenuPermission } from "../../menu-actions";
 import { ActionButton, AdminForm, Disclosure } from "@/components/admin/client";
@@ -152,6 +152,7 @@ export default async function TeamPage() {
                     {u.can_submit_videos && !can(u.role, "videos.manage") && <Badge tone="green">YouTube submission: ON</Badge>}
                     {u.can_verify_plus && u.role !== "super_admin" && <Badge tone="green">PAHAD+ verifier{u.plus_region ? `: ${u.plus_region}` : ""}</Badge>}
                     {u.can_approve_public && u.role !== "super_admin" && <Badge tone="green">Approves public / PAHAD+</Badge>}
+                    {u.can_flagproof_plus && u.role !== "super_admin" && <Badge tone="green">PAHAD+ Flag-Proof</Badge>}
                     {u.can_manage_menu && !can(u.role, "menu.manage") && <Badge tone="green">Menu &amp; pages: ON</Badge>}
                   </div>
                   <p className="text-sm text-muted">{[u.email, u.designation, where].filter(Boolean).join(" · ")}</p>
@@ -187,6 +188,11 @@ export default async function TeamPage() {
                       </Field>
                     </div>
                   </AdminForm>
+                  {u.can_verify_plus && (
+                    <ActionButton variant={u.can_flagproof_plus ? "ghost" : "primary"} action={setFlagProofPermission.bind(null, u.id, !u.can_flagproof_plus)}>
+                      {u.can_flagproof_plus ? "Flag-Proof: turn OFF" : "Flag-Proof: turn ON"}
+                    </ActionButton>
+                  )}
                   <ActionButton variant={u.can_approve_public ? "ghost" : "primary"} action={setPublicApprover.bind(null, u.id, !u.can_approve_public)}>
                     {u.can_approve_public ? "Approve for public / PAHAD+: turn OFF" : "Approve for public / PAHAD+: turn ON"}
                   </ActionButton>

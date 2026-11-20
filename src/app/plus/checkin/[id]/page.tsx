@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
-import { GateScanner } from "@/components/plus/client";
+import { GateScanner, PlusButton } from "@/components/plus/client";
 import { plusDate } from "@/components/plus/ui";
 import { db } from "@/lib/db";
-import { checkInPass } from "@/lib/plus/pass-actions";
+import { checkInPass, decidePass } from "@/lib/plus/pass-actions";
 import { gateAccess } from "@/lib/plus/passes";
 import { eventMoney } from "@/lib/plus/payments";
 import { rupees } from "@/lib/plus/razorpay";
@@ -27,7 +27,9 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
       </div>
     );
   }
-  const passes = (await db.findBy("plus_passes", "post_id", id)).filter((p) => p.status !== "cancelled").sort((a, b) => a.holder_name.localeCompare(b.holder_name));
+  const allPasses = (await db.findBy("plus_passes", "post_id", id)).filter((p) => p.status !== "cancelled" && p.status !== "revoked");
+  const pending = allPasses.filter((p) => p.status === "pending");
+  const passes = allPasses.filter((p) => p.status !== "pending").sort((a, b) => a.holder_name.localeCompare(b.holder_name));
   const inCount = passes.filter((p) => p.status === "checked_in").length;
   const money = post.price > 0 ? await eventMoney(id) : null;
   return (
@@ -54,6 +56,24 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
         <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line"><GateScanner action={checkInPass.bind(null, id)} /></section>
       ) : (
         <p className="rounded-2xl bg-sand p-4 text-sm text-muted">View only.</p>
+      )}
+      {pending.length > 0 && (
+        <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+          <h2 className="font-display text-lg text-teal">Waiting for approval ({pending.length})</h2>
+          <ul className="mt-3 divide-y divide-line text-sm">
+            {pending.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span>{p.holder_name}</span>
+                {who.canAct && (
+                  <span className="flex gap-2">
+                    <PlusButton action={decidePass.bind(null, p.code, "approve")} className="!bg-sage !text-sand !ring-0">✓ Approve</PlusButton>
+                    <PlusButton confirm={`Revoke ${p.holder_name}'s request?`} action={decidePass.bind(null, p.code, "revoke")} className="!text-coral-700">Revoke</PlusButton>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
         <h2 className="font-display text-lg text-teal">Registrations ({passes.length})</h2>

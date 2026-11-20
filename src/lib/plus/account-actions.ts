@@ -78,7 +78,7 @@ export async function signUpPlus(_prev: ActionState, fd: FormData): Promise<Acti
   const id = newId();
   await db.insert("plus_users", {
     id, email, name, phone, account_type, password_hash: hashPassword(password), email_verified: false,
-    terms_accepted_at: now(), status: "active", created_at: now(), last_login: now(), member_id: "", suspend_reason: "", suspended_by: "",
+    terms_accepted_at: now(), status: "active", created_at: now(), last_login: now(), member_id: "", suspend_reason: "", suspended_by: "", instagram: "", contact_email: "", hide_contacts: false, private_mode: false, hide_saved: false, mute_support: false, mute_events: false, admin_user_id: "", admin_mode: false,
   });
   sendVerifyEmail(email, name, await issueToken(id, "verify"));
   await setPlusSession(id);
@@ -197,6 +197,7 @@ export async function deletePlusAccount(_prev: ActionState, fd: FormData): Promi
   for (const postId of new Set(supported.map((x) => x.post_id))) await db.update("plus_posts", postId, { supports: (await db.findBy("plus_supports", "post_id", postId)).length });
   for (const f of (await db.all("plus_follows")).filter((x) => x.follower_id === u.id || x.followee_id === u.id)) await db.remove("plus_follows", f.id);
   for (const s of await db.findBy("plus_push", "user_id", u.id)) await db.remove("plus_push", s.id);
+  for (const n of await db.findBy("plus_notifications", "user_id", u.id)) await db.remove("plus_notifications", n.id);
   // Paid orders are financial records PAHAD must keep: they stay, without the name. Payout details are deleted.
   for (const o of await db.findBy("plus_orders", "user_id", u.id)) await db.update("plus_orders", o.id, { user_id: "", holder_name: "Deleted account" });
   if (await db.get("plus_organisers", u.id)) await db.remove("plus_organisers", u.id);

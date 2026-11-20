@@ -25,7 +25,7 @@ export async function placesHeld(postId: string, exceptUserId = "") {
   const [passes, orders] = await Promise.all([db.findBy("plus_passes", "post_id", postId), db.findBy("plus_orders", "post_id", postId)]);
   const cutoff = Date.now() - HOLD_MINUTES * 60_000;
   const pending = orders.filter((o) => o.status === "created" && o.user_id !== exceptUserId && Date.parse(o.created_at) > cutoff).length;
-  return passes.filter((p) => p.status !== "cancelled").length + pending;
+  return passes.filter((p) => p.status !== "cancelled" && p.status !== "revoked").length + pending;
 }
 
 /**

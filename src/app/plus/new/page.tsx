@@ -6,6 +6,8 @@ import { HUB_KEYS, type PlusHub } from "@/lib/plus/config";
 import { getPlusUser } from "@/lib/plus/session";
 import { getFeePercent, isApprovedOrganiser } from "@/lib/plus/payments";
 import { paymentsConfigured } from "@/lib/plus/razorpay";
+import { appAdmin } from "@/lib/plus/app-admin";
+import { canApprovePublic } from "@/lib/plus/access";
 
 export const metadata = { title: "Post", robots: { index: false } };
 
@@ -33,13 +35,16 @@ async function Composer({ searchParams }: { searchParams: Promise<Record<string,
     );
   }
   const hub = sp.hub as PlusHub;
-  const [canSell, feePercent] = await Promise.all([
+  const [canSell, feePercent, admin] = await Promise.all([
     paymentsConfigured ? isApprovedOrganiser(viewer.id) : Promise.resolve(false),
     getFeePercent(),
+    appAdmin(),
   ]);
   return (
     <div className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line sm:p-6">
-      <NewPostForm action={createPlusPost} initialHub={HUB_KEYS.includes(hub) ? hub : undefined} canSell={canSell} feePercent={feePercent} />
+      <NewPostForm action={createPlusPost} initialHub={HUB_KEYS.includes(hub) ? hub : undefined} canSell={canSell} feePercent={feePercent}
+        defaults={{ phone: viewer.phone, instagram: viewer.instagram, email: viewer.contact_email, showContacts: !viewer.hide_contacts }}
+        canOfficial={Boolean(admin && canApprovePublic(admin))} />
     </div>
   );
 }
@@ -47,7 +52,8 @@ async function Composer({ searchParams }: { searchParams: Promise<Record<string,
 export default function NewPlusPostPage({ searchParams }: PageProps<"/plus/new">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-2xl text-teal">Post on PAHAD+</h1>
+      <p className="text-xs font-extrabold uppercase tracking-wider text-coral-700">Publish to feed</p>
+      <h1 className="font-display text-2xl font-bold">New Community Post</h1>
       <p className="mb-4 mt-1 text-sm text-muted">
         Your post goes live straight away as <strong>Unverified</strong>. Contact, booking and registration details show once a PAHAD verifier checks it.
         Please follow the <Link href="/plus/terms" className="font-semibold text-teal underline">community guidelines</Link>.

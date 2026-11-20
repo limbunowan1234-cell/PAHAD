@@ -1,8 +1,8 @@
 {
   "id": "/plus",
-  "name": "PAHAD+: Events, places, local business and briefs from the hills",
+  "name": "PAHAD+: Events & Entertainment",
   "short_name": "PAHAD+",
-  "description": "The community app for Darjeeling, Kalimpong, Siliguri and Sikkim: events, places to roam, local businesses, alerts, jobs and opportunities.",
+  "description": "Events, places, local business, entertainment and alerts from the hills: the community app for Darjeeling, Kalimpong, Siliguri and Sikkim.",
   "start_url": "/plus",
   "scope": "/plus",
   "display": "standalone",
@@ -10,6 +10,7 @@
   "background_color": "#11181B",
   "theme_color": "#11181B",
   "categories": [
+    "entertainment",
     "social",
     "travel",
     "news",

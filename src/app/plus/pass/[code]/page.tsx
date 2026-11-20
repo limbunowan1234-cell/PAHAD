@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 export const metadata = { title: "E-Pass", robots: { index: false } };
 
 const STATUS = {
+  pending: { label: "Waiting for approval", cls: "bg-cream text-ink" },
+  revoked: { label: "Revoked", cls: "bg-red-700 text-white" },
   active: { label: "Valid", cls: "bg-green-600 text-white" },
   checked_in: { label: "Checked in", cls: "bg-teal text-white" },
   cancelled: { label: "Cancelled", cls: "bg-red-700 text-white" },
@@ -51,7 +53,9 @@ async function Pass({ params, searchParams }: { params: Promise<{ code: string }
         </div>
         <div className="p-5 text-center">
           <span className={cn("inline-block rounded-full px-3 py-1 text-xs font-bold", s.cls)}>{s.label}</span>
-          {pass.status !== "cancelled" && (
+          {pass.status === "pending" && <p className="mx-auto mt-4 max-w-[16rem] text-sm text-muted">The organiser approves each E-Pass for this event. Your QR code appears here once it&apos;s approved; we&apos;ll notify you.</p>}
+          {pass.status === "revoked" && <p className="mx-auto mt-4 max-w-[16rem] text-sm text-muted">The organiser didn&apos;t approve this E-Pass.</p>}
+          {(pass.status === "active" || pass.status === "checked_in") && (
             <div className="mx-auto mt-4 w-56 [&_svg]:h-auto [&_svg]:w-full" role="img" aria-label={`QR code for E-Pass ${pass.code}`} dangerouslySetInnerHTML={{ __html: svg }} />
           )}
           <p className="mt-3 font-mono text-xl font-bold tracking-[0.2em] text-ink">{pass.code.slice(0, 5)}-{pass.code.slice(5)}</p>
@@ -61,7 +65,7 @@ async function Pass({ params, searchParams }: { params: Promise<{ code: string }
       </article>
       {order?.status === "refunded" && <p className="mt-4 rounded-2xl bg-sand p-4 text-center text-sm text-muted">Refunded {rupees(order.amount)} on {plusDate(order.refunded_at)}.</p>}
       {pass.status === "active" && order && <p className="mt-4 text-center text-xs text-muted">Paid E-Passes can&apos;t be cancelled here. For a refund, contact the organiser or PAHAD.</p>}
-      {pass.status === "active" && !order && (
+      {(pass.status === "active" || pass.status === "pending") && !order && (
         <div className="mt-4 text-center">
           <PlusButton confirm="Cancel your E-Pass? Your place goes to someone else." action={cancelPass.bind(null, pass.code)} className="text-red-700">Cancel my E-Pass</PlusButton>
         </div>

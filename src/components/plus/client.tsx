@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode } from "react";
-import { Bell, BellOff, Bookmark, Camera, Compass, Flame, Home, Loader2, Search, ShieldCheck, Ticket } from "lucide-react";
+import { Bell, BellOff, Bookmark, Camera, Compass, Flame, Home, Loader2, Mountain, Search, ShieldCheck, UserRound } from "lucide-react";
 import type { ActionState } from "@/lib/admin-helpers";
 import { keepValuesOnSubmit } from "@/lib/use-form-submit";
-import { BRIEF_TYPES, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, ROAM_KINDS, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "@/lib/plus/config";
+import { BRIEF_TYPES, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "@/lib/plus/config";
 import { cn } from "@/lib/utils";
 
 // ------------------------------------------------------------------ app chrome: emblem, top bar, bottom bar
@@ -43,21 +43,21 @@ export function PlusTopBarView() {
   );
 }
 
-type NavInfo = { passes: number; desk: boolean };
+type NavInfo = { unread: number; desk: boolean };
 
 export function PlusNav(info: NavInfo) {
   return <PlusNavView pathname={usePathname()} {...info} />;
 }
 
-/** Bottom bar: Home · Discover · + · Desk (PAHAD verifiers only) · Pass. Also the prerendered fallback (no path, no counts). */
-export function PlusNavView({ pathname, passes, desk }: NavInfo & { pathname: string }) {
-  const item = (href: string, label: ReactNode, Icon: typeof Home, active: boolean, extra?: ReactNode) => (
+/** Bottom bar (design): Valley · Discover · + Post · Desk (PAHAD admins) · Profile. Also the prerendered fallback. */
+export function PlusNavView({ pathname, unread, desk }: NavInfo & { pathname: string }) {
+  const item = (href: string, label: string, Icon: typeof Home, active: boolean, badge = 0) => (
     <li>
       <Link href={href} aria-current={active ? "page" : undefined}
-        className={cn("relative flex flex-col items-center gap-0.5 py-2 text-[10px]", active ? "font-extrabold text-teal" : "font-semibold text-muted hover:text-ink")}>
+        className={cn("relative flex flex-col items-center gap-0.5 py-2 text-[11px]", active ? "font-extrabold text-ink" : "font-semibold text-muted hover:text-ink")}>
         <Icon className="h-5 w-5" aria-hidden />
         {label}
-        {extra}
+        {badge > 0 && <span className="absolute right-[18%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-extrabold text-sand" aria-label={`${badge} new`}>{badge > 9 ? "9+" : badge}</span>}
       </Link>
     </li>
   );
@@ -65,16 +65,16 @@ export function PlusNavView({ pathname, passes, desk }: NavInfo & { pathname: st
   return (
     <nav aria-label="PAHAD+" className="fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 border-t border-ink/10 bg-[#141C1F]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
       <ul className={cn("grid items-center px-2", desk ? "grid-cols-5" : "grid-cols-4")}>
-        {item("/plus", "Home", Home, pathname === "/plus" || /^\/plus\/(?!new|me|discover|desk|signup|login|pass)/.test(pathname))}
+        {item("/plus", "Valley", Mountain, pathname === "/plus" || /^\/plus\/(?!new|me|discover|desk|signup|login|pass)/.test(pathname))}
         {item("/plus/discover", "Discover", Compass, pathname.startsWith("/plus/discover"))}
         <li className="flex justify-center">
-          <Link href="/plus/new" aria-label="Post" aria-current={onPost ? "page" : undefined}
-            className="rounded-xl bg-ink px-4 py-1.5 text-lg font-black leading-none text-sand shadow-[3px_0_0_#C86D51,-3px_0_0_#6FA399] transition active:scale-95">
-            +
+          <Link href="/plus/new" aria-current={onPost ? "page" : undefined}
+            className="inline-flex items-center gap-1 rounded-2xl bg-gradient-to-r from-coral to-[#d98b5c] px-4 py-2 text-sm font-extrabold text-sand shadow-lg transition active:scale-95">
+            <span className="text-lg leading-none" aria-hidden>+</span> Post
           </Link>
         </li>
         {desk && item("/plus/desk", "Desk", ShieldCheck, pathname.startsWith("/plus/desk"))}
-        {item("/plus/me", <span>Pass{passes > 0 ? ` (${passes})` : ""}</span>, Ticket, pathname.startsWith("/plus/me") || pathname.startsWith("/plus/pass") || pathname.startsWith("/plus/login") || pathname.startsWith("/plus/signup"))}
+        {item("/plus/me", "Profile", UserRound, pathname.startsWith("/plus/me") || pathname.startsWith("/plus/pass") || pathname.startsWith("/plus/login") || pathname.startsWith("/plus/signup"), unread)}
       </ul>
     </nav>
   );
@@ -169,47 +169,52 @@ function F({ label, hint, children, className }: { label: string; hint?: string;
   );
 }
 
-const LOCKED_NOTE = "Shown only after PAHAD verifies your post.";
+export type ComposerDefaults = { phone: string; instagram: string; email: string; showContacts: boolean };
 
+/** New Community Post (design): one form for every hub, with hub-specific extras appearing as needed. */
 export function NewPostForm({
   action,
   initialHub,
   canSell = false,
   feePercent = 0,
+  defaults = { phone: "", instagram: "", email: "", showContacts: true },
+  canOfficial = false,
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   initialHub?: PlusHub;
   /** Approved paid organiser (and payments switched on): may set a price. */
   canSell?: boolean;
   feePercent?: number;
+  defaults?: ComposerDefaults;
+  /** PAHAD admin in Admin mode with approval rights: may publish a regulated circular. */
+  canOfficial?: boolean;
 }) {
   const [hub, setHub] = useState<PlusHub>(initialHub ?? "events");
   const [brief, setBrief] = useState<BriefType>("alert");
+  const [pass, setPass] = useState(false);
+  const contactOptional = hub === "briefs" && (brief === "alert" || brief === "tip");
+  const sub: Record<PlusHub, string> = { events: "e.g. Folk Music, Workshop, Competition", roam: "e.g. Eco-Trail, Viewpoint, Heritage homestay", business: "e.g. Café, Cooperative, Handloom", briefs: "e.g. Road Advisory, Cold-Chain, Scholarship" };
 
   return (
-    <PlusForm action={action} submitLabel="Post to PAHAD+">
-      <fieldset>
-        <legend className="label">Hub *</legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {(Object.keys(PLUS_HUBS) as PlusHub[]).map((h) => (
-            <label key={h} className={cn("cursor-pointer rounded-2xl border p-3 text-sm", hub === h ? "border-teal bg-sage-100" : "border-line bg-white")}>
-              <input type="radio" name="hub" value={h} checked={hub === h} onChange={() => setHub(h)} className="sr-only" />
-              <span className="block text-xl" aria-hidden>{PLUS_HUBS[h].emoji}</span>
-              <span className="font-semibold text-ink">{PLUS_HUBS[h].label}</span>
-            </label>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-muted">{PLUS_HUBS[hub].blurb}.</p>
-      </fieldset>
-
-      {hub === "briefs" && (
-        <F label="Type of brief *">
-          <select name="brief_type" value={brief} onChange={(e) => setBrief(e.target.value as BriefType)} className="field">
-            {USER_BRIEF_TYPES.map((t) => <option key={t} value={t}>{BRIEF_TYPES[t].emoji} {BRIEF_TYPES[t].label}</option>)}
+    <PlusForm action={action} submitLabel="Publish now" className="[&>button[type=submit]]:w-full [&>button[type=submit]]:!bg-coral [&>button[type=submit]]:!text-sand">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <F label="Hub category *">
+          <select name="hub" value={hub} onChange={(e) => setHub(e.target.value as PlusHub)} className="field">
+            {(Object.keys(PLUS_HUBS) as PlusHub[]).map((h) => <option key={h} value={h}>{PLUS_HUBS[h].label}</option>)}
           </select>
         </F>
-      )}
-
+        {hub === "briefs" ? (
+          <F label="Type of brief *">
+            <select name="brief_type" value={brief} onChange={(e) => setBrief(e.target.value as BriefType)} className="field">
+              {USER_BRIEF_TYPES.map((t) => <option key={t} value={t}>{BRIEF_TYPES[t].emoji} {BRIEF_TYPES[t].label}</option>)}
+            </select>
+          </F>
+        ) : (
+          <F label="Subcategory"><input name="kind" maxLength={60} placeholder={sub[hub]} className="field" /></F>
+        )}
+      </div>
+      {hub === "briefs" && <F label="Subcategory"><input name="kind" maxLength={60} placeholder={sub.briefs} className="field" /></F>}
+      <F label="Title *"><input name="title" required minLength={4} maxLength={120} placeholder="Enter title…" className="field" /></F>
       <div className="grid gap-4 sm:grid-cols-2">
         <F label="Region *">
           <select name="region" required defaultValue="" className="field">
@@ -217,61 +222,69 @@ export function NewPostForm({
             {PLUS_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </F>
-        <F label="Locality" hint="Town, village or area, e.g. Mirik, Lava, Sevoke Road.">
-          <input name="locality" maxLength={80} className="field" />
-        </F>
+        <F label="Locality" hint="Town, village or area."><input name="locality" maxLength={80} placeholder="e.g. Mirik, Lava, Sevoke Road" className="field" /></F>
       </div>
-
-      <F label="Title *"><input name="title" required minLength={4} maxLength={120} className="field" /></F>
-      <F label="Short summary *" hint="Shown to everyone straight away. Up to 280 characters.">
-        <textarea name="summary" required minLength={10} maxLength={280} rows={2} className="field" />
+      <F label="YouTube or other video link (optional)" hint="A YouTube link or id, or a direct .mp4 / .webm link.">
+        <input name="youtube" maxLength={600} placeholder="YouTube URL, ID, or direct video link (.mp4)" className="field" />
       </F>
-      <F label="Photo" hint="JPG, PNG or WebP, up to 4 MB.">
-        <input type="file" name="image" accept="image/jpeg,image/png,image/webp" className="field" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <F label="Public image URL (optional)" hint="https:// link. You can also change media within 24 hours."><input name="image_url" type="url" maxLength={500} placeholder="Paste any public image URL" className="field" /></F>
+        <F label="…or upload a photo" hint="JPG, PNG or WebP, up to 4 MB."><input type="file" name="image" accept="image/jpeg,image/png,image/webp" className="field" /></F>
+      </div>
+      <F label="Summary *" hint="Shown on the feed. Up to 280 characters."><textarea name="summary" required minLength={10} maxLength={280} rows={2} placeholder="Share what is happening…" className="field" /></F>
+      <F label="Details"><textarea name="body" rows={4} maxLength={4000} className="field" /></F>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <F label={hub === "events" ? "Starting date & time *" : "Starting date & time"}><input type="datetime-local" name="starts_at" required={hub === "events"} className="field" /></F>
+        <F label="Ending date & time"><input type="datetime-local" name="ends_at" className="field" /></F>
+      </div>
+      <F label="External action link (website, social or form, optional)" hint="Shown once PAHAD verifies the post.">
+        <input name="link" maxLength={500} placeholder="https://forms.gle/… or Instagram / website URL" className="field" />
       </F>
 
-      {hub === "events" && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <F label="Starts *"><input type="datetime-local" name="starts_at" required className="field" /></F>
-          <F label="Ends"><input type="datetime-local" name="ends_at" className="field" /></F>
-        </div>
-      )}
       {hub === "events" && (
         <fieldset className="space-y-3 rounded-2xl bg-sand p-4">
           <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="pass_enabled" className="mt-1 h-4 w-4 accent-teal" />
-            <span><strong>Offer free E-Passes</strong> with a QR code. People get them once PAHAD verifies the event; you check them in at the gate from PAHAD+.</span>
+            <input type="checkbox" name="pass_enabled" checked={pass} onChange={(e) => setPass(e.target.checked)} className="mt-1 h-4 w-4 accent-teal" />
+            <span><strong>Offer E-Passes</strong> with a QR code. They open once PAHAD verifies the event; you check people in at the gate.</span>
           </label>
-          <F label="How many E-Passes?" hint="Leave empty for no limit.">
-            <input type="number" name="pass_capacity" min={0} max={100000} className="field" />
-          </F>
-          {canSell && (
-            <F label="Price per E-Pass (₹)" hint={`Leave empty for free. ₹10–₹50,000. Buyers pay through Razorpay to PAHAD; PAHAD pays you after the event${feePercent ? `, less its ${feePercent}% fee` : ""}. The price can't be changed after posting.`}>
-              <input type="number" name="price" min={10} max={50000} step="1" inputMode="numeric" className="field" />
-            </F>
+          {pass && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <F label="How many E-Passes?" hint="Leave empty for no limit."><input type="number" name="pass_capacity" min={0} max={100000} className="field" /></F>
+              <F label="Who gets a pass?">
+                <select name="pass_mode" defaultValue="" className="field">
+                  <option value="">Instant: anyone who asks</option>
+                  <option value="approval">Needs approval: I approve each one</option>
+                </select>
+              </F>
+              {canSell && (
+                <F label="Price per E-Pass (₹)" hint={`Leave empty for free. ₹10–₹50,000. Paid passes are issued on payment${feePercent ? `; PAHAD keeps ${feePercent}%` : ""}.`}>
+                  <input type="number" name="price" min={10} max={50000} step="1" inputMode="numeric" className="field" />
+                </F>
+              )}
+            </div>
           )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <F label="Venue"><input name="venue" maxLength={160} className="field" /></F>
+            <F label="Organiser"><input name="organiser" maxLength={120} className="field" /></F>
+          </div>
         </fieldset>
       )}
       {hub === "roam" && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <F label="Kind of place *">
-            <select name="kind" required defaultValue="" className="field">
-              <option value="" disabled>Choose…</option>
-              {ROAM_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
-            </select>
-          </F>
           <F label="Stage *">
-            <select name="stage" required defaultValue="open" className="field">
+            <select name="stage" defaultValue="open" className="field">
               {Object.entries(ROAM_STAGES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </F>
           <F label="Best season"><input name="best_season" maxLength={80} placeholder="e.g. October to March" className="field" /></F>
+          <F label="Map link" hint="Google Maps link. Shown once verified." className="sm:col-span-2"><input name="map_link" maxLength={500} className="field" /></F>
         </div>
       )}
       {hub === "business" && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <F label="Kind of business"><input name="kind" maxLength={60} placeholder="e.g. Café, Tea estate shop, Weavers' collective" className="field" /></F>
           <F label="Opening hours"><input name="hours" maxLength={120} placeholder="e.g. 9am–7pm, closed Tuesday" className="field" /></F>
+          <F label="Registration / licence number" hint="Optional. Shown once verified."><input name="reg_id" maxLength={40} placeholder="e.g. UDYAM-WB-…" className="field" /></F>
+          <F label="Website / social page" hint="Shown once verified." className="sm:col-span-2"><input name="website" maxLength={500} className="field" /></F>
         </div>
       )}
       {hub === "briefs" && brief === "alert" && (
@@ -290,29 +303,28 @@ export function NewPostForm({
         <F label="Last date to apply *"><input type="date" name="deadline" required className="field" /></F>
       )}
 
-      <F label={hub === "briefs" && brief === "alert" ? "Details" : "Full description"} hint={hub === "briefs" && brief === "alert" ? "Alerts are shown in full straight away." : LOCKED_NOTE}>
-        <textarea name="body" rows={5} maxLength={4000} className="field" />
-      </F>
-      <F label="YouTube video (optional)"><input name="youtube" maxLength={600} placeholder="https://youtu.be/…" className="field" /></F>
-
-      <fieldset className="space-y-4 rounded-2xl border border-dashed border-line p-4">
-        <legend className="px-1 text-sm font-semibold text-teal">🔒 Contact and booking details</legend>
-        <p className="text-xs text-muted">{LOCKED_NOTE} Until then people see the title, photo, place and summary.</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {hub === "events" && <F label="Exact venue"><input name="venue" maxLength={160} className="field" /></F>}
-          {hub === "events" && <F label="Organiser"><input name="organiser" maxLength={120} className="field" /></F>}
-          {hub === "business" && <F label="Address" className="sm:col-span-2"><input name="address" maxLength={240} className="field" /></F>}
-          {hub === "business" && <F label="Registration / licence number" hint="Optional: trade licence, GST, Udyam or society registration."><input name="reg_id" maxLength={40} className="field" /></F>}
-          {hub !== "briefs" && <F label="Phone"><input name="contact_phone" type="tel" maxLength={30} className="field" /></F>}
-          {hub !== "briefs" && <F label="WhatsApp"><input name="contact_whatsapp" type="tel" maxLength={30} className="field" /></F>}
-          {hub !== "briefs" && <F label="Email"><input name="contact_email" type="email" maxLength={160} className="field" /></F>}
-          {(hub === "business" || hub === "roam") && <F label="Website / social page"><input name="website" maxLength={500} className="field" /></F>}
-          {hub === "roam" && <F label="Map link" hint="Google Maps link to the place."><input name="map_link" maxLength={500} className="field" /></F>}
-          <F label={hub === "events" ? "Registration / form link" : hub === "briefs" ? "Apply / source link" : "Booking link"}>
-            <input name="link" maxLength={500} className="field" />
-          </F>
+      <fieldset className="space-y-3 rounded-2xl border border-line bg-[#11181B]/60 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <legend className="text-xs font-extrabold uppercase tracking-wider text-sage">Collaboration contact details</legend>
+          <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" name="show_contacts" defaultChecked={defaults.showContacts} className="h-4 w-4 accent-teal" /> Show publicly</label>
         </div>
+        <p className="text-xs text-muted">Show publicly: people see these straight away. Otherwise they show once PAHAD verifies the post.</p>
+        <F label={contactOptional ? "Contact / WhatsApp number" : "Contact / WhatsApp number (needed to post) *"}>
+          <input name="contact_whatsapp" type="tel" required={!contactOptional} maxLength={30} defaultValue={defaults.phone} placeholder="+91 …" className="field" />
+        </F>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <F label="Instagram (optional)"><input name="contact_instagram" maxLength={60} defaultValue={defaults.instagram} placeholder="@yourpage" className="field" /></F>
+          <F label="Email (optional)"><input name="contact_email" type="email" maxLength={160} defaultValue={defaults.email} className="field" /></F>
+        </div>
+        {(hub === "business" || hub === "roam") && <F label="Address"><input name="address" maxLength={240} className="field" /></F>}
       </fieldset>
+
+      {canOfficial && (
+        <label className="flex items-start gap-3 rounded-2xl border border-teal/40 bg-[#1D353A] p-4 text-sm">
+          <span className="flex-1"><strong className="text-teal">📢 Publish as Regulated Admin Circular</strong><br /><span className="text-muted">Appears as PAHAD Official in For You and ⭐ PAHAD&apos;s picks, already Verified.</span></span>
+          <input type="checkbox" name="official" className="mt-1 h-5 w-5 accent-teal" />
+        </label>
+      )}
     </PlusForm>
   );
 }
@@ -596,6 +608,97 @@ export function BuyPassButton({
         {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />} {label}
       </button>
       {msg && <p role="alert" className="mt-2 text-sm text-red-700">{msg}</p>}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ small shared controls (design: ON/OFF pills, Share)
+/** ON/OFF pill that saves straight away. */
+export function PlusSwitch({ on, action, label }: { on: boolean; action: (on: boolean) => Promise<ActionState>; label: string }) {
+  const [value, setValue] = useState(on);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <button type="button" role="switch" aria-checked={value} aria-label={label} disabled={pending}
+      onClick={() => start(async () => { const next = !value; setValue(next); const r = await action(next); if (!r?.ok) setValue(!next); router.refresh(); })}
+      className={cn("min-w-[3.5rem] shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold transition disabled:opacity-60", value ? "bg-sage text-sand" : "bg-[#2b3a3f] text-ink/80")}>
+      {value ? "ON" : "OFF"}
+    </button>
+  );
+}
+
+/** Share a link with the phone's share sheet, or copy it. */
+export function ShareButton({ path, title, label = "Share", className }: { path: string; title: string; label?: string; className?: string }) {
+  const [msg, setMsg] = useState("");
+  return (
+    <span className="inline-flex flex-col items-start">
+      <button type="button" className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold ring-1 ring-ink/20", className)}
+        onClick={async () => {
+          const url = new URL(path, location.origin).toString();
+          try {
+            if (navigator.share) await navigator.share({ title, url });
+            else { await navigator.clipboard.writeText(url); setMsg("Link copied."); }
+          } catch { /* closed */ }
+        }}>
+        ↗ {label}
+      </button>
+      {msg && <span role="status" className="mt-1 text-[11px] text-muted">{msg}</span>}
+    </span>
+  );
+}
+
+/** Follow / Following on a public profile. */
+export function FollowButton({ on, action, signedIn }: { on: boolean; action: () => Promise<{ ok: boolean; message: string; on?: boolean }>; signedIn: boolean }) {
+  const [value, setValue] = useState(on);
+  const [msg, setMsg] = useState("");
+  const [pending, start] = useTransition();
+  return (
+    <span className="inline-flex flex-col items-end">
+      <button type="button" aria-pressed={value} disabled={pending}
+        onClick={() => {
+          if (!signedIn) return setMsg("Sign in to follow accounts.");
+          start(async () => { const r = await action(); if (r.ok) setValue(Boolean(r.on)); setMsg(r.ok ? "" : r.message); });
+        }}
+        className={cn("rounded-full px-4 py-2 text-xs font-extrabold disabled:opacity-60", value ? "bg-[#2b3a3f]" : "bg-coral text-sand")}>
+        {value ? "Following" : "+ Follow"}
+      </button>
+      {msg && <span role="alert" className="mt-1 text-[11px] text-muted">{msg}</span>}
+    </span>
+  );
+}
+
+// ------------------------------------------------------------------ opening animation
+const SPLASH_KEY = "pahad-plus-splash";
+const noSub = () => () => {};
+/**
+ * Opening animation, once per app session. Server HTML includes it (so nothing flashes before it), and CSS fades it
+ * out by itself; after hydration it is dropped straight away if it already played this session. Tap to skip.
+ */
+export function PlusSplash() {
+  const seen = useSyncExternalStore(noSub, () => {
+    try { return sessionStorage.getItem(SPLASH_KEY) === "1"; } catch { return true; }
+  }, () => false);
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    if (seen) return;
+    try { sessionStorage.setItem(SPLASH_KEY, "1"); } catch { /* private mode */ }
+    const t = setTimeout(() => setGone(true), 2900);
+    return () => clearTimeout(t);
+  }, [seen]);
+  if (seen || gone) return null;
+  return (
+    <div className="plus-splash fixed inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden bg-[#11181B]" onClick={() => setGone(true)} aria-hidden>
+      <div className="relative flex h-44 w-44 items-center justify-center">
+        <span className="plus-splash-glow absolute -inset-6 rounded-full bg-[radial-gradient(circle,rgba(233,132,94,0.6)_0%,rgba(233,132,94,0)_70%)]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/plus-512.png" alt="" width={176} height={176} className="plus-splash-sun relative h-44 w-44" />
+      </div>
+      <svg className="plus-splash-ridge mt-2 w-[min(88vw,380px)]" viewBox="0 0 380 60" fill="none">
+        <path d="M0 52 L48 30 L78 40 L122 10 L160 34 L196 20 L236 44 L276 16 L318 38 L346 28 L380 46" stroke="#F4F1EA" strokeOpacity=".55" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <p className="plus-splash-name mt-3 font-display text-5xl font-bold tracking-tight text-[#F4F1EA]">PAHAD<span className="text-[#E9845E]">+</span></p>
+      <p className="plus-splash-tag mt-2 text-xs font-extrabold uppercase tracking-[0.25em] text-[#D9A75A]">Events · Places · Entertainment</p>
+      <p className="plus-splash-tag absolute bottom-10 text-[11px] text-[#F4F1EA]/50">Tap to skip</p>
     </div>
   );
 }

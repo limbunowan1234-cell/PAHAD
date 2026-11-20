@@ -69,25 +69,46 @@ export type PlusCard = {
   createdAt: string;
   href: string;
   /** Only when verified. */
+  /**
+   * Contact and booking details, or null when none may be shown. Contacts (phone, WhatsApp, email, Instagram, venue,
+   * address) show once verified, or before that if the poster switched on "Show publicly". Links and the registration ID
+   * (website, booking / registration / apply link, map) always wait for verification.
+   */
   locked: null | {
-    venue: string; organiser: string; phone: string; whatsapp: string; email: string; address: string; website: string; link: string; mapLink: string; regId: string;
+    venue: string; organiser: string; phone: string; whatsapp: string; email: string; instagram: string; address: string; website: string; link: string; mapLink: string; regId: string;
   };
+  /** Contacts shown before PAHAD verified the post (the app warns people to check first). */
+  contactsUnverified: boolean;
+  videoUrl: string;
+  official: boolean;
+  spotlight: boolean;
+  /** Events: E-Passes need approval. */
+  passApproval: boolean;
 };
+
+/** Authentic: more than 5 people support the post, or PAHAD confirmed who the poster is. */
+export const AUTHENTIC_SUPPORTS = 5;
 
 export function toCard(p: PlusPost): PlusCard {
   const verified = isVerifiedPlus(p);
   const isAlert = p.hub === "briefs" && p.brief_type === "alert";
+  const contacts = verified || p.show_contacts;
   return {
     id: p.id, source: "user", hub: p.hub as PlusHub, briefType: (p.brief_type as BriefType) || "", kind: p.kind, stage: p.stage,
     region: p.region, locality: p.locality, title: p.title, summary: p.summary,
-    body: verified || isAlert ? p.body : "",
+    body: verified || isAlert || p.show_contacts ? p.body : "",
     image: p.image, youtubeId: p.youtube_id, startsAt: p.starts_at, endsAt: p.ends_at, validUntil: p.valid_until, deadline: p.deadline,
     bestSeason: p.best_season, hours: p.hours, verified, flagProof: p.status === "flag_proof",
-    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, authentic: p.author_member, likes: p.likes, supports: p.supports, flags: p.flags,
+    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, authentic: p.author_member || p.supports > AUTHENTIC_SUPPORTS || p.official, likes: p.likes, supports: p.supports, flags: p.flags,
     passEnabled: p.hub === "events" && p.pass_enabled, price: p.price, createdAt: p.created_at, href: `/plus/${p.id}`,
-    locked: verified
-      ? { venue: p.venue, organiser: p.organiser, phone: p.contact_phone, whatsapp: p.contact_whatsapp, email: p.contact_email, address: p.address, website: p.website, link: p.link, mapLink: p.map_link, regId: p.reg_id }
+    locked: contacts
+      ? {
+          venue: p.venue, organiser: p.organiser, phone: p.contact_phone, whatsapp: p.contact_whatsapp, email: p.contact_email, instagram: p.contact_instagram, address: p.address,
+          website: verified ? p.website : "", link: verified ? p.link : "", mapLink: verified ? p.map_link : "", regId: verified ? p.reg_id : "",
+        }
       : null,
+    contactsUnverified: !verified && p.show_contacts,
+    videoUrl: p.video_url, official: p.official, spotlight: p.spotlight, passApproval: p.pass_mode === "approval",
   };
 }
 
@@ -97,7 +118,7 @@ function pahadPostCard(p: Post): PlusCard {
   return {
     id: `pahad-${p.id}`, source: "pahad", hub, briefType: hub === "briefs" ? "tip" : "", kind: "", stage: "", region: "Darjeeling", locality: p.location || "PAHAD",
     title: p.title, summary: p.excerpt, body: "", image: p.cover, youtubeId: "", startsAt: p.event_date, endsAt: "", validUntil: "", deadline: "",
-    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, createdAt: p.published_at || p.created_at,
+    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, contactsUnverified: false, videoUrl: "", official: true, spotlight: false, passApproval: false, createdAt: p.published_at || p.created_at,
     href: `${POST_TYPE_PATH[p.type]}/${p.slug}`, locked: null,
   };
 }
@@ -109,7 +130,7 @@ function circularCard(c: Circular): PlusCard {
     id: `circular-${c.id}`, source: "pahad", hub: "briefs", briefType: "policy", kind: "", stage: "", region: "Darjeeling", locality: "PAHAD",
     title: c.title, summary: text.length > 220 ? `${text.slice(0, 219).replace(/\s+\S*$/, "")}…` : text, body: "", image: "", youtubeId: "",
     startsAt: "", endsAt: "", validUntil: "", deadline: "", bestSeason: "", hours: "", verified: true, flagProof: true,
-    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
+    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, contactsUnverified: false, videoUrl: "", official: true, spotlight: false, passApproval: false, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
   };
 }
 
@@ -172,7 +193,9 @@ function forYouScore(c: PlusCard, at: number) {
  * Alerts always come first.
  */
 export async function plusFeed(f: PlusFilters, blocked: Set<string> = new Set(), following: Set<string> = new Set()): Promise<PlusCard[]> {
-  const [posts, pahad] = await Promise.all([f.tab === "pahad" ? Promise.resolve([]) : getLivePlusPosts(), f.tab === "following" ? Promise.resolve([]) : getPahadPlusCards()]);
+  const [all, pahad] = await Promise.all([getLivePlusPosts(), f.tab === "following" ? Promise.resolve([]) : getPahadPlusCards()]);
+  // ⭐ PAHAD's picks: PAHAD's own content, including circulars admins published from the app.
+  const posts = f.tab === "pahad" ? all.filter((p) => p.official) : all;
   const q = f.q?.toLowerCase().trim();
   const cards = await withAuthentic([...posts.filter((p) => !blocked.has(p.author_id) && (f.tab !== "following" || following.has(p.author_id))).map(toCard), ...pahad].filter(
     (c) =>

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { DiscoverExplorer, type DiscoverItem, type Spotlight } from "@/components/plus/discover";
+import { DiscoverExplorer, type Creator, type DiscoverItem, type SpotlightItem } from "@/components/plus/discover";
+import { db } from "@/lib/db";
+import { toggleFollow, toggleSave } from "@/lib/plus/post-actions";
+import { getPlusUser } from "@/lib/plus/session";
 import { InstallAppButton } from "@/components/site/InstallApp";
 import { getPublishedVideos } from "@/lib/data";
 import { BRIEF_TYPES, HUB_KEYS, PLUS_HUBS, PLUS_REGIONS, USER_BRIEF_TYPES } from "@/lib/plus/config";
@@ -8,20 +11,38 @@ import { plusFeed } from "@/lib/plus/posts";
 
 export const metadata = { title: "Discover" };
 
-/** Search, a featured video (a verified PAHAD+ post with a video, or PAHAD's latest film), and the photo grid. */
+/** Discover data: posts for the grid, spotlight videos, creators to follow, and what the viewer saved / follows. */
 async function Explorer() {
-  const [cards, videos] = await Promise.all([plusFeed({ tab: "community" }), getPublishedVideos()]);
+  const viewer = await getPlusUser();
+  const [cards, videos, saves, follows, users] = await Promise.all([
+    plusFeed({ tab: "community" }), getPublishedVideos(),
+    viewer ? db.findBy("plus_saves", "user_id", viewer.id) : Promise.resolve([]),
+    viewer ? db.findBy("plus_follows", "follower_id", viewer.id) : Promise.resolve([]),
+    db.all("plus_users"),
+  ]);
+  const saved = new Set(saves.map((x) => x.post_id)), followed = new Set(follows.map((x) => x.followee_id));
   const items: DiscoverItem[] = cards.map((c) => ({
-    id: c.id, href: c.href, title: c.title, region: c.region, summary: c.summary,
-    hub: c.briefType ? BRIEF_TYPES[c.briefType].label : PLUS_HUBS[c.hub].label,
+    id: c.id, href: c.href, title: c.title, region: c.region, summary: c.summary, author: c.authorName,
+    hub: c.briefType ? BRIEF_TYPES[c.briefType].label : PLUS_HUBS[c.hub].label, hubKey: c.briefType === "job" ? "jobs" : c.hub,
     image: c.image || (c.youtubeId ? `https://i.ytimg.com/vi/${c.youtubeId}/hqdefault.jpg` : ""),
+    verified: c.verified, authentic: c.authentic, supports: c.supports, saved: saved.has(c.id), userPost: c.source === "user",
   }));
-  const withVideo = cards.find((c) => c.youtubeId && c.verified);
+  // Spotlight: PAHAD's Executive Spotlight picks first, then verified posts with video, then PAHAD's latest film.
+  const withVideo = cards.filter((c) => c.youtubeId && c.verified).sort((a, b) => Number(b.spotlight) - Number(a.spotlight));
+  const spotlights: SpotlightItem[] = withVideo.slice(0, 3).map((c) => ({
+    youtubeId: c.youtubeId, title: c.title, text: c.summary, href: c.href, external: false, executive: c.spotlight,
+    label: `${c.spotlight ? "Featured" : PLUS_HUBS[c.hub].label} • ${c.region}`,
+  }));
   const film = [...videos].sort((a, b) => a.sort - b.sort || b.created_at.localeCompare(a.created_at))[0];
-  const spotlight: Spotlight = withVideo
-    ? { youtubeId: withVideo.youtubeId, title: withVideo.title, text: withVideo.summary, href: withVideo.href, external: false }
-    : film ? { youtubeId: film.youtube_id, title: film.title, text: film.description, href: `/films#film-${film.id}`, external: true } : null;
-  return <DiscoverExplorer items={items} spotlight={spotlight} />;
+  if (spotlights.length < 3 && film) spotlights.push({ youtubeId: film.youtube_id, title: film.title, text: film.description, href: `/films#film-${film.id}`, external: true, executive: false, label: "PAHAD film" });
+  // Creators & guilds: accounts with the most support on live posts (business and organisation accounts first).
+  const score = new Map<string, number>(), hubOf = new Map<string, string>();
+  for (const c of cards) if (c.source === "user" && c.authorId && c.authorId !== viewer?.id) { score.set(c.authorId, (score.get(c.authorId) ?? 0) + 1 + c.supports + c.likes); if (!hubOf.has(c.authorId)) hubOf.set(c.authorId, PLUS_HUBS[c.hub].label); }
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const creators: Creator[] = [...score].map(([id, n]) => ({ id, n, u: byId.get(id) })).filter((x) => x.u && x.u.status === "active")
+    .sort((a, b) => Number(b.u!.account_type !== "individual") - Number(a.u!.account_type !== "individual") || b.n - a.n).slice(0, 10)
+    .map((x) => ({ id: x.id, name: x.u!.name, hub: hubOf.get(x.id) ?? "", following: followed.has(x.id) }));
+  return <DiscoverExplorer items={items} spotlights={spotlights} creators={creators} signedIn={Boolean(viewer)} follow={toggleFollow} save={toggleSave} />;
 }
 
 export default function DiscoverPage() {
