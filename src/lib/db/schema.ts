@@ -7,7 +7,7 @@ type ColType = "text" | "bool" | "int";
 export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   users: {
     id: "text", email: "text", name: "text", role: "text", designation: "text", directorate: "text", unit: "text", geo: "text",
-    owner: "bool", finance: "text", can_submit_videos: "bool", can_verify_plus: "bool", plus_region: "text", can_approve_public: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
+    owner: "bool", finance: "text", can_submit_videos: "bool", can_manage_menu: "bool", can_verify_plus: "bool", plus_region: "text", can_approve_public: "bool", active: "bool", password_hash: "text", created_at: "text", last_login: "text",
   },
   posts: {
     id: "text", type: "text", title: "text", slug: "text", excerpt: "text", body: "text",
@@ -100,6 +100,13 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     id: "text", kind: "text", entity: "text", entity_id: "text", title: "text", target: "text", status: "text", requested_by: "text",
     requested_by_name: "text", decided_by_name: "text", note: "text", created_at: "text", decided_at: "text",
   },
+  pages: {
+    id: "text", slug: "text", title: "text", eyebrow: "text", intro: "text", body: "text", cover: "text", collect: "text",
+    status: "text", updated_by: "text", created_at: "text", updated_at: "text",
+  },
+  translations: {
+    id: "text", en: "text", ne: "text", source: "text", page: "text", updated_by: "text", created_at: "text", updated_at: "text",
+  },
   featured: {
     id: "text", kind: "text", ref_id: "text", title: "text", text: "text", link: "text", image: "text", pages: "text",
     active: "bool", sort: "int", starts_on: "text", ends_on: "text", created_by_name: "text", created_at: "text", updated_at: "text",
@@ -125,6 +132,7 @@ export function createTableSQL(): string[] {
   statements.push(
     "CREATE UNIQUE INDEX IF NOT EXISTS users_email_idx ON users (lower(email))",
     "CREATE UNIQUE INDEX IF NOT EXISTS posts_slug_idx ON posts (slug)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_idx ON pages (slug)",
     "CREATE INDEX IF NOT EXISTS posts_type_status_idx ON posts (type, status)",
     "CREATE INDEX IF NOT EXISTS members_status_idx ON members (status)",
     // One-time, repeatable: old membership categories → the new list ("Former DSSCOLONY member" becomes the checkbox).

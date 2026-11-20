@@ -123,6 +123,11 @@ export const PERMISSIONS = {
   "videos.permission": [P], // grant or revoke YouTube Embed Submission Permission
   "featured.manage": [P],
 
+  // Website menu (top navigation, dropdowns, footer) and dashboard-made pages. The Governing Body (L1)
+  // always can; the President can switch it on for anyone else (users.can_manage_menu).
+  "menu.manage": [P, GS, JS, TR, GB],
+  "menu.permission": [P],
+
   // Voting (GB, EB and General Assembly). The General Secretary is the authorised administrator.
   // Every signed-in account can open Voting; only eligible members (per poll) can vote.
   "polls.manage": [P, GS], // create, edit, open, pause, close, archive, results, export
@@ -146,6 +151,16 @@ export function can(role: Role | null | undefined, permission: Permission): bool
  */
 export function canView(role: Role | null | undefined, permission: Permission): boolean {
   return role === "sysadmin" || can(role, permission);
+}
+
+/** Can this account change page banners (photo, video, title)? The President, L1, or people allowed menu editing. */
+export function canEditBanners(u: Pick<PublicUser, "role" | "can_manage_menu">): boolean {
+  return can(u.role, "site.images") || canManageMenu(u);
+}
+
+/** Can this account edit the website menu and pages? */
+export function canManageMenu(u: Pick<PublicUser, "role" | "can_manage_menu">): boolean {
+  return can(u.role, "menu.manage") || Boolean(u.can_manage_menu);
 }
 
 export function roleInfo(role: Role): RoleInfo {

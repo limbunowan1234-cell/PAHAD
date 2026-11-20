@@ -26,3 +26,31 @@ export const HERO_PAGES = {
 } as const satisfies Record<string, { label: string; path: string; fallback: string }>;
 
 export const heroSettingId = (key: HeroKey) => `hero:${key}`;
+
+/** Banner wording override (JSON: eyebrow, title, intro). Blank fields keep the page's own wording. */
+export const heroTextId = (key: HeroKey) => `herotext:${key}`;
+/** Banner video (JSON: id, on). When on, a muted, looping YouTube video plays behind the heading. */
+export const heroVideoId = (key: HeroKey) => `herovideo:${key}`;
+
+export type HeroText = { eyebrow?: string; title?: string; intro?: string };
+export type HeroVideo = { id: string; on: boolean };
+export type HeroOverride = HeroText & { video?: string };
+
+export function parseHeroText(value: string | undefined): HeroText {
+  try {
+    const v = JSON.parse(value || "{}") as Record<string, unknown>;
+    const pick = (k: string) => (typeof v[k] === "string" && (v[k] as string).trim() ? (v[k] as string).trim() : undefined);
+    return { eyebrow: pick("eyebrow"), title: pick("title"), intro: pick("intro") };
+  } catch {
+    return {};
+  }
+}
+
+export function parseHeroVideo(value: string | undefined): HeroVideo | null {
+  try {
+    const v = JSON.parse(value || "null") as { id?: unknown; on?: unknown } | null;
+    return v && typeof v.id === "string" && /^[\w-]{11}$/.test(v.id) ? { id: v.id, on: v.on === true } : null;
+  } catch {
+    return null;
+  }
+}

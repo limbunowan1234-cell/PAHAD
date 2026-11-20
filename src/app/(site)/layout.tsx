@@ -1,14 +1,15 @@
 import { Footer } from "@/components/site/Footer";
 import { Suspense } from "react";
 import { Header, HeaderView } from "@/components/site/Header";
-import { getFilmsPage } from "@/lib/data";
+import { getFilmsPage, getLanguageSwitchOn, getMenu } from "@/lib/data";
+import { visibleMenu } from "@/lib/menu";
 import { JsonLd, organizationJsonLd } from "@/components/site/JsonLd";
 import { site } from "@/lib/site";
 
-/** Reads the films page title (cached) so the menu shows it under its current name. */
+/** The menu from Admin → Menu & Pages (cached), with the films page under its current name. */
 async function SiteHeader() {
-  const { title } = await getFilmsPage();
-  return <Header filmsLabel={title} />;
+  const [{ title }, menu, languages] = await Promise.all([getFilmsPage(), getMenu(), getLanguageSwitchOn()]);
+  return <Header menu={visibleMenu(menu, title)} languages={languages} />;
 }
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {

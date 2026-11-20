@@ -54,6 +54,8 @@ export type User = {
   plus_region: string;
   /** May approve internal → public and organisation posts for PAHAD+, granted by the President. */
   can_approve_public: boolean;
+  /** Allowed by the President to edit the website menu and pages (L1 always can). */
+  can_manage_menu: boolean;
   active: boolean;
   password_hash: string;
   created_at: string;
@@ -432,6 +434,37 @@ export type TeamMember = {
   created_at: string;
 };
 
+/** A page created from the dashboard (Admin → Menu & Pages), shown at /pages/<slug>. */
+export type CustomPage = {
+  id: string;
+  slug: string;
+  title: string;
+  /** Small label above the title, e.g. "Media". */
+  eyebrow: string;
+  intro: string;
+  body: string;
+  cover: string;
+  /** Also list published posts whose category / label matches this (e.g. "Feature"). */
+  collect: string;
+  status: "published" | "draft";
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** One phrase of website text and its Nepali version (Admin → Nepali translation). */
+export type Translation = {
+  id: string;
+  en: string;
+  ne: string;
+  /** "machine" = Google's first draft, "human" = checked or written by PAHAD, "keep" = leave in English. */
+  source: "machine" | "human" | "keep" | "";
+  page: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /** Small key/value settings, e.g. "hero:about" → image URL. */
 export type Setting = {
   id: string;
@@ -545,5 +578,7 @@ export type Tables = {
   plus_flags: PlusFlag;
   plus_blocks: PlusBlock;
   approvals: Approval;
+  pages: CustomPage;
+  translations: Translation;
 };
 export type TableName = keyof Tables;

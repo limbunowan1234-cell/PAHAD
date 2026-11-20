@@ -70,9 +70,3 @@ export const nav: NavGroup[] = [
     ],
   },
 ];
-
-/** The menu with the films page under its current (possibly renamed) title. */
-export function navWithFilms(label?: string): NavGroup[] {
-  if (!label) return nav;
-  return nav.map((group) => (group.items ? { ...group, items: group.items.map((item) => (item.href === "/films" ? { ...item, label } : item)) } : group));
-}

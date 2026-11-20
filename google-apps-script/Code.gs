@@ -111,6 +111,18 @@ function doPost(e) {
       MailApp.sendEmail({ to: to, subject: String(body.subject || '').slice(0, 200), body: String(body.body || '').slice(0, 5000), name: 'PAHAD' });
       return json({ ok: true });
     }
+    if (body.action === 'translate') {
+      // First drafts for the website's Nepali version; PAHAD reviews them in the dashboard.
+      var texts = (body.texts || []).slice(0, 60);
+      var out = texts.map(function (t) {
+        try {
+          return LanguageApp.translate(String(t).slice(0, 2000), 'en', String(body.to || 'ne'));
+        } catch (err) {
+          return '';
+        }
+      });
+      return json({ ok: true, texts: out });
+    }
     if (body.action === 'ping') return json({ ok: true });
     return json({ ok: false, error: 'Unknown action' });
   } catch (err) {

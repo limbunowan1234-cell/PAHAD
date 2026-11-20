@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, Inter, Noto_Sans_Devanagari } from "next/font/google";
 import { site } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
+// Nepali text (the नेपाली switch) falls back to this; it only downloads when Devanagari is on the page.
+const devanagari = Noto_Sans_Devanagari({ variable: "--font-devanagari", subsets: ["devanagari"], display: "swap", preload: false, weight: ["400", "500", "600", "700"] });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], display: "swap", axes: ["opsz"] });
 
 export const metadata: Metadata = {
@@ -30,7 +32,7 @@ export const viewport: Viewport = { themeColor: "#164d58" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${fraunces.variable} h-full`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${fraunces.variable} ${devanagari.variable} h-full`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
