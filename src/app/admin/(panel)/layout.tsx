@@ -3,7 +3,7 @@ import { logout } from "../actions";
 import { AdminNav, type NavKey } from "@/components/admin/client";
 import { requireUser } from "@/lib/auth/session";
 import { db, usingPostgres } from "@/lib/db";
-import { can, canEditBanners, canManageMenu, canView, financeAccess, roleLabel, type Permission } from "@/lib/permissions";
+import { can, canEditBanners, canManageMenu, canView, financeAccess, roleLabel, type Permission, canSubmitVideos } from "@/lib/permissions";
 import { phaseOf } from "@/lib/polls";
 import { usingCloudStorage } from "@/lib/storage";
 import { canApprovePublic, canModeratePlus, canVerifyPlusPost } from "@/lib/plus/access";
@@ -69,7 +69,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
   const sys = user.role === "sysadmin";
   const showPlus = canModeratePlus(user) || sys;
   const showApprovals = canApprovePublic(user) || sys;
-  const showVideos = canView(user.role, "videos.manage") || user.can_submit_videos;
+  const showVideos = canView(user.role, "videos.manage") || canSubmitVideos(user);
   const items = NAV.filter((n) => canView(user.role, n.perm) && (n.key !== "finance" || financeAccess(user) !== "none") && (n.key !== "videos" || showVideos) && (!["menu", "translations"].includes(n.key) || canManageMenu(user) || user.role === "sysadmin") && (n.key !== "heroes" || canEditBanners(user) || user.role === "sysadmin") && (n.key !== "plus" || showPlus) && (n.key !== "approvals" || showApprovals)).map(({ key, label, href }) => ({ key, label, href, badge: badges[key] }));
 
   return (

@@ -149,7 +149,8 @@ export default async function TeamPage() {
                     <Badge tone={u.owner || role.level === 1 ? "teal" : role.id === "sysadmin" ? "grey" : role.level <= 3 ? "green" : "amber"}>{roleTitle(u)}</Badge>
                     {!u.active && <Badge tone="red">Deactivated</Badge>}
                     {fin !== "none" && <Badge>Finance: {fin}</Badge>}
-                    {u.can_submit_videos && !can(u.role, "videos.manage") && <Badge tone="green">YouTube submission: ON</Badge>}
+                    {(u.can_submit_videos || u.role === "creator") && !can(u.role, "videos.manage") && <Badge tone="green">YouTube submission: ON</Badge>}
+                    {(u.role === "creator" || u.role === "honorary") && <Badge>No voting rights</Badge>}
                     {u.can_verify_plus && u.role !== "super_admin" && <Badge tone="green">PAHAD+ verifier{u.plus_region ? `: ${u.plus_region}` : ""}</Badge>}
                     {u.can_approve_public && u.role !== "super_admin" && <Badge tone="green">Approves public / PAHAD+</Badge>}
                     {u.can_flagproof_plus && u.role !== "super_admin" && <Badge tone="green">PAHAD+ Flag-Proof</Badge>}
@@ -158,7 +159,7 @@ export default async function TeamPage() {
                   <p className="text-sm text-muted">{[u.email, u.designation, where].filter(Boolean).join(" · ")}</p>
                   <p className="text-xs text-muted">Last sign-in: {u.last_login ? formatDate(u.last_login, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "never"}</p>
                 </div>
-                {videoPermission && !can(u.role, "videos.manage") && u.active && (
+                {videoPermission && !can(u.role, "videos.manage") && u.role !== "creator" && u.active && (
                   <ActionButton variant={u.can_submit_videos ? "ghost" : "primary"} action={setVideoPermission.bind(null, u.id, !u.can_submit_videos)}>
                     {u.can_submit_videos ? "YouTube submission: turn OFF" : "YouTube submission: turn ON"}
                   </ActionButton>

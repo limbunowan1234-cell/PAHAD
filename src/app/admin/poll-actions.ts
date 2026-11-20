@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { canVote } from "@/lib/permissions";
 import { db, newId } from "@/lib/db";
 import { guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { CATEGORY, istInputToIso, parseOptions, phaseOf, voterKey } from "@/lib/polls";
@@ -19,7 +20,8 @@ const votersOf = async (pollId: string) => db.findBy("poll_voters", "poll_id", p
 
 /** Replace the eligibility register for a poll (only allowed before anyone has voted). */
 async function setVoters(pollId: string, userIds: string[]) {
-  const users = new Map((await db.all("users")).filter((u) => u.active).map((u) => [u.id, u]));
+  // C1 Creators and H1 Honorary Members have no voting rights, so they never enter a register.
+  const users = new Map((await db.all("users")).filter((u) => u.active && canVote(u.role)).map((u) => [u.id, u]));
   const wanted = new Set(userIds.filter((id) => users.has(id)));
   const current = await votersOf(pollId);
   for (const v of current) if (!wanted.has(v.user_id)) await db.remove("poll_voters", v.id);
@@ -155,7 +157,7 @@ export async function castVote(pollId: string, optionId: string): Promise<Action
   return guarded("dashboard.view", async (user) => {
     const poll = await loadPoll(pollId);
     if (poll.archived || phaseOf(poll) !== "active") throw new Error("This poll is not open for voting.");
-    if (!(await db.get("poll_voters", voterKey(pollId, user.id)))) throw new Error("You are not eligible to vote in this poll.");
+    if (!canVote(user.role) || !(await db.get("poll_voters", voterKey(pollId, user.id)))) throw new Error("You are not eligible to vote in this poll.");
     if (!parseOptions(poll).some((o) => o.id === optionId)) throw new Error("Choose one of the options.");
 
     const receiptId = voterKey(pollId, user.id);

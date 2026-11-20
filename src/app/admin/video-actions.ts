@@ -6,13 +6,13 @@ import { FEATURED_SWITCH, getFilmsPage } from "@/lib/data";
 import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { safeUrl, toImageUrl } from "@/lib/drive";
 import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING } from "@/lib/films";
-import { can } from "@/lib/permissions";
+import { can, canSubmitVideos as canSubmit } from "@/lib/permissions";
 import { pagesFromForm } from "@/lib/placements";
 import type { Featured, FeaturedKind, PublicUser, Video } from "@/lib/types";
 import { parseYouTubeId } from "@/lib/youtube";
 
 /** Every check below runs on the server; hidden buttons are only a convenience. */
-const canSubmitVideos = (u: PublicUser) => can(u.role, "videos.manage") || u.can_submit_videos;
+const canSubmitVideos = (u: PublicUser) => canSubmit(u);
 
 function videoFields(fd: FormData) {
   const youtube_id = parseYouTubeId(str(fd, "url", 2000));

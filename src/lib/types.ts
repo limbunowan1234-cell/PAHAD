@@ -12,6 +12,8 @@ export type Role =
   | "department_head" // L4 D1 Department Head (scoped to a Department)
   | "project_coordinator" // L5-1 Project Coordinator (scoped to a Programme)
   | "editor" // L6 Member of the General Assembly
+  | "creator" // C1 Creator: an artist who submits videos (no voting rights)
+  | "honorary" // H1 Honorary Member: advises and trains, non-binding (no voting rights)
   | "sysadmin"; // SYS Website Administrator: sees everything read-only, decides nothing
 
 export type UnitKind = "directorate" | "department" | "programme" | "project" | "designation" | "district" | "subdivision" | "block" | "gp";

@@ -1,3 +1,4 @@
+import { NON_VOTING } from "./permissions";
 import type { Ballot, Poll, PollCategory, PollOption, PollReceipt, PollResultsVisibility, PollVoter, PublicUser, Role } from "./types";
 
 export const CATEGORY: Record<PollCategory, { short: string; label: string; hint: string }> = {
@@ -14,7 +15,7 @@ const DEFAULT_ROLES: Record<PollCategory, Role[] | "all"> = {
 
 /** Suggested voters for a category. The President can change the list for each poll before voting starts. */
 export function defaultEligible(category: PollCategory, u: Pick<PublicUser, "role" | "active">) {
-  if (!u.active) return false;
+  if (!u.active || NON_VOTING.includes(u.role)) return false; // C1 / H1: no voting rights
   const roles = DEFAULT_ROLES[category];
   return roles === "all" || roles.includes(u.role);
 }
