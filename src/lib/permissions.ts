@@ -149,6 +149,11 @@ export function canView(role: Role | null | undefined, permission: Permission): 
   return role === "sysadmin" || can(role, permission);
 }
 
+/** Can this account change page banners (photo, video, title)? The President, L1, or people allowed menu editing. */
+export function canEditBanners(u: Pick<PublicUser, "role" | "can_manage_menu">): boolean {
+  return can(u.role, "site.images") || canManageMenu(u);
+}
+
 /** Can this account edit the website menu and pages? */
 export function canManageMenu(u: Pick<PublicUser, "role" | "can_manage_menu">): boolean {
   return can(u.role, "menu.manage") || Boolean(u.can_manage_menu);

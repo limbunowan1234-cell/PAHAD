@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight, BookOpen, HandHeart, Lightbulb, Users } from "lucide-react";
 import { coreValues, cycle, storyMoments, workAreas } from "@/lib/content";
-import { getPartners, getPublishedPosts, getSiteImages, getUpcomingEvents } from "@/lib/data";
+import { getHeroOverride, getPartners, getPublishedPosts, getSiteImages, getUpcomingEvents } from "@/lib/data";
+import { HeroVideo } from "@/components/site/HeroVideo";
 import { HERO_PAGES, heroSettingId } from "@/lib/heroes";
 import { site } from "@/lib/site";
 import { pageMetadata } from "@/lib/seo";
@@ -40,6 +41,7 @@ export default function HomePage() {
 
 async function Hero() {
   const image = (await getSiteImages())[heroSettingId("home")] || HERO_PAGES.home.fallback;
+  const o = await getHeroOverride("home"); // wording and video from Admin → Page Images
   return (
     <section className="relative isolate flex min-h-[calc(100svh-72px)] items-end overflow-hidden bg-teal-950 text-white">
       <Image
@@ -50,17 +52,22 @@ async function Hero() {
         sizes="100vw"
         className="-z-20 object-cover object-[50%_35%]"
       />
+      {o.video && <HeroVideo id={o.video} />}
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-teal-950 via-teal-950/55 to-teal-950/10" />
       <div className="container-page pb-16 pt-32 sm:pb-20">
         <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cream backdrop-blur">
-          A community development institution
+          {o.eyebrow ?? "A community development institution"}
         </p>
         <h1 className="mt-6 max-w-4xl text-5xl font-medium leading-[1.02] sm:text-6xl lg:text-7xl">
-          People. Knowledge. <span className="text-coral">Action.</span>
+          {o.title ?? (
+            <>
+              People. Knowledge. <span className="text-coral">Action.</span>
+            </>
+          )}
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/90 sm:text-xl">
-          Working with people across the Darjeeling and Kalimpong hills, the Terai, the Dooars and the wider Himalayan region, so communities can shape
-          their own future.
+          {o.intro ??
+            "Working with people across the Darjeeling and Kalimpong hills, the Terai, the Dooars and the wider Himalayan region, so communities can shape their own future."}
         </p>
         <div className="mt-9 flex flex-wrap gap-3">
           <Link href="/about" className="btn btn-accent">

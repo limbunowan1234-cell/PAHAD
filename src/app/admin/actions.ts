@@ -6,12 +6,13 @@ import { db, newId } from "@/lib/db";
 import { hashPassword, validatePasswordStrength, verifyPassword } from "@/lib/auth/password";
 import { clearSessionCookie, getCurrentUser, setSessionCookie } from "@/lib/auth/session";
 import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
-import { can, canEditPost, canPublish, FINANCE_ACCESS, FINANCE_APPROVERS, inScope, roleInfo, roleLabel, ROLES, type FinanceAccess } from "@/lib/permissions";
+import { can, canEditBanners, canEditPost, canPublish, FINANCE_ACCESS, FINANCE_APPROVERS, inScope, roleInfo, roleLabel, ROLES, type FinanceAccess } from "@/lib/permissions";
 import { assertRoleScope, assertSeat, loadStructure, recordScope, scopeFromForm } from "@/lib/structure";
 import { appendToSheet } from "@/lib/google";
 import { storeUpload } from "@/lib/storage";
 import { safeUrl, toFileUrl, toImageUrl } from "@/lib/drive";
-import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
+import { HERO_PAGES, heroSettingId, heroTextId, heroVideoId, type HeroKey } from "@/lib/heroes";
+import { parseYouTubeId } from "@/lib/youtube";
 import { TEAM_SECTIONS, type MemberStatus, type Post, type PostStatus, type PostType, type PublicUser, type Role, type TaskStatus, type TeamSection } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 import { interestsFromText, MAX_INTEREST_LENGTH, MAX_INTERESTS, memberCategoryFromForm, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "@/lib/membership";
@@ -382,8 +383,45 @@ export async function deletePartner(id: string) {
 }
 
 // ------------------------------------------------------------------ page banner images
+/** Banner photo, wording and video: the President, L1, or people the President allowed. */
+async function bannerGuard(fn: (user: PublicUser) => Promise<string>) {
+  return guarded("dashboard.view", async (user) => {
+    if (!canEditBanners(user)) throw new Error("Only the President, the Governing Body (L1) or people they allow can change page banners.");
+    return fn(user);
+  });
+}
+
+async function putSetting(user: PublicUser, id: string, value: string) {
+  if (await db.get("settings", id)) await db.update("settings", id, { value, updated_by: user.name });
+  else await db.insert("settings", { id, value, updated_by: user.name, created_at: now() });
+}
+
+export async function saveHeroText(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  return bannerGuard(async (user) => {
+    const key = str(fd, "page", 40) as HeroKey;
+    if (!(key in HERO_PAGES)) throw new Error("Unknown page.");
+    const text = { eyebrow: str(fd, "eyebrow", 60), title: str(fd, "title", 140), intro: str(fd, "intro", 400) };
+    if (text.eyebrow || text.title || text.intro) await putSetting(user, heroTextId(key), JSON.stringify(text));
+    else await db.remove("settings", heroTextId(key));
+
+    const link = str(fd, "video", 500);
+    const on = fd.get("video_on") === "on";
+    if (link) {
+      const id = parseYouTubeId(link);
+      if (!id) throw new Error("That doesn't look like a YouTube link. Paste the video's address, e.g. https://youtu.be/…");
+      await putSetting(user, heroVideoId(key), JSON.stringify({ id, on }));
+    } else {
+      if (on) throw new Error("Paste a YouTube link to play a video in the banner.");
+      await db.remove("settings", heroVideoId(key));
+    }
+    await log(user, "changed banner text", "page", key, `${HERO_PAGES[key].label}${on ? " (video on)" : ""}`);
+    updateTag("settings");
+    return `${HERO_PAGES[key].label} banner saved.`;
+  });
+}
+
 export async function saveHeroImage(_prev: ActionState, fd: FormData): Promise<ActionState> {
-  return guarded("site.images", async (user) => {
+  return bannerGuard(async (user) => {
     const key = str(fd, "page", 40) as HeroKey;
     if (!(key in HERO_PAGES)) throw new Error("Unknown page.");
     const link = safeUrl(str(fd, "link", 500));
@@ -399,7 +437,7 @@ export async function saveHeroImage(_prev: ActionState, fd: FormData): Promise<A
 }
 
 export async function resetHeroImage(key: HeroKey) {
-  return guarded("site.images", async (user) => {
+  return bannerGuard(async (user) => {
     if (!(key in HERO_PAGES)) throw new Error("Unknown page.");
     await db.remove("settings", heroSettingId(key));
     await log(user, "reset banner", "page", key, HERO_PAGES[key].label);

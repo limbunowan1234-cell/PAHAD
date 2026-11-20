@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Post } from "@/lib/types";
-import { getSiteImages } from "@/lib/data";
+import { getHeroOverride, getSiteImages } from "@/lib/data";
+import { HeroVideo } from "./HeroVideo";
 import { HERO_PAGES, heroSettingId, type HeroKey } from "@/lib/heroes";
 import { cn, formatDate, POST_TYPE_PATH } from "@/lib/utils";
 
@@ -25,6 +26,11 @@ export async function PageHero({
   children?: ReactNode;
 }) {
   const image = imageOverride ? imageOverride : page ? (await getSiteImages())[heroSettingId(page)] || HERO_PAGES[page].fallback : "";
+  // Wording and video set in Admin → Page Images replace the page's own.
+  const o = page ? await getHeroOverride(page) : {};
+  if (o.eyebrow) eyebrow = o.eyebrow;
+  if (o.title) title = o.title;
+  if (o.intro) intro = o.intro;
   return (
     <section className="relative isolate overflow-hidden bg-teal-900 text-white">
       {image && (
@@ -35,7 +41,13 @@ export async function PageHero({
           <div className="absolute inset-0 -z-10 bg-teal-950/55 md:bg-transparent md:bg-gradient-to-r md:from-teal-950/90 md:via-teal-950/60 md:to-teal-950/5" />
         </>
       )}
-      {!image && <MountainLine className="absolute bottom-0 left-0 -z-10 w-full text-white/[0.06]" />}
+      {o.video && (
+        <>
+          <HeroVideo id={o.video} />
+          {!image && <div className="absolute inset-0 -z-10 bg-teal-950/55" />}
+        </>
+      )}
+      {!image && !o.video && <MountainLine className="absolute bottom-0 left-0 -z-10 w-full text-white/[0.06]" />}
       <div className="container-page py-20 [text-shadow:0_1px_12px_rgb(11_46_53/0.45)] sm:py-24 lg:py-28">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-cream">{eyebrow}</p>
         <h1 className="mt-4 max-w-4xl text-4xl font-medium leading-[1.08] sm:text-5xl lg:text-6xl">{title}</h1>

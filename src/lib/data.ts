@@ -2,6 +2,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
 import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING, type FilmsPage } from "./films";
+import { heroTextId, heroVideoId, parseHeroText, parseHeroVideo, type HeroKey, type HeroOverride } from "./heroes";
 import { DEFAULT_MENU, MENU_SETTING, sanitizeMenu, type MenuGroup } from "./menu";
 import { DEFAULT_MEMBERSHIP_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "./membership";
 import { onPage, todayInIndia } from "./placements";
@@ -93,6 +94,16 @@ export async function getSiteImages(): Promise<Record<string, string>> {
   cacheLife("hours");
   cacheTag("settings");
   return Object.fromEntries((await db.all("settings")).filter((s) => s.id.startsWith("hero:") && s.value).map((s) => [s.id, s.value]));
+}
+
+/** Banner wording and video overrides for a page (Admin → Page Images). */
+export async function getHeroOverride(key: HeroKey): Promise<HeroOverride> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+  const [text, video] = await Promise.all([db.get("settings", heroTextId(key)), db.get("settings", heroVideoId(key))]);
+  const v = parseHeroVideo(video?.value);
+  return { ...parseHeroText(text?.value), video: v?.on ? v.id : undefined };
 }
 
 export async function getTeam() {
