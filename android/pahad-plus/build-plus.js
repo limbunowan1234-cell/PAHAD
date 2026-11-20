@@ -24,7 +24,15 @@ const VERSION_NAME = "1.0.0";
 const OUT = process.env.PAHAD_PLUS_OUT || "D:\\PAHAD\\android\\pahad-plus\\dist";
 
 const HOME = process.env.USERPROFILE;
-const config = new Config(path.join(HOME, ".jdks", "jdk-17.0.21+9"), path.join(process.env.LOCALAPPDATA, "Android", "Sdk"));
+// Android SDK: ANDROID_HOME if set, otherwise where Android Studio / Bubblewrap put it.
+const SDK = [process.env.ANDROID_HOME, process.env.ANDROID_SDK_ROOT, path.join(process.env.LOCALAPPDATA || "", "Android", "Sdk"), path.join(HOME, ".bubblewrap", "android_sdk"), "D:\\Android\\Sdk"]
+  .find((p) => p && fs.existsSync(path.join(p, "build-tools")));
+const JDK = [process.env.JAVA_HOME, path.join(HOME, ".jdks", "jdk-17.0.21+9"), path.join(HOME, ".bubblewrap", "jdk")]
+  .find((p) => p && fs.existsSync(path.join(p, "bin", "java.exe")));
+if (!SDK) { console.error("Android SDK not found. Run: dir \"%LOCALAPPDATA%\\Android\\Sdk\" and tell Claude what it shows."); process.exit(1); }
+if (!JDK) { console.error("Java (JDK 17) not found in %USERPROFILE%\\.jdks. Tell Claude."); process.exit(1); }
+console.log("Android SDK:", SDK, "\nJava:", JDK);
+const config = new Config(JDK, SDK);
 const log = new ConsoleLog("pahad-plus");
 const KEYSTORE = path.join(__dirname, "pahad-release.keystore");
 for (const f of [KEYSTORE, path.join(__dirname, "keystore-password.txt")]) {
@@ -59,6 +67,8 @@ process.env.PAHAD_KS = fs.readFileSync(path.join(__dirname, "keystore-password.t
     const r = spawnSync(cmd, args, { cwd: dir, env, stdio: "inherit", shell: true });
     if (r.status !== 0) throw new Error(`${label} failed (${r.status})`);
   };
+  // Tell Gradle exactly where the SDK is (it doesn't always pick up ANDROID_HOME).
+  fs.writeFileSync(path.join(dir, "local.properties"), `sdk.dir=${SDK.replace(/\\/g, "/")}\n`);
   const bg = path.join(dir, "app", "build.gradle");
   fs.writeFileSync(bg, fs.readFileSync(bg, "utf8").replace(/minSdkVersion \d+/, "minSdkVersion 24"));
 
@@ -67,7 +77,9 @@ process.env.PAHAD_KS = fs.readFileSync(path.join(__dirname, "keystore-password.t
   if (g.status !== 0) throw new Error("gradle failed");
 
   // APK for testing: align, then sign.
-  const bt = path.join(config.androidSdkPath, "build-tools", "35.0.0");
+  const btRoot = path.join(config.androidSdkPath, "build-tools");
+  const btVer = fs.existsSync(path.join(btRoot, "35.0.0")) ? "35.0.0" : fs.readdirSync(btRoot).sort().pop();
+  const bt = path.join(btRoot, btVer);
   const unsigned = path.join(dir, "app", "build", "outputs", "apk", "release", "app-release-unsigned.apk");
   const aligned = path.join(dir, "aligned.apk");
   run(`"${path.join(bt, "zipalign.exe")}"`, ["-f", "-p", "4", `"${unsigned}"`, `"${aligned}"`], "zipalign");
