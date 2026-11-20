@@ -136,6 +136,7 @@ export const PERMISSIONS = {
   // PAHAD+ (public app). Verifiers and approvers are per-member switches the President sets on Admin Team.
   "plus.permission": [P], // grant / revoke "PAHAD+ verifier" and "Approve for public / PAHAD+"
   "plus.flagproof": [P], // mark a PAHAD+ post Flag-Proof
+  "plus.payments": [P], // PAHAD+ fee, paid organisers, refunds and payouts
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

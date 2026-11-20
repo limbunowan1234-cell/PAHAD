@@ -4,6 +4,9 @@ import { PlusButton, PlusForm, PushToggle } from "@/components/plus/client";
 import { hubLabel, plusDate } from "@/components/plus/ui";
 import { deletePlusAccount, requestMemberLink, resendVerification, signOutPlus, unlinkMember, updatePlusProfile } from "@/lib/plus/account-actions";
 import { removePushSubscription, savePushSubscription } from "@/lib/plus/push-actions";
+import { applyAsOrganiser } from "@/lib/plus/pay-actions";
+import { eventMoney, getFeePercent } from "@/lib/plus/payments";
+import { paymentsConfigured, rupees } from "@/lib/plus/razorpay";
 import { vapidPublicKey } from "@/lib/plus/push";
 import { PLUS_REGIONS } from "@/lib/plus/config";
 import { unblockPlusUser } from "@/lib/plus/post-actions";
@@ -51,6 +54,9 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
   const passRows = (await Promise.all(myPasses.filter((p) => p.status !== "cancelled").map(async (p) => ({ pass: p, post: await db.get("plus_posts", p.post_id) }))))
     .filter((r): r is { pass: typeof r.pass; post: NonNullable<typeof r.post> } => Boolean(r.post))
     .sort((a, b) => a.post.starts_at.localeCompare(b.post.starts_at));
+  const seller = viewer.account_type !== "individual";
+  const [organiser, feePercent] = seller ? await Promise.all([db.get("plus_organisers", viewer.id), getFeePercent()]) : [null, 0];
+  const sales = organiser ? await Promise.all(posts.filter((p) => p.price > 0).map(async (p) => ({ post: p, money: await eventMoney(p.id) }))) : [];
   const savedPosts = (await Promise.all(mySaves.map((s) => db.get("plus_posts", s.post_id)))).filter((p): p is NonNullable<typeof p> => Boolean(p && isLivePlus(p, at)));
 
   return (
@@ -144,6 +150,49 @@ async function Account({ searchParams }: { searchParams: Promise<Record<string, 
           </ul>
         )}
       </section>
+
+      {seller && paymentsConfigured && (
+        <section id="sell" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
+          <h2 className="font-display text-xl text-teal">Sell E-Passes</h2>
+          {organiser?.status === "approved" ? (
+            <div className="mt-2 space-y-3 text-sm">
+              <p>You&apos;re approved to sell E-Passes. Add a price when you post an event. Buyers pay PAHAD through Razorpay; PAHAD pays you after the event{feePercent ? `, less its ${feePercent}% fee` : ""}.</p>
+              {sales.length > 0 && (
+                <ul className="divide-y divide-line">
+                  {sales.map(({ post, money }) => (
+                    <li key={post.id} className="py-3">
+                      <Link href={`/plus/checkin/${post.id}`} className="font-semibold text-ink hover:underline">{post.title}</Link>
+                      <p className="text-xs text-muted">
+                        {money.sold} sold · {rupees(money.gross)} · fee {rupees(money.fee)} · paid to you {rupees(money.paidOut)} · <strong className="text-ink">owed {rupees(money.owed)}</strong>
+                        {money.refunds > 0 && ` · ${money.refunds} refunded`}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : organiser?.status === "pending" ? (
+            <p className="mt-2 text-sm text-muted">Your request is with PAHAD. You&apos;ll be able to add prices once the President approves it.</p>
+          ) : (
+            <div className="mt-2">
+              <p className="text-sm text-muted">
+                {organiser?.status === "rejected" || organiser?.status === "revoked" ? `Your earlier request was ${organiser.status}${organiser.note ? `: ${organiser.note}` : ""}. You can ask again.` : "Want to charge for your events? Ask PAHAD to approve you as a paid organiser. Only the President sees your payout details."}
+              </p>
+              <div className="mt-3">
+                <PlusForm action={applyAsOrganiser} submitLabel="Ask to sell E-Passes">
+                  <label className="block"><span className="label">Name on the account *</span><input name="account_name" required maxLength={120} className="field" /></label>
+                  <label className="block"><span className="label">UPI ID</span><input name="upi" maxLength={100} placeholder="name@okbank" className="field" /></label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block"><span className="label">Bank account number</span><input name="bank_account" inputMode="numeric" maxLength={20} className="field" /></label>
+                    <label className="block"><span className="label">IFSC</span><input name="ifsc" maxLength={11} className="field uppercase" /></label>
+                  </div>
+                  <p className="text-xs text-muted">Give a UPI ID, a bank account, or both.</p>
+                </PlusForm>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <section id="notifications" className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line">
         <h2 className="font-display text-xl text-teal">Notifications</h2>

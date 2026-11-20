@@ -25,7 +25,9 @@ export default function PlusTermsPage() {
       <ul>
         <li>E-Passes are free, one per person per event, and open only once PAHAD verifies the event. Organisers can set a limit.</li>
         <li>Your E-Pass is your ticket: don&apos;t share or copy its QR code. Each pass can be checked in once.</li>
-        <li>The organiser runs the event and may refuse entry. Cancel your E-Pass if you can&apos;t go, so someone else can.</li>
+        <li>The organiser runs the event and may refuse entry. Cancel your free E-Pass if you can&apos;t go, so someone else can.</li>
+        <li><strong>Paid E-Passes</strong> are sold by organisers PAHAD has approved. You pay PAHAD through Razorpay; PAHAD keeps a fee and pays the organiser after the event. Paid E-Passes can&apos;t be cancelled in the app: ask the organiser or PAHAD. If an event is cancelled, PAHAD refunds paid E-Passes in full to the original payment method.</li>
+        <li>Organisers who sell E-Passes must run the event as described, and agree that PAHAD may refund buyers and hold their payout if an event doesn&apos;t happen or isn&apos;t as described.</li>
       </ul>
 
       <h2>Community guidelines</h2>

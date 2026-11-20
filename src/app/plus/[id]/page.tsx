@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, BadgeCheck, CalendarDays, ExternalLink, Globe, Mail, MapPin, Phone, QrCode, Ticket } from "lucide-react";
 import { VideoPlayer } from "@/components/site/VideoPlayer";
-import { LikeSaveBar, PlusButton, PlusForm } from "@/components/plus/client";
+import { BuyPassButton, LikeSaveBar, PlusButton, PlusForm } from "@/components/plus/client";
+import { confirmPaidPass, startPaidPass } from "@/lib/plus/pay-actions";
+import { isApprovedOrganiser, placesHeld } from "@/lib/plus/payments";
+import { paymentsConfigured, rupees } from "@/lib/plus/razorpay";
 import { hubLabel, LockedBox, plusDate, timing, TrustBadge } from "@/components/plus/ui";
 import { blockPlusUser, deleteOwnPlusPost, reportPlusPost, toggleLike, toggleSave } from "@/lib/plus/post-actions";
 import { registerPass } from "@/lib/plus/pass-actions";
@@ -43,8 +46,10 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
     viewer ? db.get("plus_likes", `${post.id}:${viewer.id}`) : null,
     viewer ? db.get("plus_saves", `${post.id}:${viewer.id}`) : null,
     viewer ? db.get("plus_passes", `${post.id}:${viewer.id}`) : null,
-    c.passEnabled ? takenPlaces(post.id) : Promise.resolve(0),
+    c.passEnabled ? (post.price > 0 ? placesHeld(post.id, viewer?.id) : takenPlaces(post.id)) : Promise.resolve(0),
   ]);
+  const paid = post.price > 0;
+  const onSale = paid ? paymentsConfigured && (await isApprovedOrganiser(post.author_id)) : true;
   const open = passesOpen(post, at);
   const left = post.pass_capacity > 0 ? Math.max(post.pass_capacity - taken, 0) : null;
   const holding = myPass && myPass.status !== "cancelled" ? myPass : null;
@@ -92,7 +97,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
           {c.youtubeId && <div className="mt-5"><VideoPlayer id={c.youtubeId} title={c.title} /></div>}
 
           <div className="mt-6">
-            {l ? (
+            {l && Object.values(l).some(Boolean) ? (
               <section aria-label="Contact and details" className="space-y-2 rounded-2xl bg-sage-100 p-4 text-sm">
                 {l.venue && <p><span className="text-muted">Venue:</span> <strong>{l.venue}</strong></p>}
                 {l.organiser && <p><span className="text-muted">Organiser:</span> <strong>{l.organiser}</strong></p>}
@@ -106,14 +111,14 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
                   {l.mapLink && <a href={l.mapLink} target="_blank" rel="noopener noreferrer nofollow" className="btn bg-white !px-4 !py-2 text-sm text-teal ring-1 ring-line"><MapPin className="h-4 w-4" aria-hidden /> Map</a>}
                 </div>
               </section>
-            ) : (
+            ) : !l ? (
               <LockedBox hub={c.hub} />
-            )}
+            ) : null}
           </div>
 
           {c.passEnabled && (
             <section aria-label="E-Pass" className="mt-4 rounded-2xl border border-teal/30 bg-white p-4 text-sm">
-              <p className="flex items-center gap-2 font-semibold text-teal"><Ticket className="h-5 w-5" aria-hidden /> Free E-Pass</p>
+              <p className="flex items-center gap-2 font-semibold text-teal"><Ticket className="h-5 w-5" aria-hidden /> {paid ? `E-Pass ${rupees(post.price)}` : "Free E-Pass"}</p>
               {holding ? (
                 <Link href={`/plus/pass/${holding.code}`} className="btn btn-primary mt-3"><QrCode className="h-4 w-4" aria-hidden /> {holding.status === "checked_in" ? "Checked in · view E-Pass" : "View my E-Pass"}</Link>
               ) : !c.verified ? (
@@ -122,13 +127,20 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
                 <p className="mt-1 text-muted">E-Passes are closed: the event has ended.</p>
               ) : left === 0 ? (
                 <p className="mt-1 text-muted">All E-Passes have gone.</p>
+              ) : paid && !onSale ? (
+                <p className="mt-1 text-muted">Sales for this event are paused.</p>
+              ) : viewer && paid ? (
+                <div className="mt-2">
+                  <BuyPassButton postId={post.id} label={`Buy E-Pass ${rupees(post.price)}`} start={startPaidPass} confirm={confirmPaidPass} />
+                  <p className="mt-2 text-xs text-muted">Secure payment by Razorpay (UPI, cards, net banking) to PAHAD.{left !== null ? ` ${left} of ${post.pass_capacity} left.` : ""}</p>
+                </div>
               ) : viewer ? (
                 <div className="mt-2">
                   <PlusButton action={registerPass.bind(null, post.id)} className="!bg-teal !px-4 !py-2 !text-white">Get my free E-Pass</PlusButton>
                   {left !== null && <p className="mt-2 text-xs text-muted">{left} of {post.pass_capacity} left</p>}
                 </div>
               ) : (
-                <p className="mt-1"><Link href={`/plus/login?next=/plus/${post.id}`} className="font-semibold text-teal underline">Sign in</Link> to get your free E-Pass{left !== null ? ` (${left} left)` : ""}.</p>
+                <p className="mt-1"><Link href={`/plus/login?next=/plus/${post.id}`} className="font-semibold text-teal underline">Sign in</Link> to {paid ? "buy" : "get your free"} E-Pass{left !== null ? ` (${left} left)` : ""}.</p>
               )}
               {mine && c.verified && (
                 <Link href={`/plus/checkin/${post.id}`} className="mt-3 inline-flex items-center gap-1 font-semibold text-teal underline">Check-in &amp; registrations ({taken})</Link>

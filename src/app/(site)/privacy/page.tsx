@@ -49,6 +49,8 @@ export default function PrivacyPage() {
           <li><strong>E-Passes:</strong> the events you take a free E-Pass for, the name on the pass, and when you were checked in. The organiser and PAHAD&apos;s verifiers see the names on the passes for their event; nobody else does.</li>
           <li><strong>Likes and saves:</strong> the posts you like (only the total number is public) and the posts you save (only you see them).</li>
           <li><strong>Notifications:</strong> if you turn them on, your browser&apos;s push subscription (a device address from Google, Apple or Mozilla) and the regions you chose. Turn them off in Me at any time.</li>
+          <li><strong>Paid E-Passes:</strong> payments are made to PAHAD through Razorpay, which handles your card, UPI or bank details under its own privacy policy; PAHAD never sees or stores them. PAHAD keeps a record of each sale (event, amount, Razorpay payment reference, refunds) for its accounts.</li>
+          <li><strong>Paid organisers:</strong> the name on the payout account and the UPI ID or bank account and IFSC you give PAHAD, seen only by PAHAD&apos;s President, to pay you for your ticket sales.</li>
           <li><strong>PAHAD membership link:</strong> if you link your membership, which membership it is, so your posts show a PAHAD member badge.</li>
           <li><strong>Cookie:</strong> one essential cookie keeps you signed in for up to 30 days. No advertising or analytics trackers.</li>
         </ul>
@@ -62,7 +64,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong>Deleting your data:</strong> delete your account at any time in the app (Me → Delete my account). Your account and sign-in data are deleted
-          at once, along with your E-Passes, likes, saves and notification subscriptions, and your posts are removed with their contact details erased. See <Link href="/plus/delete-account" className="underline">how account deletion works</Link>.
+          at once, along with your E-Passes, likes, saves, notification subscriptions and payout details (records of paid E-Passes are kept for PAHAD&apos;s accounts, without your name), and your posts are removed with their contact details erased. See <Link href="/plus/delete-account" className="underline">how account deletion works</Link>.
         </p>
       </section>
     </>

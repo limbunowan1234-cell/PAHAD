@@ -4,6 +4,8 @@ import { NewPostForm } from "@/components/plus/client";
 import { createPlusPost } from "@/lib/plus/post-actions";
 import { HUB_KEYS, type PlusHub } from "@/lib/plus/config";
 import { getPlusUser } from "@/lib/plus/session";
+import { getFeePercent, isApprovedOrganiser } from "@/lib/plus/payments";
+import { paymentsConfigured } from "@/lib/plus/razorpay";
 
 export const metadata = { title: "Post", robots: { index: false } };
 
@@ -31,9 +33,13 @@ async function Composer({ searchParams }: { searchParams: Promise<Record<string,
     );
   }
   const hub = sp.hub as PlusHub;
+  const [canSell, feePercent] = await Promise.all([
+    paymentsConfigured ? isApprovedOrganiser(viewer.id) : Promise.resolve(false),
+    getFeePercent(),
+  ]);
   return (
     <div className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line sm:p-6">
-      <NewPostForm action={createPlusPost} initialHub={HUB_KEYS.includes(hub) ? hub : undefined} />
+      <NewPostForm action={createPlusPost} initialHub={HUB_KEYS.includes(hub) ? hub : undefined} canSell={canSell} feePercent={feePercent} />
     </div>
   );
 }

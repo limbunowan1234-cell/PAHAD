@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { moderatePlusPost } from "../../plus-actions";
+import { bulkModeratePlus, moderatePlusPost } from "../../plus-actions";
+import { PlusTabs } from "@/components/admin/PlusTabs";
 import { AdminForm, Disclosure } from "@/components/admin/client";
 import { Badge, Empty, Field, Notice, PageHeader } from "@/components/admin/ui";
 import { requireUser } from "@/lib/auth/session";
@@ -85,6 +86,7 @@ export default async function PlusQueuePage({ searchParams }: PageProps<"/admin/
         title="PAHAD+"
         description={`Posts from the PAHAD+ app. They go live straight away as Unverified, with contact, booking and registration details hidden until a verifier checks them. Unverified posts drop out after ${PLUS_RULES.unverifiedDays} days; ${PLUS_RULES.flagsToHold} community reports put a post on hold unless the President made it Flag-Proof.`}
       />
+      <PlusTabs user={user} active="queue" />
       {viewOnly && <Notice>View only. PAHAD+ posts are verified by the President and the verifiers he assigns.</Notice>}
       {!viewOnly && user.role !== "super_admin" && (
         <Notice>
@@ -102,6 +104,23 @@ export default async function PlusQueuePage({ searchParams }: PageProps<"/admin/
         ))}
       </div>
 
+      {!viewOnly && rows.length > 1 && tab.key !== "verified" && (
+        <div className="mb-4 rounded-2xl border border-line bg-sand/60 p-4">
+          <AdminForm id="plus-bulk" action={bulkModeratePlus} submitLabel="Apply to ticked posts">
+            <div className="grid gap-3 sm:grid-cols-[200px_1fr]">
+              <Field label="For every ticked post">
+                <select name="status" defaultValue="verified" className="field">
+                  <option value="verified">Verify</option>
+                  <option value="hold">Put on hold</option>
+                  <option value="rejected">Reject (needs a reason)</option>
+                </select>
+              </Field>
+              <Field label="Reason for the posters" hint="Needed when rejecting."><input name="reason" maxLength={300} className="field" /></Field>
+            </div>
+          </AdminForm>
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <Empty>Nothing here.</Empty>
       ) : (
@@ -118,6 +137,9 @@ export default async function PlusQueuePage({ searchParams }: PageProps<"/admin/
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      {!viewOnly && rows.length > 1 && tab.key !== "verified" && (
+                        <input type="checkbox" name="ids" value={p.id} form="plus-bulk" aria-label={`Tick “${p.title}”`} className="h-4 w-4 accent-teal" />
+                      )}
                       <Badge tone={TONE[p.status]}>{LABEL[p.status]}</Badge>
                       <Badge>{hub?.emoji} {hub?.label}{p.brief_type ? `: ${BRIEF_TYPES[p.brief_type as BriefType]?.label}` : ""}</Badge>
                       <span className="text-xs text-muted">{p.region}{p.locality ? ` · ${p.locality}` : ""}</span>

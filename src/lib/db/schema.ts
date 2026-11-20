@@ -83,7 +83,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   password_resets: { id: "text", user_id: "text", expires_at: "text", used: "bool", created_at: "text" },
   plus_users: {
     id: "text", email: "text", name: "text", phone: "text", account_type: "text", password_hash: "text", email_verified: "bool",
-    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text", member_id: "text",
+    terms_accepted_at: "text", status: "text", created_at: "text", last_login: "text", member_id: "text", suspend_reason: "text", suspended_by: "text",
   },
   plus_tokens: { id: "text", user_id: "text", kind: "text", expires_at: "text", used: "bool", created_at: "text", data: "text" },
   plus_posts: {
@@ -92,12 +92,21 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     organiser: "text", contact_phone: "text", contact_whatsapp: "text", contact_email: "text", address: "text", website: "text",
     link: "text", map_link: "text", best_season: "text", hours: "text", valid_until: "text", deadline: "text", status: "text",
     flags: "int", verified_by_name: "text", verified_at: "text", reject_reason: "text", author_id: "text", author_name: "text",
-    author_type: "text", author_member: "bool", pass_enabled: "bool", pass_capacity: "int", likes: "int", created_at: "text", updated_at: "text",
+    author_type: "text", author_member: "bool", pass_enabled: "bool", pass_capacity: "int", price: "int", likes: "int", created_at: "text", updated_at: "text",
   },
   plus_passes: {
     id: "text", code: "text", post_id: "text", user_id: "text", holder_name: "text", status: "text", checked_in_at: "text",
-    checked_in_by: "text", reminded: "bool", created_at: "text",
+    checked_in_by: "text", reminded: "bool", order_id: "text", created_at: "text",
   },
+  plus_organisers: {
+    id: "text", account_name: "text", upi: "text", bank_account: "text", ifsc: "text", status: "text", note: "text",
+    requested_at: "text", decided_by_name: "text", decided_at: "text",
+  },
+  plus_orders: {
+    id: "text", rzp_order_id: "text", rzp_payment_id: "text", post_id: "text", user_id: "text", holder_name: "text", amount: "int",
+    fee: "int", status: "text", pass_id: "text", refund_id: "text", created_at: "text", paid_at: "text", refunded_at: "text",
+  },
+  plus_payouts: { id: "text", post_id: "text", organiser_id: "text", amount: "int", reference: "text", paid_by_name: "text", paid_at: "text" },
   plus_likes: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
   plus_saves: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
   plus_push: { id: "text", user_id: "text", endpoint: "text", p256dh: "text", auth: "text", regions: "text", created_at: "text" },
@@ -166,6 +175,9 @@ export function createTableSQL(): string[] {
     "CREATE INDEX IF NOT EXISTS plus_likes_post_idx ON plus_likes (post_id)",
     "CREATE INDEX IF NOT EXISTS plus_saves_user_idx ON plus_saves (user_id)",
     "CREATE INDEX IF NOT EXISTS plus_push_user_idx ON plus_push (user_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS plus_orders_rzp_idx ON plus_orders (rzp_order_id)",
+    "CREATE INDEX IF NOT EXISTS plus_orders_post_idx ON plus_orders (post_id)",
+    "CREATE INDEX IF NOT EXISTS plus_payouts_post_idx ON plus_payouts (post_id)",
     // One vote per member per poll, enforced by the database (the receipt id is poll:user too).
     "CREATE UNIQUE INDEX IF NOT EXISTS poll_receipts_once_idx ON poll_receipts (poll_id, user_id)",
   );

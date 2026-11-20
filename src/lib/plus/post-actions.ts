@@ -8,6 +8,8 @@ import { parseYouTubeId } from "@/lib/youtube";
 import type { PlusPost } from "@/lib/types";
 import { HUB_KEYS, PLUS_REGIONS, PLUS_RULES, ROAM_KINDS, ROAM_STAGES, USER_BRIEF_TYPES, type BriefType, type PlusHub } from "./config";
 import { getPlusUser } from "./session";
+import { isApprovedOrganiser } from "./payments";
+import { paymentsConfigured } from "./razorpay";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
@@ -66,7 +68,7 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     best_season: str(fd, "best_season", 80), hours: str(fd, "hours", 120), valid_until: "", deadline: "",
     status: "unverified", flags: 0, verified_by_name: "", verified_at: "", reject_reason: "",
     author_id: u.id, author_name: u.name, author_type: u.account_type, author_member: Boolean(u.member_id),
-    pass_enabled: false, pass_capacity: 0, likes: 0, created_at: now(), updated_at: now(),
+    pass_enabled: false, pass_capacity: 0, price: 0, likes: 0, created_at: now(), updated_at: now(),
   };
 
   if (hub === "events") {
@@ -80,6 +82,13 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
     // Free E-Passes: open once the event is verified (registration is locked until then).
     p.pass_enabled = fd.get("pass_enabled") === "on";
     p.pass_capacity = p.pass_enabled ? Math.min(Math.max(Math.round(Number(str(fd, "pass_capacity", 7)) || 0), 0), 100_000) : 0;
+    // Paid E-Passes: approved paid organisers only, when payments are switched on. Price fixed once posted.
+    const rupeesAsked = Number(str(fd, "price", 8) || 0);
+    if (p.pass_enabled && rupeesAsked > 0) {
+      if (!paymentsConfigured || !(await isApprovedOrganiser(u.id))) return { ok: false, message: "Only organisers PAHAD has approved can sell E-Passes. Leave the price empty for free passes." };
+      if (!Number.isFinite(rupeesAsked) || rupeesAsked < 10 || rupeesAsked > 50_000) return { ok: false, message: "Set a price between ₹10 and ₹50,000." };
+      p.price = Math.round(rupeesAsked * 100);
+    }
   } else if (hub === "roam") {
     const kind = str(fd, "kind", 60);
     const stage = str(fd, "stage", 20);

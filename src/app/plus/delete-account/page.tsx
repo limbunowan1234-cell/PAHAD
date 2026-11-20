@@ -26,11 +26,12 @@ export default function DeleteAccountPage() {
       <ul>
         <li>Your account: name, email address, phone number and password, straight away.</li>
         <li>Your sign-in and email links, the reports you made, and the accounts you blocked.</li>
-        <li>Your E-Passes, likes, saved posts, notification subscriptions and any PAHAD membership link.</li>
+        <li>Your E-Passes, likes, saved posts, notification subscriptions, any PAHAD membership link, and your payout details if you sold E-Passes.</li>
         <li>Your posts are taken off PAHAD+ at once, and their phone, WhatsApp, email and address details are erased.</li>
       </ul>
       <h2>What is kept</h2>
       <ul>
+        <li>Records of paid E-Passes (amount, date and Razorpay payment reference, without your name), which PAHAD must keep for its accounts.</li>
         <li>An entry in PAHAD&apos;s activity log saying that an account was deleted (without your name or email), kept for security.</li>
         <li>The text of removed posts (titles and descriptions, without your contact details or your name), hidden from everyone, so PAHAD can deal with any reports about them. Ask PAHAD through the <Link href="/contact">contact page</Link> to erase it completely.</li>
       </ul>

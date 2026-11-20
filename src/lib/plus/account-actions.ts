@@ -78,7 +78,7 @@ export async function signUpPlus(_prev: ActionState, fd: FormData): Promise<Acti
   const id = newId();
   await db.insert("plus_users", {
     id, email, name, phone, account_type, password_hash: hashPassword(password), email_verified: false,
-    terms_accepted_at: now(), status: "active", created_at: now(), last_login: now(), member_id: "",
+    terms_accepted_at: now(), status: "active", created_at: now(), last_login: now(), member_id: "", suspend_reason: "", suspended_by: "",
   });
   sendVerifyEmail(email, name, await issueToken(id, "verify"));
   await setPlusSession(id);
@@ -90,7 +90,8 @@ export async function signInPlus(_prev: ActionState, fd: FormData): Promise<Acti
   const password = String(fd.get("password") ?? "");
   if (tooMany(`signin:${email}`, 5, 10 * 60_000)) return { ok: false, message: "Too many attempts. Please wait 10 minutes and try again." };
   const u = (await db.all("plus_users")).find((x) => x.email.toLowerCase() === email);
-  if (!u || u.status !== "active" || !verifyPassword(password, u.password_hash)) return { ok: false, message: "Email or password is incorrect." };
+  if (!u || !verifyPassword(password, u.password_hash)) return { ok: false, message: "Email or password is incorrect." };
+  if (u.status !== "active") return { ok: false, message: "This PAHAD+ account is suspended. Contact PAHAD through the website if you think this is a mistake." };
   await db.update("plus_users", u.id, { last_login: now() });
   await setPlusSession(u.id);
   redirect(safeNext(str(fd, "next", 300)));
@@ -192,6 +193,9 @@ export async function deletePlusAccount(_prev: ActionState, fd: FormData): Promi
   for (const postId of new Set(liked.map((l) => l.post_id))) await db.update("plus_posts", postId, { likes: (await db.findBy("plus_likes", "post_id", postId)).length });
   for (const s of await db.findBy("plus_saves", "user_id", u.id)) await db.remove("plus_saves", s.id);
   for (const s of await db.findBy("plus_push", "user_id", u.id)) await db.remove("plus_push", s.id);
+  // Paid orders are financial records PAHAD must keep: they stay, without the name. Payout details are deleted.
+  for (const o of await db.findBy("plus_orders", "user_id", u.id)) await db.update("plus_orders", o.id, { user_id: "", holder_name: "Deleted account" });
+  if (await db.get("plus_organisers", u.id)) await db.remove("plus_organisers", u.id);
   for (const b of (await db.all("plus_blocks")).filter((x) => x.blocker_id === u.id || x.blocked_id === u.id)) await db.remove("plus_blocks", b.id);
   for (const f of await db.findBy("plus_flags", "user_id", u.id)) await db.remove("plus_flags", f.id);
   await db.remove("plus_users", u.id);

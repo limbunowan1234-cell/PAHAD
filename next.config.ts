@@ -53,6 +53,11 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // PAHAD+ gate: the organiser scans E-Pass QR codes with the camera (this page only; later rules override).
+        source: "/plus/checkin/:id",
+        headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }],
+      },
+      {
         // Android app downloads (PAHAD.apk, PAHAD-Admin.apk).
         source: "/downloads/:file",
         headers: [
