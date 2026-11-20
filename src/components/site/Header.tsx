@@ -8,15 +8,16 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogIn, Menu, Search, X } from "lucide-react";
 import { nav, site, type NavGroup } from "@/lib/site";
 import { InstallAppButton } from "./InstallApp";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { cn } from "@/lib/utils";
 
 /** Reads the URL for active-link styling; wrapped in Suspense by the layout. */
-export function Header({ menu }: { menu?: NavGroup[] }) {
-  return <HeaderView pathname={usePathname()} menu={menu} />;
+export function Header({ menu, languages }: { menu?: NavGroup[]; languages?: boolean }) {
+  return <HeaderView pathname={usePathname()} menu={menu} languages={languages} />;
 }
 
 /** `menu`: the website menu as arranged in Admin → Menu & Pages, read on the server. */
-export function HeaderView({ pathname, menu = nav }: { pathname: string; menu?: NavGroup[] }) {
+export function HeaderView({ pathname, menu = nav, languages = false }: { pathname: string; menu?: NavGroup[]; languages?: boolean }) {
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -100,6 +101,7 @@ export function HeaderView({ pathname, menu = nav }: { pathname: string; menu?: 
         </nav>
 
         <div className="flex items-center gap-2">
+          {languages && <LanguageSwitch className="hidden !px-2.5 xl:inline-flex" />}
           <LiveEventsButton onClick={() => setOpen(false)} active={pathname.startsWith("/events")} />
           <Link href="/membership" className="btn btn-primary hidden whitespace-nowrap !py-2.5 sm:inline-flex lg:!px-4 lg:text-sm xl:!px-[1.4rem] xl:text-[0.95rem]">
             Become a member
@@ -145,6 +147,7 @@ export function HeaderView({ pathname, menu = nav }: { pathname: string; menu?: 
         >
           <nav aria-label="Mobile" className="container-page py-4">
             <SearchForm id="mobile-search" className="mb-2" />
+            {languages && <LanguageSwitch className="mb-2 w-full justify-center py-2.5" />}
             {menu.map((group) => (
               <div key={group.label} className="border-b border-line">
                 {group.items ? (

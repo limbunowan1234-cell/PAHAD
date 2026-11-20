@@ -356,6 +356,19 @@ export type CustomPage = {
   updated_at: string;
 };
 
+/** One phrase of website text and its Nepali version (Admin → Nepali translation). */
+export type Translation = {
+  id: string;
+  en: string;
+  ne: string;
+  /** "machine" = Google's first draft, "human" = checked or written by PAHAD, "keep" = leave in English. */
+  source: "machine" | "human" | "keep" | "";
+  page: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /** Small key/value settings, e.g. "hero:about" → image URL. */
 export type Setting = {
   id: string;
@@ -464,5 +477,6 @@ export type Tables = {
   ballots: Ballot;
   password_resets: PasswordReset;
   pages: CustomPage;
+  translations: Translation;
 };
 export type TableName = keyof Tables;

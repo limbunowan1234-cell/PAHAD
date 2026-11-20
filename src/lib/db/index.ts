@@ -165,7 +165,7 @@ function fileBackend(): Backend {
     return {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
       submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
-      notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [], pages: [],
+      notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [], pages: [], translations: [],
       videos: [], featured: [], polls: [], poll_voters: [], poll_receipts: [], ballots: [], password_resets: [],
     };
   }

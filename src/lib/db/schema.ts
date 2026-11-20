@@ -85,6 +85,9 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     id: "text", slug: "text", title: "text", eyebrow: "text", intro: "text", body: "text", cover: "text", collect: "text",
     status: "text", updated_by: "text", created_at: "text", updated_at: "text",
   },
+  translations: {
+    id: "text", en: "text", ne: "text", source: "text", page: "text", updated_by: "text", created_at: "text", updated_at: "text",
+  },
   featured: {
     id: "text", kind: "text", ref_id: "text", title: "text", text: "text", link: "text", image: "text", pages: "text",
     active: "bool", sort: "int", starts_on: "text", ends_on: "text", created_by_name: "text", created_at: "text", updated_at: "text",

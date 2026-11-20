@@ -15,7 +15,7 @@ export const googleConfigured = Boolean(URL_ && SECRET);
 
 type ScriptResult = { ok: boolean; error?: string; [k: string]: unknown };
 
-async function callScript(action: string, payload: Record<string, unknown>): Promise<ScriptResult> {
+async function callScript(action: string, payload: Record<string, unknown>, timeoutMs = 20_000): Promise<ScriptResult> {
   if (!googleConfigured) return { ok: false, error: "Google Sheets is not connected yet." };
   try {
     const res = await fetch(URL_!, {
@@ -23,7 +23,7 @@ async function callScript(action: string, payload: Record<string, unknown>): Pro
       headers: { "Content-Type": "text/plain;charset=utf-8" }, // Apps Script reads the raw body
       body: JSON.stringify({ secret: SECRET, action, ...payload }),
       redirect: "follow",
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const json = (await res.json().catch(() => null)) as ScriptResult | null;
     return json ?? { ok: false, error: `Unexpected response (${res.status}).` };
@@ -82,4 +82,16 @@ export async function flushOutbox(limit = 25): Promise<number> {
     }
   }
   return (await db.all("outbox")).length;
+}
+
+/**
+ * First-draft translations from Google (LanguageApp in the organisation's Apps Script).
+ * Returns one string per input ("" where Google gave nothing), or null if the bridge failed.
+ * Needs the "translate" action in google-apps-script/Code.gs (redeploy after updating).
+ */
+export async function translateTexts(texts: string[], to = "ne"): Promise<string[] | null> {
+  if (!texts.length) return [];
+  const res = await callScript("translate", { texts, to }, 55_000);
+  if (!res.ok || !Array.isArray(res.texts)) return null;
+  return (res.texts as unknown[]).map((t) => (typeof t === "string" ? t : ""));
 }

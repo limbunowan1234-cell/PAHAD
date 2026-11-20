@@ -3,6 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "./db";
 import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING, type FilmsPage } from "./films";
 import { heroTextId, heroVideoId, parseHeroText, parseHeroVideo, type HeroKey, type HeroOverride } from "./heroes";
+import { LANGUAGE_SWITCH_SETTING } from "./i18n";
 import { DEFAULT_MENU, MENU_SETTING, sanitizeMenu, type MenuGroup } from "./menu";
 import { DEFAULT_MEMBERSHIP_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "./membership";
 import { onPage, todayInIndia } from "./placements";
@@ -270,4 +271,21 @@ export async function getPublishedPageSlugs(): Promise<string[]> {
   cacheLife("hours");
   cacheTag("pages");
   return (await db.all("pages")).filter((p) => p.status === "published").map((p) => p.slug);
+}
+
+// ------------------------------------------------------------------ Nepali version
+/** English phrase → Nepali, for the website's language switch. Phrases marked "keep" stay English. */
+export async function getNepaliDictionary(): Promise<Record<string, string>> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("translations");
+  return Object.fromEntries((await db.all("translations")).filter((t) => t.ne.trim() && t.source !== "keep").map((t) => [t.en, t.ne.trim()]));
+}
+
+/** Is the EN / नेपाली switch shown on the website? */
+export async function getLanguageSwitchOn(): Promise<boolean> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+  return (await db.get("settings", LANGUAGE_SWITCH_SETTING))?.value === "on";
 }
