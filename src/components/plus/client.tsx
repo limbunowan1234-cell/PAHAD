@@ -150,9 +150,14 @@ const LOCKED_NOTE = "Shown only after PAHAD verifies your post.";
 export function NewPostForm({
   action,
   initialHub,
+  canSell = false,
+  feePercent = 0,
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   initialHub?: PlusHub;
+  /** Approved paid organiser (and payments switched on): may set a price. */
+  canSell?: boolean;
+  feePercent?: number;
 }) {
   const [hub, setHub] = useState<PlusHub>(initialHub ?? "events");
   const [brief, setBrief] = useState<BriefType>("alert");
@@ -216,6 +221,11 @@ export function NewPostForm({
           <F label="How many E-Passes?" hint="Leave empty for no limit.">
             <input type="number" name="pass_capacity" min={0} max={100000} className="field" />
           </F>
+          {canSell && (
+            <F label="Price per E-Pass (₹)" hint={`Leave empty for free. ₹10–₹50,000. Buyers pay through Razorpay to PAHAD; PAHAD pays you after the event${feePercent ? `, less its ${feePercent}% fee` : ""}. The price can't be changed after posting.`}>
+              <input type="number" name="price" min={10} max={50000} step="1" inputMode="numeric" className="field" />
+            </F>
+          )}
         </fieldset>
       )}
       {hub === "roam" && (
@@ -483,6 +493,64 @@ export function GateScanner({ action }: { action: (prev: GateResult, fd: FormDat
         <input ref={input} id="gate-code" name="code" required autoComplete="off" autoCapitalize="characters" placeholder="E-Pass code" className="field flex-1 font-mono uppercase" />
         <button type="submit" disabled={pending} className="btn btn-primary disabled:opacity-60">{pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Check in"}</button>
       </form>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ paid E-Pass (Razorpay Checkout)
+type CheckoutStart = { ok: false; message: string } | { ok: true; done?: string; key: string; orderId: string; amount: number; name: string; description: string; prefill: { name: string; email: string } };
+type RazorpayCtor = new (o: Record<string, unknown>) => { open: () => void; on: (e: string, f: (r: { error?: { description?: string } }) => void) => void };
+
+function loadCheckout(): Promise<RazorpayCtor | null> {
+  const w = window as unknown as { Razorpay?: RazorpayCtor };
+  if (w.Razorpay) return Promise.resolve(w.Razorpay);
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(w.Razorpay ?? null);
+    s.onerror = () => resolve(null);
+    document.body.appendChild(s);
+  });
+}
+
+export function BuyPassButton({
+  postId, label, start, confirm,
+}: {
+  postId: string;
+  label: string;
+  start: (postId: string) => Promise<CheckoutStart>;
+  confirm: (r: { orderId: string; paymentId: string; signature: string }) => Promise<{ ok: boolean; message: string; code?: string }>;
+}) {
+  const [pending, setPending] = useState(false);
+  const [msg, setMsg] = useState("");
+  const router = useRouter();
+  const buy = async () => {
+    setPending(true);
+    setMsg("");
+    const s = await start(postId);
+    if (!s.ok) { setPending(false); return setMsg(s.message); }
+    if (s.done) return router.push(`/plus/pass/${s.done}`);
+    const Razorpay = await loadCheckout();
+    if (!Razorpay) { setPending(false); return setMsg("Couldn't open the payment window. Check your connection and try again."); }
+    const rz = new Razorpay({
+      key: s.key, order_id: s.orderId, amount: s.amount, currency: "INR", name: s.name, description: s.description, prefill: s.prefill,
+      theme: { color: "#164d58" },
+      modal: { ondismiss: () => setPending(false) },
+      handler: async (r: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+        const done = await confirm({ orderId: r.razorpay_order_id, paymentId: r.razorpay_payment_id, signature: r.razorpay_signature });
+        if (done.ok && done.code) router.push(`/plus/pass/${done.code}?new=1`);
+        else { setPending(false); setMsg(done.message); }
+      },
+    });
+    rz.on("payment.failed", (r) => { setPending(false); setMsg(r.error?.description || "The payment didn't go through. No money was taken."); });
+    rz.open();
+  };
+  return (
+    <div>
+      <button type="button" onClick={buy} disabled={pending} className="btn btn-primary !px-5 !py-2.5 disabled:opacity-60">
+        {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />} {label}
+      </button>
+      {msg && <p role="alert" className="mt-2 text-sm text-red-700">{msg}</p>}
     </div>
   );
 }

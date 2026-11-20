@@ -14,6 +14,7 @@ export async function registerPass(postId: string): Promise<ActionState> {
   if (!u.email_verified) return { ok: false, message: "Please confirm your email first (Me → Resend confirmation link)." };
   const p = await db.get("plus_posts", postId);
   if (!p || !passesOpen(p)) return { ok: false, message: "E-Passes aren't available for this event." };
+  if (p.price > 0) return { ok: false, message: "This is a paid E-Pass: use Buy E-Pass." };
   const id = `${postId}:${u.id}`;
   const existing = await db.get("plus_passes", id);
   if (existing && existing.status !== "cancelled") redirect(`/plus/pass/${existing.code}`);
@@ -25,7 +26,7 @@ export async function registerPass(postId: string): Promise<ActionState> {
   } else {
     for (let i = 0; i < 3 && (await db.findBy("plus_passes", "code", code)).length; i++) code = newPassCode();
     await db.insert("plus_passes", {
-      id, code, post_id: postId, user_id: u.id, holder_name: u.name, status: "active", checked_in_at: "", checked_in_by: "", reminded: false, created_at: now(),
+      id, code, post_id: postId, user_id: u.id, holder_name: u.name, status: "active", checked_in_at: "", checked_in_by: "", reminded: false, order_id: "", created_at: now(),
     });
   }
   updateTag("plus");
@@ -37,6 +38,7 @@ export async function cancelPass(code: string): Promise<ActionState> {
   if (!u) return { ok: false, message: "Please sign in again." };
   const pass = (await db.findBy("plus_passes", "code", code))[0];
   if (!pass || pass.user_id !== u.id) return { ok: false, message: "Not found." };
+  if (pass.order_id) return { ok: false, message: "Paid E-Passes can't be cancelled here. For a refund, contact the organiser or PAHAD." };
   if (pass.status !== "active") return { ok: false, message: pass.status === "checked_in" ? "You've already been checked in." : "This E-Pass is already cancelled." };
   await db.update("plus_passes", pass.id, { status: "cancelled" });
   updateTag("plus");

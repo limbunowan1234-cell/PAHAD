@@ -313,6 +313,8 @@ export type PlusUser = {
   last_login: string;
   /** Linked PAHAD membership (members.id), confirmed by email. Only shows a "PAHAD member" badge: no member access. */
   member_id: string;
+  suspend_reason: string;
+  suspended_by: string;
 };
 /** One-time link for a PP user. id = SHA-256 of the token in the link. data: e.g. the member id for "link". */
 export type PlusToken = { id: string; user_id: string; kind: "verify" | "reset" | "link"; expires_at: string; used: boolean; created_at: string; data: string };
@@ -362,6 +364,8 @@ export type PlusPost = {
   /** Events: free E-Passes offered by the organiser; capacity 0 = no limit. */
   pass_enabled: boolean;
   pass_capacity: number;
+  /** Paid E-Pass price in paise (0 = free). Only approved paid organisers, fixed when posted. */
+  price: number;
   likes: number;
   created_at: string;
   updated_at: string;
@@ -380,8 +384,45 @@ export type PlusPass = {
   checked_in_at: string;
   checked_in_by: string;
   reminded: boolean;
+  /** Paid passes: the plus_orders id. */
+  order_id: string;
   created_at: string;
 };
+/**
+ * Paid organisers: Business / Organisation accounts the President approves to sell E-Passes. id = the PP user id.
+ * Payout details are seen only by the President (PAHAD collects payments and pays organisers out).
+ */
+export type PlusOrganiser = {
+  id: string;
+  account_name: string;
+  upi: string;
+  bank_account: string;
+  ifsc: string;
+  status: "pending" | "approved" | "rejected" | "revoked";
+  note: string;
+  requested_at: string;
+  decided_by_name: string;
+  decided_at: string;
+};
+/** One Razorpay payment attempt for a paid E-Pass. Amounts in paise; fee = PAHAD's fee at the time of sale. */
+export type PlusOrder = {
+  id: string;
+  rzp_order_id: string;
+  rzp_payment_id: string;
+  post_id: string;
+  user_id: string;
+  holder_name: string;
+  amount: number;
+  fee: number;
+  status: "created" | "paid" | "refunded";
+  pass_id: string;
+  refund_id: string;
+  created_at: string;
+  paid_at: string;
+  refunded_at: string;
+};
+/** A payout PAHAD made to an organiser for an event (bank transfer / UPI done outside the app). */
+export type PlusPayout = { id: string; post_id: string; organiser_id: string; amount: number; reference: string; paid_by_name: string; paid_at: string };
 /** id = `${post_id}:${user_id}`. */
 export type PlusLike = { id: string; post_id: string; user_id: string; created_at: string };
 export type PlusSave = { id: string; post_id: string; user_id: string; created_at: string };
@@ -611,6 +652,9 @@ export type Tables = {
   plus_likes: PlusLike;
   plus_saves: PlusSave;
   plus_push: PlusPushSub;
+  plus_organisers: PlusOrganiser;
+  plus_orders: PlusOrder;
+  plus_payouts: PlusPayout;
   pages: CustomPage;
   translations: Translation;
 };

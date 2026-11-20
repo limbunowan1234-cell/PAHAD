@@ -7,6 +7,8 @@ import { plusDate } from "@/components/plus/ui";
 import { db } from "@/lib/db";
 import { checkInPass } from "@/lib/plus/pass-actions";
 import { gateAccess } from "@/lib/plus/passes";
+import { eventMoney } from "@/lib/plus/payments";
+import { rupees } from "@/lib/plus/razorpay";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Check-in", robots: { index: false } };
@@ -27,6 +29,7 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
   }
   const passes = (await db.findBy("plus_passes", "post_id", id)).filter((p) => p.status !== "cancelled").sort((a, b) => a.holder_name.localeCompare(b.holder_name));
   const inCount = passes.filter((p) => p.status === "checked_in").length;
+  const money = post.price > 0 ? await eventMoney(id) : null;
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <Link href={`/plus/${id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-teal"><ArrowLeft className="h-4 w-4" aria-hidden /> Event</Link>
@@ -37,6 +40,15 @@ async function Gate({ params }: { params: Promise<{ id: string }> }) {
         <p className="mt-3 text-3xl font-bold">{inCount} <span className="text-base font-normal text-white/80">checked in of {passes.length}{post.pass_capacity ? ` (limit ${post.pass_capacity})` : ""}</span></p>
         <p className="mt-1 text-xs text-white/70">You: {who.name}</p>
       </header>
+      {money && (
+        <section aria-label="Sales" className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] bg-white p-5 text-sm ring-1 ring-line sm:grid-cols-4">
+          <div><p className="text-muted">Sold</p><p className="text-lg font-semibold">{money.sold} · {rupees(money.gross)}</p></div>
+          <div><p className="text-muted">PAHAD fee</p><p className="text-lg font-semibold">{rupees(money.fee)}</p></div>
+          <div><p className="text-muted">Paid out</p><p className="text-lg font-semibold">{rupees(money.paidOut)}</p></div>
+          <div><p className="text-muted">Owed</p><p className="text-lg font-semibold text-teal">{rupees(money.owed)}</p></div>
+          {money.refunds > 0 && <p className="col-span-full text-xs text-muted">{money.refunds} refunded ({rupees(money.refundedAmount)})</p>}
+        </section>
+      )}
       {!["verified", "flag_proof"].includes(post.status) && <p className="rounded-2xl bg-cream p-4 text-sm text-teal-900">This event isn&apos;t verified, so no E-Passes can be issued yet.</p>}
       {who.canAct ? (
         <section className="rounded-[var(--radius-card)] bg-white p-5 ring-1 ring-line"><GateScanner action={checkInPass.bind(null, id)} /></section>

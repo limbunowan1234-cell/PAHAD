@@ -79,7 +79,7 @@ export function PlusCardView({ c, at }: { c: PlusCard; at: number }) {
         <p className="mt-1 line-clamp-3 text-sm text-ink/80">{c.summary}</p>
         <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-xs">
           {when && <span className={cn("font-semibold", alert ? "text-coral-700" : "text-teal-700")}>{when}</span>}
-          {c.passEnabled && c.verified && <span className="inline-flex items-center gap-1 font-semibold text-teal"><Ticket className="h-3.5 w-3.5" aria-hidden /> Free E-Pass</span>}
+          {c.passEnabled && c.verified && <span className="inline-flex items-center gap-1 font-semibold text-teal"><Ticket className="h-3.5 w-3.5" aria-hidden /> {c.price > 0 ? `E-Pass ₹${c.price / 100}` : "Free E-Pass"}</span>}
           {c.likes > 0 && <span className="inline-flex items-center gap-1 text-muted"><Heart className="h-3.5 w-3.5" aria-hidden /> {c.likes}</span>}
           {c.authorMember && <span className="inline-flex items-center gap-1 text-teal"><BadgeCheck className="h-3.5 w-3.5" aria-hidden /> PAHAD member</span>}
         </div>

@@ -108,12 +108,15 @@ export function AdminForm({
   submitLabel = "Save",
   resetOnSuccess = false,
   className,
+  id,
 }: {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   children: ReactNode;
   submitLabel?: string;
   resetOnSuccess?: boolean;
   className?: string;
+  /** Lets inputs elsewhere on the page join this form (form="id"), e.g. row checkboxes for a bulk bar. */
+  id?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
   const ref = useRef<HTMLFormElement>(null);
@@ -125,7 +128,7 @@ export function AdminForm({
     }
   }, [state, resetOnSuccess, router]);
   return (
-    <form ref={ref} method="post" onSubmit={keepValuesOnSubmit(formAction)} className={cn("space-y-4", className)}>
+    <form ref={ref} id={id} method="post" onSubmit={keepValuesOnSubmit(formAction)} className={cn("space-y-4", className)}>
       {children}
       {state && (
         <p role={state.ok ? "status" : "alert"} className={cn("rounded-xl p-3 text-sm", state.ok ? "bg-sage-100 text-teal" : "bg-red-50 text-red-800")}>
