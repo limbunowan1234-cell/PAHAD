@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { ACCOUNT_TYPES, plusAccountId, type PlusAccountType } from "@/lib/plus/config";
 import { isOptimisable } from "@/lib/plus/media";
 import { toggleFollow } from "@/lib/plus/post-actions";
-import { isLivePlus, requestTime, toCard, withAuthentic } from "@/lib/plus/posts";
+import { AUTHOR_BADGE, associateBadges, isLivePlus, requestTime, toCard, withAuthentic } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 import { youTubeThumb } from "@/lib/youtube";
 
@@ -28,6 +28,7 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
   const live = posts.filter((p) => ["unverified", "verified", "flag_proof"].includes(p.status) && isLivePlus(p, at) && !p.official)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
   const cards = await withAuthentic(live.map(toCard));
+  const badge = (await associateBadges()).get(u.id);
   const saves = !u.private_mode && !u.hide_saved ? await db.findBy("plus_saves", "user_id", u.id) : [];
   const saved = (await Promise.all(saves.slice(0, 12).map((s) => db.get("plus_posts", s.post_id))))
     .filter((p): p is NonNullable<typeof p> => Boolean(p && ["verified", "flag_proof"].includes(p.status) && isLivePlus(p, at)));
@@ -48,6 +49,7 @@ async function Profile({ params }: { params: Promise<{ id: string }> }) {
             <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-extrabold">
               <span className="rounded-full bg-white px-2 py-0.5 ring-1 ring-line">{ACCOUNT_TYPES[u.account_type as PlusAccountType]}</span>
               {u.member_id && <span className="rounded-full bg-sage px-2 py-0.5 text-sand">PAHAD member</span>}
+              {badge && <span className="rounded-full bg-[#D9A75A]/20 px-2 py-0.5 text-[#E9C27A] ring-1 ring-[#D9A75A]/50">{AUTHOR_BADGE[badge]}</span>}
               {u.private_mode && <span className="rounded-full bg-white px-2 py-0.5 ring-1 ring-line">🔒 Private</span>}
             </div>
           </div>

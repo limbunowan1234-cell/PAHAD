@@ -83,7 +83,7 @@ export const PERMISSIONS = {
   "media.upload": [...EXEC, CR, HN],
   "media.delete": [P, GS, C],
 
-  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E, SYS],
+  "members.view": [P, GS, JS, GB, C, ES, RO, MD, DH, PC, E, SYS, HN], // H1: read-only, to know who they advise and train
   "members.create": [P, GS, JS, C, ES, MD, DH, PC, E], // scoped roles: own unit
   "members.edit": [P, GS, JS, C, MD, DH],
   "members.approve": [P, GS, JS, C, MD, DH],

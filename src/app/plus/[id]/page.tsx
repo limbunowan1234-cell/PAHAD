@@ -15,7 +15,7 @@ import { registerPass } from "@/lib/plus/pass-actions";
 import { passesOpen, takenPlaces } from "@/lib/plus/passes";
 import { db } from "@/lib/db";
 import { ROAM_STAGES } from "@/lib/plus/config";
-import { getPlusPost, isLivePlus, toCard, requestTime, withAuthentic } from "@/lib/plus/posts";
+import { AUTHOR_BADGE, getPlusPost, isLivePlus, toCard, requestTime, withAuthentic } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 
 export const metadata = { title: "Post", robots: { index: false } };
@@ -83,6 +83,7 @@ async function Detail({ params, searchParams }: { params: Promise<{ id: string }
             <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-semibold text-ink">{hubLabel(c)}</span>
             <TrustBadge c={c} size="md" />
             {authentic && <span className="rounded-full bg-sage px-3 py-1 text-xs font-extrabold text-sand">✓ Authentic</span>}
+            {c.authorBadge && <span className="rounded-full bg-[#D9A75A]/20 px-3 py-1 text-xs font-extrabold text-[#E9C27A] ring-1 ring-[#D9A75A]/50">{AUTHOR_BADGE[c.authorBadge]}</span>}
           </div>
           <h1 className="mt-3 font-display text-3xl leading-tight text-teal">{c.title}</h1>
           <p className="mt-2 flex items-center gap-1 text-sm text-muted"><MapPin className="h-4 w-4" aria-hidden /> {[c.locality, c.region].filter(Boolean).join(", ")}</p>

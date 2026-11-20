@@ -25,6 +25,7 @@ export type Reel = {
   youtubeId: string;
   trust: "pahad" | "flag_proof" | "verified" | "unverified";
   authentic: boolean;
+  authorBadge: string;
   author: string;
   authorId: string;
   canFollow: boolean;
@@ -243,6 +244,7 @@ export function ReelsFeed({ reels, signedIn, actions, flagsToHold }: { reels: Re
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     <span className={cn("rounded-md px-2 py-0.5 text-[11px] font-extrabold", TRUST[r.trust].cls)}>{TRUST[r.trust].label}</span>
                     {r.authentic && r.trust !== "pahad" && <span className="rounded-md bg-sage px-2 py-0.5 text-[11px] font-extrabold text-sand">✓ Authentic</span>}
+                    {r.authorBadge && <span className="rounded-md bg-[#D9A75A]/20 px-2 py-0.5 text-[11px] font-extrabold text-[#E9C27A] ring-1 ring-[#D9A75A]/50">{r.authorBadge}</span>}
                   </div>
                 </div>
               </div>

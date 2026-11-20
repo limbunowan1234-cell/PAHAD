@@ -7,7 +7,7 @@ import { timing } from "@/components/plus/ui";
 import { db } from "@/lib/db";
 import { BRIEF_TYPES, HUB_KEYS, PLUS_HUBS, PLUS_REGIONS, PLUS_RULES, type BriefType, type PlusHub } from "@/lib/plus/config";
 import { reportPlusPost, toggleFollow, toggleLike, toggleSave, toggleSupport } from "@/lib/plus/post-actions";
-import { plusFeed, requestTime, type PlusCard, type PlusFilters, type PlusTab } from "@/lib/plus/posts";
+import { plusFeed, requestTime, type PlusCard, type PlusFilters, type PlusTab, AUTHOR_BADGE } from "@/lib/plus/posts";
 import { getPlusUser } from "@/lib/plus/session";
 import { appAdmin } from "@/lib/plus/app-admin";
 import { canModeratePlus } from "@/lib/plus/access";
@@ -82,6 +82,7 @@ function toReel(c: PlusCard, at: number, liked: Set<string>, saved: Set<string>,
     trust: c.source === "pahad" || c.official ? "pahad" : c.flagProof ? "flag_proof" : c.verified ? "verified" : "unverified",
     videoUrl: c.videoUrl, canEditMedia: c.source === "user" && mediaEditable(c), contactsUnverified: c.contactsUnverified,
     authentic: c.authentic,
+    authorBadge: c.authorBadge ? AUTHOR_BADGE[c.authorBadge] : "",
     author: c.authorName, authorId: c.authorId, canFollow: c.source === "user" && Boolean(c.authorId) && c.authorId !== viewerId,
     following: followed.has(c.authorId), authorMember: c.authorMember,
     likes: c.likes, liked: liked.has(c.id), saved: saved.has(c.id), supports: c.supports, supported: supported.has(c.id),

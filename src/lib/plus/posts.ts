@@ -57,6 +57,8 @@ export type PlusCard = {
   authorId: string;
   /** The poster linked their PAHAD membership. */
   authorMember: boolean;
+  /** C1 Creator / H1 Honorary Member: the poster's PAHAD+ account is linked to such a PAHAD dashboard account. */
+  authorBadge: AuthorBadge;
   /** PAHAD has confirmed who the poster is: a linked PAHAD member or an approved paid organiser. */
   authentic: boolean;
   likes: number;
@@ -99,7 +101,7 @@ export function toCard(p: PlusPost): PlusCard {
     body: verified || isAlert || p.show_contacts ? p.body : "",
     image: p.image, youtubeId: p.youtube_id, startsAt: p.starts_at, endsAt: p.ends_at, validUntil: p.valid_until, deadline: p.deadline,
     bestSeason: p.best_season, hours: p.hours, verified, flagProof: p.status === "flag_proof",
-    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, authentic: p.author_member || p.supports > AUTHENTIC_SUPPORTS || p.official, likes: p.likes, supports: p.supports, flags: p.flags,
+    authorName: p.author_name, authorType: p.author_type, authorId: p.author_id, authorMember: p.author_member, authorBadge: "", authentic: p.author_member || p.supports > AUTHENTIC_SUPPORTS || p.official, likes: p.likes, supports: p.supports, flags: p.flags,
     passEnabled: p.hub === "events" && p.pass_enabled, price: p.price, createdAt: p.created_at, href: `/plus/${p.id}`,
     locked: contacts
       ? {
@@ -118,7 +120,7 @@ function pahadPostCard(p: Post): PlusCard {
   return {
     id: `pahad-${p.id}`, source: "pahad", hub, briefType: hub === "briefs" ? "tip" : "", kind: "", stage: "", region: "Darjeeling", locality: p.location || "PAHAD",
     title: p.title, summary: p.excerpt, body: "", image: p.cover, youtubeId: "", startsAt: p.event_date, endsAt: "", validUntil: "", deadline: "",
-    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, contactsUnverified: false, videoUrl: "", official: true, spotlight: false, passApproval: false, createdAt: p.published_at || p.created_at,
+    bestSeason: "", hours: "", verified: true, flagProof: true, authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authorBadge: "", authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, contactsUnverified: false, videoUrl: "", official: true, spotlight: false, passApproval: false, createdAt: p.published_at || p.created_at,
     href: `${POST_TYPE_PATH[p.type]}/${p.slug}`, locked: null,
   };
 }
@@ -130,7 +132,7 @@ function circularCard(c: Circular): PlusCard {
     id: `circular-${c.id}`, source: "pahad", hub: "briefs", briefType: "policy", kind: "", stage: "", region: "Darjeeling", locality: "PAHAD",
     title: c.title, summary: text.length > 220 ? `${text.slice(0, 219).replace(/\s+\S*$/, "")}…` : text, body: "", image: "", youtubeId: "",
     startsAt: "", endsAt: "", validUntil: "", deadline: "", bestSeason: "", hours: "", verified: true, flagProof: true,
-    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, contactsUnverified: false, videoUrl: "", official: true, spotlight: false, passApproval: false, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
+    authorName: "PAHAD", authorType: "organisation", authorId: "", authorMember: false, authorBadge: "", authentic: true, likes: 0, supports: 0, flags: 0, passEnabled: false, price: 0, contactsUnverified: false, videoUrl: "", official: true, spotlight: false, passApproval: false, createdAt: c.created_at, href: `/plus/c/${c.id}`, locked: null,
   };
 }
 
@@ -174,10 +176,28 @@ async function approvedOrganisers(): Promise<Set<string>> {
   return new Set((await db.all("plus_organisers")).filter((o) => o.status === "approved").map((o) => o.id));
 }
 
-/** Marks posts from confirmed people as Authentic. */
+export type AuthorBadge = "" | "creator" | "honorary";
+export const AUTHOR_BADGE: Record<Exclude<AuthorBadge, "">, string> = { creator: "🎨 Creator", honorary: "H1 Honorary" };
+
+/** PAHAD+ accounts linked to an active C1 Creator or H1 Honorary Member dashboard account. */
+export async function associateBadges(): Promise<Map<string, Exclude<AuthorBadge, "">>> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("plus");
+  const users = new Map((await db.all("users")).filter((u) => u.active && (u.role === "creator" || u.role === "honorary")).map((u) => [u.id, u.role as "creator" | "honorary"]));
+  const out = new Map<string, "creator" | "honorary">();
+  for (const pu of await db.all("plus_users")) { const r = pu.admin_user_id && users.get(pu.admin_user_id); if (r) out.set(pu.id, r); }
+  return out;
+}
+
+/** Marks posts from confirmed people as Authentic (approved organisers, C1 Creators and H1 Honorary Members), with their badge. */
 export async function withAuthentic(cards: PlusCard[]): Promise<PlusCard[]> {
-  const orgs = await approvedOrganisers();
-  return cards.map((c) => (c.source === "user" && !c.authentic && orgs.has(c.authorId) ? { ...c, authentic: true } : c));
+  const [orgs, badges] = await Promise.all([approvedOrganisers(), associateBadges()]);
+  return cards.map((c) => {
+    if (c.source !== "user") return c;
+    const badge = badges.get(c.authorId) ?? "";
+    return { ...c, authorBadge: badge, authentic: c.authentic || orgs.has(c.authorId) || Boolean(badge) };
+  });
 }
 
 /** For You: what the community is backing (likes, support, verification), favouring recent posts. */
