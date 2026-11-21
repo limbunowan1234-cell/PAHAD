@@ -100,7 +100,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   },
   plus_organisers: {
     id: "text", account_name: "text", upi: "text", bank_account: "text", ifsc: "text", status: "text", note: "text",
-    requested_at: "text", decided_by_name: "text", decided_at: "text",
+    requested_at: "text", decided_by_name: "text", decided_at: "text", created_at: "text",
   },
   plus_orders: {
     id: "text", rzp_order_id: "text", rzp_payment_id: "text", post_id: "text", user_id: "text", holder_name: "text", amount: "int",
@@ -109,7 +109,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   plus_follows: { id: "text", follower_id: "text", followee_id: "text", created_at: "text" },
   plus_supports: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
   plus_notifications: { id: "text", user_id: "text", kind: "text", title: "text", body: "text", url: "text", read: "bool", created_at: "text" },
-  plus_payouts: { id: "text", post_id: "text", organiser_id: "text", amount: "int", reference: "text", paid_by_name: "text", paid_at: "text" },
+  plus_payouts: { id: "text", post_id: "text", organiser_id: "text", amount: "int", reference: "text", paid_by_name: "text", paid_at: "text", created_at: "text" },
   plus_likes: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
   plus_saves: { id: "text", post_id: "text", user_id: "text", created_at: "text" },
   plus_push: { id: "text", user_id: "text", endpoint: "text", p256dh: "text", auth: "text", regions: "text", created_at: "text" },
