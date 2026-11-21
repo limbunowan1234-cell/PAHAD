@@ -5,6 +5,7 @@ import { GridSkeleton, PostGrid, MembersOnlyGrid } from "@/components/site/posts
 import { PageHero } from "@/components/site/ui";
 import { pageMetadata } from "@/lib/seo";
 import { PageFeatures } from "@/components/site/PageFeatures";
+import { KhabarNews, KhabarNewsSkeleton } from "@/components/site/KhabarNews";
 
 export const metadata: Metadata = pageMetadata({
   title: "News & Stories",
@@ -30,7 +31,10 @@ export default function NewsPage() {
           <MembersOnlyGrid type="news" />
         </Suspense>
       </section>
-      <section className="container-page pb-20">
+      <Suspense fallback={<KhabarNewsSkeleton />}>
+        <KhabarNews limit={24} />
+      </Suspense>
+      <section className="container-page py-20">
         <div className="grid gap-5 rounded-[var(--radius-card)] bg-sand p-6 sm:grid-cols-2 sm:p-8">
           <p className="sm:col-span-2 eyebrow">More news from the hills</p>
           <a href="https://khabardarjeeling.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 rounded-2xl bg-white p-5 ring-1 ring-line hover:ring-teal">

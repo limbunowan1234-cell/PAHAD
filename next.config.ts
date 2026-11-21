@@ -25,6 +25,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       // YouTube video thumbnails (the player itself loads from youtube-nocookie.com on click)
       { protocol: "https", hostname: "i.ytimg.com" },
+      // Khabar Darjeeling article photos (headlines on the News page)
+      { protocol: "https", hostname: "khabardarjeeling.in" },
+      { protocol: "https", hostname: "khabar-worker.limbunowan1234.workers.dev" },
       ...(r2Host ? [{ protocol: "https" as const, hostname: r2Host }] : []),
     ],
   },
