@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // The PAHAD+ phone app (Expo) has its own tooling.
+    "mobile/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
