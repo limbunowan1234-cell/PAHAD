@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { refreshTag } from "@/lib/refresh-tag";
 import { db } from "@/lib/db";
 import { fileFrom, log, str, type ActionState } from "@/lib/admin-helpers";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -22,7 +22,7 @@ export async function setPlusSetting(key: Setting, on: boolean): Promise<ActionS
   if (!SETTINGS.includes(key)) return { ok: false, message: "Unknown setting." };
   if (key === "admin_mode" && !u.admin_user_id) return { ok: false, message: "Link your PAHAD admin account first." };
   await db.update("plus_users", u.id, { [key]: Boolean(on) });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Saved." };
 }
 
@@ -32,7 +32,7 @@ export async function setPlusAccountType(type: PlusAccountType): Promise<ActionS
   if (!Object.hasOwn(ACCOUNT_TYPES, type)) return { ok: false, message: "Choose an account type." };
   await db.update("plus_users", u.id, { account_type: type });
   for (const p of await db.findBy("plus_posts", "author_id", u.id)) if (!p.official) await db.update("plus_posts", p.id, { author_type: type });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Account type saved." };
 }
 
@@ -59,7 +59,7 @@ export async function linkAdminAccess(): Promise<ActionState> {
   if (taken) return { ok: false, message: "That dashboard account is already linked to another PAHAD+ account." };
   await db.update("plus_users", u.id, { admin_user_id: admin.id, admin_mode: true });
   await log(admin, "linked", "plus account", u.id, `PAHAD+ account ${u.email} linked to ${admin.name}'s dashboard account`);
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: `Linked to ${admin.name}'s PAHAD account. Admin mode is on.` };
 }
 
@@ -67,7 +67,7 @@ export async function unlinkAdminAccess(): Promise<ActionState> {
   const u = await getPlusUser();
   if (!u) return { ok: false, message: "Please sign in again." };
   await db.update("plus_users", u.id, { admin_user_id: "", admin_mode: false });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Admin access unlinked. This is now an app user account." };
 }
 
@@ -109,7 +109,7 @@ export async function updatePlusMedia(_prev: ActionState, fd: FormData): Promise
   if (fd.get("clear_video") === "on") { youtube_id = ""; video_url = ""; }
   await db.update("plus_posts", p.id, { image, youtube_id, video_url, updated_at: new Date().toISOString() });
   if (curator && !owner) await log(admin, "updated", "plus media", p.id, `${p.title}: media changed from the Desk`);
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Media saved." };
 }
 
@@ -119,7 +119,7 @@ export async function deskModerate(_prev: ActionState, fd: FormData): Promise<Ac
   if (!admin) return { ok: false, message: "Admin mode is off. Sign in to your PAHAD dashboard account or switch Admin mode on." };
   try {
     const title = await moderateOne(admin, str(fd, "id", 64), str(fd, "status", 20) as PlusStatus, str(fd, "reason", 300));
-    updateTag("plus");
+    refreshTag("plus");
     return { ok: true, message: `Saved: “${title}”.` };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Not allowed." };
@@ -134,7 +134,7 @@ export async function setPlusSpotlight(postId: string, on: boolean): Promise<Act
   if (!p) return { ok: false, message: "Post not found." };
   await db.update("plus_posts", postId, { spotlight: on });
   await log(admin, on ? "spotlighted" : "unspotlighted", "plus post", postId, p.title);
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: on ? "Added to the Executive Spotlight." : "Removed from the spotlight." };
 }
 
@@ -161,6 +161,6 @@ export async function blockFromPicker(_prev: ActionState, fd: FormData): Promise
   if (other.admin_user_id) return { ok: false, message: "Official PAHAD accounts cannot be blocked. Report a post instead." };
   const key = `${u.id}:${id}`;
   if (!(await db.get("plus_blocks", key))) await db.insert("plus_blocks", { id: key, blocker_id: u.id, blocked_id: id, created_at: new Date().toISOString() });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: `Blocked ${other.name}. You won't see their posts any more.` };
 }

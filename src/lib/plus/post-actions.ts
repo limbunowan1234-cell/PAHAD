@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { updateTag } from "next/cache";
+import { refreshTag } from "@/lib/refresh-tag";
 import { db, newId } from "@/lib/db";
 import { fileFrom, now, str, type ActionState } from "@/lib/admin-helpers";
 import { parseYouTubeId } from "@/lib/youtube";
@@ -169,7 +169,7 @@ export async function createPlusPost(_prev: ActionState, fd: FormData): Promise<
 
   const id = newId();
   await db.insert("plus_posts", { id, image, ...p });
-  updateTag("plus");
+  refreshTag("plus");
   redirect(`/plus/${id}?posted=1`);
 }
 
@@ -180,7 +180,7 @@ export async function deleteOwnPlusPost(id: string): Promise<ActionState> {
   const p = await db.get("plus_posts", id);
   if (!p || p.author_id !== u.id) return { ok: false, message: "Not found." };
   await db.update("plus_posts", id, { status: "removed", updated_at: now() });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Your post was removed." };
 }
 
@@ -202,7 +202,7 @@ export async function reportPlusPost(_prev: ActionState, fd: FormData): Promise<
   const flags = (await db.findBy("plus_flags", "post_id", postId)).length;
   const hold = flags >= PLUS_RULES.flagsToHold && p.status !== "flag_proof";
   await db.update("plus_posts", postId, { flags, ...(hold ? { status: "hold" } : {}), updated_at: now() });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: hold ? "Thank you. The post is hidden while PAHAD reviews it." : "Thank you. PAHAD's verifiers will look at it." };
 }
 
@@ -243,7 +243,7 @@ export async function toggleLike(postId: string): Promise<ToggleState> {
   else await db.insert("plus_likes", { id, post_id: postId, user_id: u.id, created_at: now() }).catch(() => null); // a double tap
   const count = (await db.findBy("plus_likes", "post_id", postId)).length;
   await db.update("plus_posts", postId, { likes: count });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: had ? "Like removed." : "Liked.", on: !had, count };
 }
 
@@ -277,7 +277,7 @@ export async function toggleSupport(postId: string): Promise<ToggleState> {
       ? { kind: "support", title: "Someone supported your post", body: `${u.name} vouched that “${p.title}” is genuine.`, url: `/plus/${postId}` }
       : { kind: "support", title: "Your post is now Authentic ✓", body: `More than ${AUTHENTIC_SUPPORTS} people support “${p.title}”.`, url: `/plus/${postId}` }));
   }
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: had ? "Support removed." : "Thanks for vouching for this post.", on: !had, count };
 }
 

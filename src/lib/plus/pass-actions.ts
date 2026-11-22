@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { updateTag } from "next/cache";
+import { refreshTag } from "@/lib/refresh-tag";
 import { db } from "@/lib/db";
 import { now, str, type ActionState } from "@/lib/admin-helpers";
 import { codeFrom, gateAccess, newPassCode, passesOpen, takenPlaces } from "./passes";
@@ -34,7 +34,7 @@ export async function registerPass(postId: string): Promise<ActionState> {
     });
   }
   if (status === "pending") after(() => notifyPlus(p.author_id, { kind: "events", title: "New E-Pass request", body: `${u.name} asked for an E-Pass to “${p.title}”.`, url: `/plus/checkin/${p.id}` }));
-  updateTag("plus");
+  refreshTag("plus");
   redirect(`/plus/pass/${code}?new=1`);
 }
 
@@ -46,7 +46,7 @@ export async function cancelPass(code: string): Promise<ActionState> {
   if (pass.order_id) return { ok: false, message: "Paid E-Passes can't be cancelled here. For a refund, contact the organiser or PAHAD." };
   if (pass.status !== "active" && pass.status !== "pending") return { ok: false, message: pass.status === "checked_in" ? "You've already been checked in." : "This E-Pass is already cancelled." };
   await db.update("plus_passes", pass.id, { status: "cancelled" });
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Your E-Pass is cancelled and your place is free for someone else." };
 }
 
@@ -89,6 +89,6 @@ export async function decidePass(code: string, decision: "approve" | "revoke"): 
     await db.update("plus_passes", pass.id, { status: "revoked" });
     after(() => notifyPlus(pass.user_id, { kind: "events", title: "E-Pass not approved", body: `Your E-Pass for “${post.title}” was revoked by the organiser.`, url: "/plus/me#passes" }));
   }
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: decision === "approve" ? `Approved: ${pass.holder_name}.` : `Revoked: ${pass.holder_name}.` };
 }

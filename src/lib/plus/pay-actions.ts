@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { refreshTag } from "@/lib/refresh-tag";
 import { db, newId } from "@/lib/db";
 import { notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { passesOpen } from "./passes";
@@ -68,6 +68,6 @@ export async function confirmPaidPass(input: { orderId: string; paymentId: strin
   const order = (await db.findBy("plus_orders", "rzp_order_id", orderId))[0];
   if (!order || order.user_id !== u.id) return { ok: false, message: "Order not found." };
   const code = await fulfilOrder(order, paymentId);
-  updateTag("plus");
+  refreshTag("plus");
   return { ok: true, message: "Payment received.", code };
 }

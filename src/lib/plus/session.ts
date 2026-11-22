@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { connection } from "next/server";
 import { secret } from "../auth/session";
@@ -36,6 +36,9 @@ function decode(token: string | undefined): string | null {
   }
 }
 
+/** A sign-in token for the PAHAD+ phone app (sent as "Authorization: Bearer …"); the same signed format as the cookie. */
+export const plusAppToken = (userId: string) => encode(userId);
+
 export async function setPlusSession(userId: string) {
   (await cookies()).set(COOKIE, encode(userId), {
     httpOnly: true,
@@ -54,7 +57,9 @@ export type PlusViewer = Omit<PlusUser, "password_hash">;
 
 /** The signed-in PP user, re-read from the database on every request (suspension / deletion apply at once). */
 export const getPlusUser = cache(async (): Promise<PlusViewer | null> => {
-  const token = (await cookies()).get(COOKIE)?.value;
+  // The website uses the cookie; the PAHAD+ phone app sends the same signed token as a Bearer header.
+  const bearer = (await headers()).get("authorization")?.match(/^Bearer\s+(\S+)$/i)?.[1];
+  const token = bearer ?? (await cookies()).get(COOKIE)?.value;
   await connection();
   const id = decode(token);
   if (!id) return null;

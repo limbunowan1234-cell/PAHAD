@@ -3,7 +3,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { updateTag } from "next/cache";
+import { refreshTag } from "@/lib/refresh-tag";
 import { db, newId } from "@/lib/db";
 import { now, str, type ActionState } from "@/lib/admin-helpers";
 import { hashPassword, validatePasswordStrength, verifyPassword } from "@/lib/auth/password";
@@ -208,7 +208,7 @@ export async function deletePlusAccount(_prev: ActionState, fd: FormData): Promi
     id: newId(), actor_id: "", actor_name: "PAHAD+ user", action: "deleted account", entity: "plus account", entity_id: u.id,
     summary: "A PAHAD+ user deleted their account", details: "", directorate: "", created_at: now(),
   });
-  updateTag("plus");
+  refreshTag("plus");
   await clearPlusSession();
   redirect("/plus?deleted=1");
 }
@@ -219,7 +219,7 @@ const LINK_SENT = "If that email belongs to an active PAHAD member, we sent it a
 async function setMemberLink(userId: string, memberId: string) {
   await db.update("plus_users", userId, { member_id: memberId });
   for (const p of await db.findBy("plus_posts", "author_id", userId)) await db.update("plus_posts", p.id, { author_member: Boolean(memberId) });
-  updateTag("plus");
+  refreshTag("plus");
 }
 
 /**
