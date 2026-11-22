@@ -7,6 +7,7 @@
     "eslint": "^10.15.0",
     "eslint-config-expo": "~58.0.4",
     "expo": "~58.0.26",
+    "expo-build-properties": "~58.0.12",
     "expo-camera": "~58.0.14",
     "expo-constants": "~58.0.16",
     "expo-haptics": "~58.0.8",
@@ -36,7 +37,8 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "prebuild": "expo prebuild --platform android --clean"
+    "prebuild": "expo prebuild --platform android --clean",
+    "build:android": "node scripts/build-android.js"
   },
   "private": true
 }
