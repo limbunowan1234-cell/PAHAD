@@ -243,6 +243,7 @@ export const TEAM_SECTIONS = [
   "Directorate",
   "Department",
   "Geographical Unit",
+  "Associates",
 ] as const;
 export type TeamSection = (typeof TEAM_SECTIONS)[number];
 
@@ -533,6 +534,11 @@ export type TeamMember = {
   id: string;
   name: string;
   section: TeamSection;
+  subtitle: string;
+  detail: string;
+  tag: string;
+  profile_url: string;
+  profile_label: string;
   designation: string;
   department: string;
   /** Additional work beyond the main role; hidden on the site when empty. */

@@ -470,8 +470,16 @@ export async function saveTeamMember(_prev: ActionState, fd: FormData): Promise<
     if (!TEAM_SECTIONS.includes(section)) throw new Error("Choose a section.");
     const photoLink = safeUrl(str(fd, "photo_link", 500));
     const photo_url = (await fileFrom(fd, "photo_file", "images")) ?? (photoLink ? toImageUrl(photoLink, 600) : str(fd, "photo_url", 500));
+    const rawProfileUrl = str(fd, "profile_url", 500);
+    const profile_url = safeUrl(rawProfileUrl);
+    if (rawProfileUrl && (!profile_url || profile_url.startsWith("//"))) throw new Error("Enter a valid profile URL.");
     const data = {
       name, section, photo_url,
+      subtitle: str(fd, "subtitle", 200),
+      detail: str(fd, "detail", 500),
+      tag: str(fd, "tag", 80),
+      profile_url,
+      profile_label: str(fd, "profile_label", 80),
       designation: str(fd, "designation", 120),
       department: str(fd, "department", 160),
       additional_charge: str(fd, "additional_charge", 200),

@@ -1,4 +1,4 @@
-import type { Media, Partner, Post, Task, Tables, Unit, User } from "../types";
+import type { Media, Partner, Post, Task, Tables, TeamMember, Unit, User } from "../types";
 
 const now = () => new Date().toISOString();
 
@@ -15,6 +15,68 @@ export function seedUnits(): Unit[] {
   return DEFAULT_DIRECTORATES.map((d, i) => ({
     id: d.id, kind: "directorate", name: d.name, parent_id: "", active: true, status: "", sort: i + 1, created_at: new Date(Date.UTC(2026, 10, 1, 0, 0, i)).toISOString(),
   }));
+}
+
+/** Actual profiles and media supplied in the PAHAD team carousel design. */
+export function seedTeamMembers(): Omit<TeamMember, "id" | "created_at">[] {
+  return [
+    {
+      name: "Karma Dorjee", section: "Governing Body", subtitle: "Darjeeling · Governing Body",
+      detail: "President & Chairperson · Institutional Governance & Strategic Direction across the Eastern Himalayas.",
+      tag: "Governing Body", profile_url: "https://pahad.org/team", profile_label: "PAHAD Profile",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=900&q=85", sort: 10,
+    },
+    {
+      name: "Dakshata Gurung", section: "Associates", subtitle: "Darjeeling · Music & Culture",
+      detail: "Singer-Songwriter · PAHAD Creative & Cultural Wing celebrating original Himalayan music and youth storytelling.",
+      tag: "Artist", profile_url: "https://www.instagram.com/pahadofficial/", profile_label: "Instagram",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=85", sort: 20,
+    },
+    {
+      name: "Anjali Rai", section: "Executive Body", subtitle: "Kurseong · Executive Leadership",
+      detail: "Chief Executive Director (CED) · Coordinating all six institutional directorates and hill-valley programmes.",
+      tag: "Executive · CED", profile_url: "https://www.linkedin.com/in/pahad-org-8a343244a/", profile_label: "LinkedIn",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=900&q=85", sort: 30,
+    },
+    {
+      name: "Tenzing Bhutia", section: "Directorate", subtitle: "Kalimpong · Directorate 01",
+      detail: "Documentary Filmmaker & Researcher · Leading visual archives, oral histories, and knowledge documentation.",
+      tag: "Creator", profile_url: "https://pahad.org/pages/creators-in-pahad", profile_label: "Creator Profile",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=900&q=85", sort: 40,
+    },
+    {
+      name: "Bikram Tamang", section: "Directorate", subtitle: "Mirik · Directorate 03",
+      detail: "Managing Director · Economic Development, smallholder grower cooperatives, and mountain enterprise.",
+      tag: "Directorate Lead", profile_url: "https://pahad.org/our-work#livelihood-development", profile_label: "Portfolio",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=900&q=85", sort: 50,
+    },
+    {
+      name: "Prerna Subba", section: "Secretariat", subtitle: "Kalimpong · Central Secretariat",
+      detail: "Executive Secretary · Institutional administration, member records, and transparent governance.",
+      tag: "Secretariat", profile_url: "https://www.instagram.com/pahadofficial/", profile_label: "Instagram",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=900&q=85", sort: 60,
+    },
+    {
+      name: "Sonam Lepcha", section: "Geographical Unit", subtitle: "Sikkim · Regional Convenor",
+      detail: "Himalayan Sustainability & Heritage · Spring recharge, biodiversity stewardship, and regional fellowships.",
+      tag: "Regional Convenor", profile_url: "https://youtube.com/@pahad_org", profile_label: "YouTube",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?auto=format&fit=crop&w=900&q=85", sort: 70,
+    },
+    {
+      name: "Rohan Chettri", section: "Directorate", subtitle: "Siliguri & Terai · Directorate 05",
+      detail: "Managing Director · Policy, Governance & Public Affairs connecting Terai, Dooars, and hill communities.",
+      tag: "Directorate Lead", profile_url: "https://pahad.org/team", profile_label: "Profile",
+      designation: "", department: "", additional_charge: "",
+      photo_url: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=85", sort: 80,
+    },
+  ];
 }
 
 export function seedPartners(): Partner[] {
