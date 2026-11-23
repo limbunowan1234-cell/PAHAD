@@ -117,6 +117,7 @@
   background: #06282e;
   box-shadow: 0 28px 65px -16px rgb(0 0 0 / 85%);
   color: var(--team-cream);
+  cursor: grab;
   text-align: left;
   transform-style: preserve-3d;
   backface-visibility: hidden;
@@ -127,6 +128,10 @@
     filter 450ms ease,
     border-color 350ms ease,
     box-shadow 350ms ease;
+}
+
+.card:active {
+  cursor: grabbing;
 }
 
 .card:focus-visible {
