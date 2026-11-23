@@ -7,12 +7,22 @@ import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/li
 import { safeUrl, toImageUrl } from "@/lib/drive";
 import { FILMS_DEFAULTS, FILMS_INTRO_SETTING, FILMS_TITLE_SETTING } from "@/lib/films";
 import { can, canSubmitVideos as canSubmit } from "@/lib/permissions";
-import { pagesFromForm } from "@/lib/placements";
+import { customPageIdFromPlacement, pageList, pagesFromForm } from "@/lib/placements";
 import type { Featured, FeaturedKind, PublicUser, Video } from "@/lib/types";
 import { parseYouTubeId } from "@/lib/youtube";
 
 /** Every check below runs on the server; hidden buttons are only a convenience. */
 const canSubmitVideos = (u: PublicUser) => canSubmit(u);
+
+async function pagePlacementsFromForm(fd: FormData) {
+  const pages = pagesFromForm(fd);
+  const customIds = pageList(pages).map(customPageIdFromPlacement).filter(Boolean);
+  const customPages = await Promise.all(customIds.map((id) => db.get("pages", id)));
+  if (customPages.some((page) => !page || page.format === "html")) {
+    throw new Error("Choose existing standard pages for video and Featured placements.");
+  }
+  return pages;
+}
 
 function videoFields(fd: FormData) {
   const youtube_id = parseYouTubeId(str(fd, "url", 2000));
@@ -61,10 +71,11 @@ export async function saveVideo(_prev: ActionState, fd: FormData): Promise<Actio
     const id = str(fd, "id", 60);
     const existing = id ? await db.get("videos", id) : null;
     if (id && !existing) throw new Error("This video no longer exists.");
+    const pages = fd.get("also_other") === "on" ? await pagePlacementsFromForm(fd) : "";
     const data = {
       ...videoFields(fd),
       // Approved + ON videos always show on the films page; other pages only when "Also show on other pages" is ticked.
-      pages: fd.get("also_other") === "on" ? pagesFromForm(fd) : "",
+      pages,
       visible: fd.get("visible") === "on",
       sort: Number(str(fd, "sort", 6)) || 10,
       updated_at: now(),
@@ -174,9 +185,10 @@ export async function saveFeatured(_prev: ActionState, fd: FormData): Promise<Ac
     const ends_on = str(fd, "ends_on", 10);
     if (starts_on && ends_on && ends_on < starts_on) throw new Error("The end date is before the start date.");
 
+    const pages = await pagePlacementsFromForm(fd);
     const data = {
       kind, ref_id: kind === "announcement" ? "" : ref_id, title, text: str(fd, "text", 400), link: safeLink, image,
-      pages: pagesFromForm(fd), active: fd.get("active") === "on", sort: Number(str(fd, "sort", 6)) || 10, starts_on, ends_on, updated_at: now(),
+      pages, active: fd.get("active") === "on", sort: Number(str(fd, "sort", 6)) || 10, starts_on, ends_on, updated_at: now(),
     };
     if (!data.pages) throw new Error("Choose at least one page to show it on.");
     if (existing) {

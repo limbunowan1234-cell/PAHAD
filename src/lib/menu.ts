@@ -1,7 +1,8 @@
 import { nav, type NavGroup, type NavItem } from "./site";
 import { FILMS_PATH } from "./films";
+import type { CustomPageFormat } from "./types";
 
-/** Settings row holding the website menu as JSON (Admin → Menu & Pages). */
+/** Settings row holding the website menu as JSON (Admin → Pages). */
 export const MENU_SETTING = "site:menu";
 
 export type MenuItem = NavItem & { hidden?: boolean };
@@ -93,4 +94,15 @@ export const BUILT_IN_PAGES: { label: string; href: string }[] = [
   { label: "Terms", href: "/terms" },
 ];
 
-export const customPagePath = (slug: string) => `/pages/${slug}`;
+export const customPagePath = (slug: string, format: CustomPageFormat = "standard") =>
+  format === "html" ? `/pages/${slug}` : `/${slug}`;
+
+const RESERVED_PAGE_SLUGS = new Set([
+  ...BUILT_IN_PAGES.map((page) => page.href.slice(1)),
+  "admin",
+  "api",
+  "pages",
+  "plus",
+]);
+
+export const isReservedPageSlug = (slug: string) => RESERVED_PAGE_SLUGS.has(slug);

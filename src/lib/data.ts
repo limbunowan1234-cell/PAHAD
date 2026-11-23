@@ -8,9 +8,10 @@ import { DEFAULT_MENU, MENU_SETTING, sanitizeMenu, type MenuGroup } from "./menu
 import { DEFAULT_MEMBERSHIP_INTERESTS, MEMBERSHIP_INTERESTS_SETTING, parseInterests } from "./membership";
 import { onPage, todayInIndia } from "./placements";
 import { phaseOf, tally, type Tally } from "./polls";
-import type { CustomPage, FeaturedKind, PageKey, Poll, Post, PostType, Video } from "./types";
+import type { CustomPage, CustomPageFormat, FeaturedKind, PagePlacementKey, Poll, Post, PostType, Video } from "./types";
 import { POST_TYPE_LABEL, POST_TYPE_PATH } from "./utils";
 import { youTubeThumb, youTubeWatchUrl } from "./youtube";
+import { customPagePath } from "./menu";
 
 /** settings row: "off" turns the whole Featured section off; anything else is on. */
 export const FEATURED_SWITCH = "featured:enabled";
@@ -127,7 +128,7 @@ export async function getMedia() {
 
 // ------------------------------------------------------------------ videos and featured content
 /** Approved videos switched ON for a page. Admin changes call updateTag("videos"). */
-export async function getPageVideos(page: PageKey): Promise<Video[]> {
+export async function getPageVideos(page: PagePlacementKey): Promise<Video[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag("videos");
@@ -177,7 +178,7 @@ export type FeaturedCard = { id: string; kind: FeaturedKind; label: string; titl
  * Featured items for a page, resolved to cards. Only approved / published content is used.
  * Members Only posts come back in `members` and must only be rendered inside <MembersOnly>.
  */
-export async function getPageFeatured(page: PageKey): Promise<{ public: FeaturedCard[]; members: FeaturedCard[] }> {
+export async function getPageFeatured(page: PagePlacementKey): Promise<{ public: FeaturedCard[]; members: FeaturedCard[] }> {
   "use cache";
   cacheLife("minutes");
   cacheTag("featured");
@@ -238,27 +239,41 @@ export async function getPublicPollResults(): Promise<{ poll: Poll; tally: Tally
 }
 
 // ------------------------------------------------------------------ menu and custom pages
-/** The website menu: the saved one (Admin → Menu & Pages), or the built-in default. */
+/** The website menu: the saved one (Admin → Pages), or the built-in default. */
 export async function getMenu(): Promise<MenuGroup[]> {
   "use cache";
   cacheLife("hours");
   cacheTag("settings");
+  cacheTag("pages");
   const row = await db.get("settings", MENU_SETTING);
+  let menu: MenuGroup[];
   if (!row) return DEFAULT_MENU;
   try {
-    return sanitizeMenu(JSON.parse(row.value)) ?? DEFAULT_MENU;
+    menu = sanitizeMenu(JSON.parse(row.value)) ?? DEFAULT_MENU;
   } catch {
-    return DEFAULT_MENU;
+    menu = DEFAULT_MENU;
   }
+  const paths = new Map((await db.all("pages")).map((page) => [`/pages/${page.slug}`, customPagePath(page.slug, page.format === "html" ? "html" : "standard")]));
+  const currentPath = (href: string) => paths.get(href) ?? href;
+  return menu.map((group) => ({
+    ...group,
+    href: currentPath(group.href),
+    items: group.items?.map((item) => ({ ...item, href: currentPath(item.href) })),
+  }));
 }
 
-/** A published dashboard-made page, or null. */
+/** A published dashboard-made page in either format, or null. */
 export async function getCustomPage(slug: string): Promise<CustomPage | null> {
   "use cache";
   cacheLife("hours");
   cacheTag("pages");
   const rows = await db.findBy("pages", "slug", slug);
   return rows.find((p) => p.status === "published") ?? null;
+}
+
+export async function getStandardCustomPage(slug: string): Promise<CustomPage | null> {
+  const page = await getCustomPage(slug);
+  return page && page.format !== "html" ? page : null;
 }
 
 /** Published public posts whose category / label matches (case-insensitive). */
@@ -271,11 +286,18 @@ export async function getPostsByLabel(label: string): Promise<Post[]> {
   return (await getPublishedPosts()).filter((p) => p.type !== "document" && p.category.trim().toLowerCase() === want);
 }
 
-export async function getPublishedPageSlugs(): Promise<string[]> {
+export async function getPublishedPageSlugs(format: CustomPageFormat = "standard"): Promise<string[]> {
   "use cache";
   cacheLife("hours");
   cacheTag("pages");
-  return (await db.all("pages")).filter((p) => p.status === "published").map((p) => p.slug);
+  return (await db.all("pages")).filter((p) => p.status === "published" && (format === "html" ? p.format === "html" : p.format !== "html")).map((p) => p.slug);
+}
+
+export async function getPublishedCustomPages(): Promise<CustomPage[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("pages");
+  return (await db.all("pages")).filter((p) => p.status === "published");
 }
 
 // ------------------------------------------------------------------ Nepali version

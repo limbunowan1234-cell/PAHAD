@@ -6,7 +6,7 @@ import { visibleMenu } from "@/lib/menu";
 import { JsonLd, organizationJsonLd } from "@/components/site/JsonLd";
 import { site } from "@/lib/site";
 
-/** The menu from Admin → Menu & Pages (cached), with the films page under its current name. */
+/** The menu from Admin → Pages (cached), with the films page under its current name. */
 async function SiteHeader() {
   const [{ title }, menu, languages] = await Promise.all([getFilmsPage(), getMenu(), getLanguageSwitchOn()]);
   return <Header menu={visibleMenu(menu, title)} languages={languages} />;

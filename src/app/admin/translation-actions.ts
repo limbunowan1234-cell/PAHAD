@@ -8,7 +8,7 @@ import { LANGUAGE_SWITCH_SETTING, normPhrase, phraseId, translatable } from "@/l
 import { canManageMenu } from "@/lib/permissions";
 import type { PublicUser, Translation } from "@/lib/types";
 
-/** Same people as Menu & Pages: the Governing Body (L1), or people the President allowed. */
+/** Same people as Pages: the Governing Body (L1), or people the President allowed. */
 function assertAccess(user: PublicUser) {
   if (!canManageMenu(user)) throw new Error("Only the Governing Body (L1), or people the President allows, can change the Nepali version.");
 }

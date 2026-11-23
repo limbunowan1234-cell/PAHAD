@@ -249,6 +249,8 @@ export type TeamSection = (typeof TEAM_SECTIONS)[number];
 /** Website pages that can show videos and featured content (see lib/placements.ts). */
 export type PageKey =
   | "home" | "about" | "our-work" | "programmes" | "knowledge" | "news" | "events" | "gallery" | "get-involved" | "membership" | "partners";
+export type CustomPagePlacementKey = `custom:${string}`;
+export type PagePlacementKey = PageKey | CustomPagePlacementKey;
 
 export type VideoStatus = "pending" | "approved" | "rejected";
 /** A YouTube video shown through an embed. Video files are never uploaded. */
@@ -541,10 +543,13 @@ export type TeamMember = {
   created_at: string;
 };
 
-/** A page created from the dashboard (Admin → Menu & Pages), shown at /pages/<slug>. */
+export type CustomPageFormat = "standard" | "html";
+
+/** A page created from Admin → Pages: standard pages use /<slug>, HTML pages use /pages/<slug>. */
 export type CustomPage = {
   id: string;
   slug: string;
+  format: CustomPageFormat;
   title: string;
   /** Small label above the title, e.g. "Media". */
   eyebrow: string;

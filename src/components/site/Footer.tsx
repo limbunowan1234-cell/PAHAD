@@ -9,7 +9,7 @@ import { SocialIcon } from "./SocialIcon";
 import { InstallAppButton } from "./InstallApp";
 
 /**
- * Footer columns follow the website menu (Admin → Menu & Pages): one column per section with links,
+ * Footer columns follow the website menu (Admin → Pages): one column per section with links,
  * then "More" for single-link sections such as Partners, plus Voting results.
  */
 function columns(menu: NavGroup[]) {

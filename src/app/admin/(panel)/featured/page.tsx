@@ -9,14 +9,14 @@ import { FEATURED_SWITCH } from "@/lib/data";
 import { db } from "@/lib/db";
 import { can, canView } from "@/lib/permissions";
 import { pageLabel, pageList, todayInIndia } from "@/lib/placements";
-import type { Featured, FeaturedKind } from "@/lib/types";
+import type { CustomPage, Featured, FeaturedKind } from "@/lib/types";
 import { formatDate, POST_TYPE_LABEL } from "@/lib/utils";
 
 export const metadata = { title: "Featured" };
 
 const KIND_LABEL: Record<FeaturedKind, string> = { post: "Post", video: "Video", person: "Team member", announcement: "Announcement" };
 
-function DetailFields({ f }: { f?: Featured }) {
+function DetailFields({ f, customPages }: { f?: Featured; customPages: CustomPage[] }) {
   const isAnnouncement = !f || f.kind === "announcement";
   return (
     <>
@@ -33,7 +33,7 @@ function DetailFields({ f }: { f?: Featured }) {
           <Field label="…or image link" className="sm:col-span-2"><input name="image_link" type="url" className="field" placeholder="https://drive.google.com/file/d/…/view" /></Field>
         </>
       )}
-      <PagesPicker value={f?.pages ?? "home"} />
+      <PagesPicker value={f?.pages ?? "home"} customPages={customPages} />
       <Field label="Start date (optional)"><input name="starts_on" type="date" defaultValue={f?.starts_on} className="field" /></Field>
       <Field label="End date (optional)"><input name="ends_on" type="date" defaultValue={f?.ends_on} className="field" /></Field>
       <Field label="Display order" hint="Lower numbers show first. You can also use the arrows."><input name="sort" type="number" defaultValue={f?.sort ?? 10} className="field" /></Field>
@@ -48,7 +48,10 @@ export default async function FeaturedPage() {
   const user = await requireUser();
   if (!canView(user.role, "featured.manage")) redirect("/admin");
   const manage = can(user.role, "featured.manage");
-  const [items, posts, videos, team, sw] = await Promise.all([db.all("featured"), db.all("posts"), db.all("videos"), db.all("team"), db.get("settings", FEATURED_SWITCH)]);
+  const [items, posts, videos, team, sw, customPages] = await Promise.all([
+    db.all("featured"), db.all("posts"), db.all("videos"), db.all("team"), db.get("settings", FEATURED_SWITCH), db.all("pages"),
+  ]);
+  const customPageLabels = new Map(customPages.filter((p) => p.format !== "html").map((p) => [p.id, p.title]));
   const enabled = sw?.value !== "off";
   const list = items.sort((a, b) => a.sort - b.sort || a.created_at.localeCompare(b.created_at));
   const today = todayInIndia();
@@ -106,7 +109,7 @@ export default async function FeaturedPage() {
           <AdminForm action={saveFeatured} submitLabel="Add to featured" resetOnSuccess>
             <div className="grid gap-4 sm:grid-cols-2">
               <FeaturedKindFields {...options} />
-              <DetailFields />
+              <DetailFields customPages={customPages} />
             </div>
           </AdminForm>
         </Disclosure>
@@ -129,7 +132,7 @@ export default async function FeaturedPage() {
                       <Badge tone={f.active ? "green" : "grey"}>{f.active ? "Active" : "Inactive"}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-muted">
-                      {pageList(f.pages).map(pageLabel).join(", ")}
+                      {pageList(f.pages).map((key) => pageLabel(key, customPageLabels)).join(", ")}
                       {(f.starts_on || f.ends_on) && ` · ${f.starts_on ? formatDate(f.starts_on) : "now"} – ${f.ends_on ? formatDate(f.ends_on) : "no end"}`}
                     </p>
                     {issue && <p className="mt-1 text-xs font-semibold text-coral-700">{issue}</p>}
@@ -145,7 +148,7 @@ export default async function FeaturedPage() {
                   <Disclosure summary="Edit">
                     <AdminForm action={saveFeatured}>
                       <input type="hidden" name="id" value={f.id} />
-                      <div className="grid gap-4 sm:grid-cols-2"><DetailFields f={f} /></div>
+                      <div className="grid gap-4 sm:grid-cols-2"><DetailFields f={f} customPages={customPages} /></div>
                     </AdminForm>
                   </Disclosure>
                 </div>}

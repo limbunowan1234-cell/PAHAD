@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DetailSkeleton, GridSkeleton, RichText } from "@/components/site/posts";
+import { PageFeatures } from "@/components/site/PageFeatures";
 import { EmptyState, PageHero, PostCard } from "@/components/site/ui";
-import { getCustomPage, getPostsByLabel, getPublishedPageSlugs } from "@/lib/data";
+import { getStandardCustomPage, getPostsByLabel, getPublishedPageSlugs } from "@/lib/data";
+import { customPagePlacementKey } from "@/lib/placements";
 import { customPagePath } from "@/lib/menu";
 import { pageMetadata } from "@/lib/seo";
 
-/** Pages made in Admin → Menu & Pages. Cache Components needs at least one entry. */
+/** Standard pages made in Admin → Pages. Cache Components needs at least one entry. */
 export async function generateStaticParams() {
   try {
     const slugs = await getPublishedPageSlugs();
@@ -18,9 +20,9 @@ export async function generateStaticParams() {
   return [{ slug: "_none" }];
 }
 
-export async function generateMetadata({ params }: PageProps<"/pages/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const page = await getCustomPage(slug);
+  const page = await getStandardCustomPage(slug);
   if (!page) return { title: "Not found", robots: { index: false } };
   return pageMetadata({
     title: page.title,
@@ -30,8 +32,7 @@ export async function generateMetadata({ params }: PageProps<"/pages/[slug]">): 
   });
 }
 
-export default function CustomPageRoute({ params }: PageProps<"/pages/[slug]">) {
-  // Pages made after the last deploy are rendered on their first visit, then cached.
+export default function CustomPageRoute({ params }: PageProps<"/[slug]">) {
   return (
     <Suspense fallback={<DetailSkeleton />}>
       <CustomPageView params={params} />
@@ -39,9 +40,9 @@ export default function CustomPageRoute({ params }: PageProps<"/pages/[slug]">) 
   );
 }
 
-async function CustomPageView({ params }: { params: PageProps<"/pages/[slug]">["params"] }) {
+async function CustomPageView({ params }: { params: PageProps<"/[slug]">["params"] }) {
   const { slug } = await params;
-  const page = await getCustomPage(slug);
+  const page = await getStandardCustomPage(slug);
   if (!page) notFound();
   return (
     <>
@@ -60,6 +61,7 @@ async function CustomPageView({ params }: { params: PageProps<"/pages/[slug]">["
           </div>
         </section>
       )}
+      <PageFeatures page={customPagePlacementKey(page.id)} />
     </>
   );
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 import { getPageFeatured, getPageVideos, type FeaturedCard } from "@/lib/data";
-import type { PageKey } from "@/lib/types";
+import type { PagePlacementKey } from "@/lib/types";
 import { MembersOnly } from "./MembersOnly";
 import { MembersBadge } from "./posts";
 import { VideoPlayer } from "./VideoPlayer";
@@ -13,7 +13,7 @@ import { WatchOnYouTube } from "./WatchOnYouTube";
  * Featured content and YouTube videos for one page, all managed from the dashboard
  * (Admin → Featured and Admin → Videos). Renders nothing when there is nothing to show.
  */
-export function PageFeatures({ page }: { page: PageKey }) {
+export function PageFeatures({ page }: { page: PagePlacementKey }) {
   return (
     <Suspense fallback={null}>
       <Featured page={page} />
@@ -22,7 +22,7 @@ export function PageFeatures({ page }: { page: PageKey }) {
   );
 }
 
-async function Featured({ page }: { page: PageKey }) {
+async function Featured({ page }: { page: PagePlacementKey }) {
   const { public: items, members } = await getPageFeatured(page);
   if (items.length === 0 && members.length === 0) return null;
   return (
@@ -91,7 +91,7 @@ function FeatureCard({ card, membersOnly }: { card: FeaturedCard; membersOnly: b
   );
 }
 
-async function Videos({ page }: { page: PageKey }) {
+async function Videos({ page }: { page: PagePlacementKey }) {
   const videos = await getPageVideos(page);
   if (videos.length === 0) return null;
   return (

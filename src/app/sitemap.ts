@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
-import { getPublishedPosts } from "@/lib/data";
+import { getPublishedCustomPages, getPublishedPosts } from "@/lib/data";
 import { site } from "@/lib/site";
+import { customPagePath } from "@/lib/menu";
 import type { PostType } from "@/lib/types";
 import { POST_TYPE_PATH } from "@/lib/utils";
 
@@ -66,6 +67,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: post.type === "news" || post.type === "event" ? 0.7 : 0.6,
       ...(post.cover ? { images: [url(post.cover)] } : {}),
     });
+  }
+
+  try {
+    const customPages = await getPublishedCustomPages();
+    for (const page of customPages) {
+      entries.push({
+        url: url(customPagePath(page.slug, page.format === "html" ? "html" : "standard")),
+        lastModified: page.updated_at ? new Date(page.updated_at) : undefined,
+        changeFrequency: "monthly",
+        priority: 0.6,
+        ...(page.cover ? { images: [url(page.cover)] } : {}),
+      });
+    }
+  } catch (error) {
+    console.error("sitemap: could not load custom pages", error);
   }
 
   return entries;
