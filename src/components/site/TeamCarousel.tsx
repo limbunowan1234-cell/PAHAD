@@ -43,6 +43,7 @@ export function TeamCarousel({ people }: { people: TeamMember[] }) {
   const [expanded, setExpanded] = useState(false);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const startX = useRef<number | null>(null);
+  const dragged = useRef(false);
 
   useEffect(() => {
     if (people.length < 2) return;
@@ -86,16 +87,22 @@ export function TeamCarousel({ people }: { people: TeamMember[] }) {
       className={styles.section}
       aria-label="Our Team"
       onPointerDown={(event) => {
-        if (event.target instanceof Element && event.target.closest("button")) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (target?.closest("button") && !target.closest("[data-carousel-slide]")) return;
+        dragged.current = false;
         startX.current = event.clientX;
       }}
       onPointerUp={(event) => {
         if (startX.current === null) return;
         const distance = event.clientX - startX.current;
         startX.current = null;
-        if (Math.abs(distance) > 45) move(distance < 0 ? 1 : -1);
+        if (Math.abs(distance) > 45) {
+          dragged.current = true;
+          move(distance < 0 ? 1 : -1);
+          window.setTimeout(() => { dragged.current = false; }, 0);
+        }
       }}
-      onPointerCancel={() => { startX.current = null; }}
+      onPointerCancel={() => { startX.current = null; dragged.current = false; }}
     >
       <div className={styles.topo} aria-hidden />
       <div className={styles.aura} aria-hidden />
@@ -117,6 +124,7 @@ export function TeamCarousel({ people }: { people: TeamMember[] }) {
             return (
               <button
                 type="button"
+                data-carousel-slide="true"
                 key={member.id}
                 className={`${styles.card} ${isActive ? styles.activeCard : ""}`}
                 style={{
@@ -128,7 +136,11 @@ export function TeamCarousel({ people }: { people: TeamMember[] }) {
                 }}
                 aria-label={`${member.name}, ${subtitle(member) || member.section}`}
                 aria-current={isActive ? "true" : undefined}
-                onClick={() => isActive ? setExpanded(true) : setActive(index)}
+                onClick={() => {
+                  if (dragged.current) return;
+                  if (isActive) setExpanded(true);
+                  else setActive(index);
+                }}
               >
                 {member.photo_url ? (
                   <Image src={member.photo_url} alt="" fill sizes="(max-width: 640px) 60vw, 316px" unoptimized className={styles.photo} />
