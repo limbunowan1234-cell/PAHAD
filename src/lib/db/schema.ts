@@ -48,7 +48,8 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
   },
   media: { id: "text", url: "text", caption: "text", album: "text", uploaded_by: "text", created_at: "text" },
   team: {
-    id: "text", name: "text", section: "text", designation: "text", department: "text",
+    id: "text", name: "text", section: "text", subtitle: "text", detail: "text", tag: "text", profile_url: "text", profile_label: "text",
+    designation: "text", department: "text",
     additional_charge: "text", photo_url: "text", sort: "int", created_at: "text",
   },
   settings: { id: "text", value: "text", updated_by: "text", created_at: "text" },

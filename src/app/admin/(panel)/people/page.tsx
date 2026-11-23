@@ -10,7 +10,7 @@ import { TEAM_SECTIONS, type TeamMember } from "@/lib/types";
 
 export const metadata = { title: "Our Team" };
 
-function PersonFields({ p }: { p?: TeamMember }) {
+function PersonFields({ p, defaultSort }: { p?: TeamMember; defaultSort?: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {p && <input type="hidden" name="id" value={p.id} />}
@@ -22,6 +22,13 @@ function PersonFields({ p }: { p?: TeamMember }) {
           {TEAM_SECTIONS.map((s) => <option key={s}>{s}</option>)}
         </select>
       </Field>
+      <Field label="Carousel subtitle"><input name="subtitle" defaultValue={p?.subtitle} className="field" placeholder="e.g. Darjeeling · Governing Body" /></Field>
+      <Field label="Card tag"><input name="tag" defaultValue={p?.tag ?? p?.section} className="field" placeholder="e.g. Governing Body, Artist" /></Field>
+      <Field label="Card detail" className="sm:col-span-2">
+        <textarea name="detail" rows={3} defaultValue={p?.detail} className="field" />
+      </Field>
+      <Field label="Profile URL"><input name="profile_url" type="url" defaultValue={p?.profile_url} className="field" placeholder="https://…" /></Field>
+      <Field label="Profile link label"><input name="profile_label" defaultValue={p?.profile_label} className="field" placeholder="e.g. PAHAD Profile" /></Field>
       <Field label="Designation"><input name="designation" defaultValue={p?.designation} className="field" placeholder="e.g. Chairman, Managing Director" /></Field>
       <Field label="Department"><input name="department" defaultValue={p?.department} className="field" placeholder="e.g. Research, Knowledge and Innovation" /></Field>
       <Field label="Additional charge" hint="Any additional responsibility. Leave empty if not applicable; it won’t be shown." className="sm:col-span-2">
@@ -31,7 +38,9 @@ function PersonFields({ p }: { p?: TeamMember }) {
         <input name="photo_link" type="url" className="field" placeholder={p?.photo_url ? "Paste a new link to replace the current photo" : "https://drive.google.com/file/d/…/view"} />
       </Field>
       <Field label="…or upload a photo"><input type="file" name="photo_file" accept="image/jpeg,image/png,image/webp" className="block w-full text-sm" /></Field>
-      <Field label="Order within section" hint="Lower numbers appear first."><input name="sort" type="number" defaultValue={p?.sort ?? 10} className="field" /></Field>
+      <Field label="Carousel order" hint="Use a unique lower number to move this card earlier.">
+        <input name="sort" type="number" defaultValue={p?.sort ?? defaultSort ?? 10} className="field" />
+      </Field>
     </div>
   );
 }
@@ -41,19 +50,19 @@ export default async function PeoplePage() {
   if (!canView(user.role, "people.manage")) redirect("/admin");
   const manage = can(user.role, "people.manage");
   const team = (await db.all("team")).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
+  const nextSort = Math.max(0, ...team.map((person) => person.sort)) + 10;
 
   return (
     <>
       <PageHeader title="Our Team" description="People shown on the public Our Team page, grouped by section." />
       <Notice>
-        Profile pictures can come straight from Google Drive. The photo must be shared as “Anyone with the link”, otherwise visitors will see initials
-        instead.
+        The public /team page uses these admin-managed profiles in a 3D carousel. The supplied President profile starts at order 10; use unique lower numbers to place the President and General Secretary first, then adjust the remaining order as needed. Profile pictures can come from Google Drive when shared as “Anyone with the link”; profiles without a photo show initials instead.
       </Notice>
       {manage && (
         <div className="mb-8">
           <Disclosure summary="Add a person" defaultOpen={team.length === 0}>
             <AdminForm action={saveTeamMember} submitLabel="Add to Our Team" resetOnSuccess>
-              <PersonFields />
+              <PersonFields defaultSort={nextSort} />
             </AdminForm>
           </Disclosure>
         </div>
@@ -78,6 +87,7 @@ export default async function PeoplePage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-ink">{p.name}</p>
                         <p className="text-sm text-muted">{[p.designation, p.department].filter(Boolean).join(" · ")}</p>
+                        <p className="text-xs text-muted">Carousel order: {p.sort}</p>
                         {p.additional_charge && <p className="text-xs text-muted">Additional charge: {p.additional_charge}</p>}
                       </div>
                       {!p.photo_url && <Badge tone="amber">No photo</Badge>}

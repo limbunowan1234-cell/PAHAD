@@ -7,7 +7,7 @@ import type { TableName, Tables } from "../types";
 import { createTableSQL, SCHEMA } from "./schema";
 import {
   DEFAULT_DIRECTORATES, DEV_ACCOUNTS, DEV_PASSWORD, OLD_SHARED_HISTORY_TITLE, SHARED_HISTORY_POST, seedMedia, seedPartners, seedPosts, seedTasks, seedUnits,
-  type DbShape,
+  seedTeamMembers, type DbShape,
 } from "./seed";
 import { hashPassword } from "../auth/password";
 import { LEGACY_MEMBER_CATEGORIES } from "../membership";
@@ -47,6 +47,26 @@ function postgresBackend(url: string): Backend {
       // ---- Structure: the six Directorates become units; names stored earlier become unit ids.
       const [{ dirs }] = (await sql.query("SELECT count(*)::int AS dirs FROM units WHERE kind = 'directorate'")) as { dirs: number }[];
       if (dirs === 0) for (const u of seedUnits()) await rawInsert("units", u);
+      // One-time: make the supplied carousel roster available in Our Team without replacing existing profiles.
+      const teamSeedMarker = "migration:team-carousel-defaults-v1";
+      const teamSeedDone = (await sql.query("SELECT id FROM settings WHERE id = $1", [teamSeedMarker])) as unknown[];
+      if (!teamSeedDone.length) {
+        await sql.query("UPDATE team SET sort = sort + 100 WHERE id NOT LIKE 'team-carousel-default-%' AND sort < 100");
+        const existingNames = new Set(
+          ((await sql.query("SELECT lower(name) AS name FROM team")) as { name: string }[]).map((row) => row.name),
+        );
+        for (const [index, member] of seedTeamMembers().entries()) {
+          if (existingNames.has(member.name.toLowerCase())) continue;
+          await rawInsert("team", {
+            ...member,
+            id: `team-carousel-default-${String(index + 1).padStart(2, "0")}`,
+            created_at: new Date().toISOString(),
+          });
+        }
+        await rawInsert("settings", {
+          id: teamSeedMarker, value: new Date().toISOString(), updated_by: "system", created_at: new Date().toISOString(),
+        });
+      }
       for (const d of DEFAULT_DIRECTORATES) {
         for (const t of ["users", "posts", "members", "activity"]) await sql.query(`UPDATE ${t} SET directorate = $1 WHERE directorate = $2`, [d.id, d.name]);
       }
@@ -164,7 +184,12 @@ function fileBackend(): Backend {
     const editor = users.find((u) => u.role === "editor");
     return {
       users, posts: seedPosts(), members: [], tasks: admin && editor ? seedTasks(admin.id, editor.id) : [],
-      submissions: [], partners: seedPartners(), media: seedMedia(), team: [], settings: [], activity: [],
+      submissions: [], partners: seedPartners(), media: seedMedia(),
+      team: seedTeamMembers().map((member, index) => ({
+        ...member, id: `team-carousel-default-${String(index + 1).padStart(2, "0")}`, created_at: new Date().toISOString(),
+      })),
+      settings: [{ id: "migration:team-carousel-defaults-v1", value: new Date().toISOString(), updated_by: "system", created_at: new Date().toISOString() }],
+      activity: [],
       notifications: [], finance: [], finance_requests: [], outbox: [], units: seedUnits(), meetings: [], resolutions: [], circulars: [], pages: [], translations: [],
       videos: [], featured: [], polls: [], poll_voters: [], poll_receipts: [], ballots: [], password_resets: [],
       plus_users: [], plus_tokens: [], plus_posts: [], plus_flags: [], plus_blocks: [], approvals: [], plus_passes: [], plus_likes: [], plus_saves: [], plus_push: [], plus_organisers: [], plus_orders: [], plus_payouts: [], plus_follows: [], plus_supports: [], plus_notifications: [],
@@ -193,6 +218,27 @@ function fileBackend(): Backend {
     }
     if (!data.units.some((u) => u.kind === "directorate")) {
       data.units.push(...seedUnits());
+      changed = true;
+    }
+    const teamSeedMarker = "migration:team-carousel-defaults-v1";
+    if (!data.settings.some((setting) => setting.id === teamSeedMarker)) {
+      for (const member of data.team) {
+        if (!member.id.startsWith("team-carousel-default-") && member.sort < 100) {
+          member.sort += 100;
+          changed = true;
+        }
+      }
+      const existingNames = new Set(data.team.map((member) => member.name.toLowerCase()));
+      for (const [index, member] of seedTeamMembers().entries()) {
+        if (existingNames.has(member.name.toLowerCase())) continue;
+        data.team.push({
+          ...member, id: `team-carousel-default-${String(index + 1).padStart(2, "0")}`, created_at: new Date().toISOString(),
+        });
+        changed = true;
+      }
+      data.settings.push({
+        id: teamSeedMarker, value: new Date().toISOString(), updated_by: "system", created_at: new Date().toISOString(),
+      });
       changed = true;
     }
     for (const d of DEFAULT_DIRECTORATES) {
