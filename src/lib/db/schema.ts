@@ -120,7 +120,7 @@ export const SCHEMA: Record<TableName, Record<string, ColType>> = {
     requested_by_name: "text", decided_by_name: "text", note: "text", created_at: "text", decided_at: "text",
   },
   pages: {
-    id: "text", slug: "text", title: "text", eyebrow: "text", intro: "text", body: "text", cover: "text", collect: "text",
+    id: "text", slug: "text", format: "text", title: "text", eyebrow: "text", intro: "text", body: "text", cover: "text", collect: "text",
     status: "text", updated_by: "text", created_at: "text", updated_at: "text",
   },
   translations: {
@@ -152,6 +152,7 @@ export function createTableSQL(): string[] {
     "CREATE UNIQUE INDEX IF NOT EXISTS users_email_idx ON users (lower(email))",
     "CREATE UNIQUE INDEX IF NOT EXISTS posts_slug_idx ON posts (slug)",
     "CREATE UNIQUE INDEX IF NOT EXISTS pages_slug_idx ON pages (slug)",
+    "UPDATE pages SET format = 'standard' WHERE format = ''",
     "CREATE INDEX IF NOT EXISTS posts_type_status_idx ON posts (type, status)",
     "CREATE INDEX IF NOT EXISTS members_status_idx ON members (status)",
     // One-time, repeatable: old membership categories → the new list ("Former DSSCOLONY member" becomes the checkbox).

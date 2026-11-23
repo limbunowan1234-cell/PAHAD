@@ -16,7 +16,7 @@ export function Header({ menu, languages }: { menu?: NavGroup[]; languages?: boo
   return <HeaderView pathname={usePathname()} menu={menu} languages={languages} />;
 }
 
-/** `menu`: the website menu as arranged in Admin → Menu & Pages, read on the server. */
+/** `menu`: the website menu as arranged in Admin → Pages, read on the server. */
 export function HeaderView({ pathname, menu = nav, languages = false }: { pathname: string; menu?: NavGroup[]; languages?: boolean }) {
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);

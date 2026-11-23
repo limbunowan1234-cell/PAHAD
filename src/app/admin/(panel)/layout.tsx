@@ -21,8 +21,8 @@ const NAV: { key: NavKey; label: string; href: string; perm: Permission }[] = [
   { key: "partners", label: "Partners", href: "/admin/partners", perm: "partners.manage" },
   { key: "videos", label: "Videos", href: "/admin/videos", perm: "dashboard.view" }, // President, or members the President allowed
   { key: "featured", label: "Featured", href: "/admin/featured", perm: "featured.manage" },
-  { key: "menu", label: "Menu & Pages", href: "/admin/menu", perm: "dashboard.view" }, // L1, or people the President allowed
-  { key: "translations", label: "Nepali", href: "/admin/translations", perm: "dashboard.view" }, // same people as Menu & Pages
+  { key: "menu", label: "Pages", href: "/admin/menu", perm: "dashboard.view" }, // L1, or people the President allowed
+  { key: "translations", label: "Nepali", href: "/admin/translations", perm: "dashboard.view" }, // same people as Pages
   { key: "finance", label: "Finance", href: "/admin/finance", perm: "dashboard.view" },
   { key: "meetings", label: "GB Meetings", href: "/admin/meetings", perm: "gbm.view" },
   { key: "voting", label: "Voting", href: "/admin/voting", perm: "dashboard.view" },

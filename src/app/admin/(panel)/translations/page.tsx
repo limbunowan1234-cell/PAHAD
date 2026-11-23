@@ -52,7 +52,10 @@ export default async function TranslationsPage({ searchParams }: PageProps<"/adm
   const pageCount = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const href = (o: Record<string, string | number>) => `/admin/translations?${new URLSearchParams({ show, ...(q ? { q } : {}), ...Object.fromEntries(Object.entries(o).map(([k, v]) => [k, String(v)])) })}`;
 
-  const paths = [...BUILT_IN_PAGES.map((p) => p.href).filter((h) => h !== "/search"), ...pages.filter((p) => p.status === "published").map((p) => customPagePath(p.slug))];
+  const paths = [
+    ...BUILT_IN_PAGES.map((p) => p.href).filter((h) => h !== "/search"),
+    ...pages.filter((p) => p.status === "published" && p.format !== "html").map((p) => customPagePath(p.slug)),
+  ];
 
   return (
     <>

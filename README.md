@@ -36,6 +36,8 @@ The full permission matrix is on **Admin → Admin Team**, generated from [`src/
 
 Website forms (membership, contact, ideas and volunteering) save straight into the admin panel: applicants appear under **Members → Applicants**, and messages appear under **Messages**.
 
+Admins with Pages permission can create standard website pages at `/<slug>` or independent full-document HTML pages at `/pages/<slug>` (up to 250,000 characters, rendered in a sandbox without the PAHAD header or footer). Standard pages can collect published posts by category/label and accept YouTube and Featured placements from their respective admin modules.
+
 ---
 
 ## Run it on your computer

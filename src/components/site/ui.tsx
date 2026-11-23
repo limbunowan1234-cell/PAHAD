@@ -21,7 +21,7 @@ export async function PageHero({
   intro?: ReactNode;
   /** Which page this is; its banner photo can be changed by Super Admins. */
   page?: HeroKey;
-  /** A specific banner photo (used by pages made in Admin → Menu & Pages). */
+  /** A specific banner photo (used by standard pages made in Admin → Pages). */
   image?: string;
   children?: ReactNode;
 }) {

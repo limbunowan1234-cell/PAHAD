@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { FILMS_DEFAULTS, FILMS_PATH } from "@/lib/films";
 import { can, canView, canSubmitVideos } from "@/lib/permissions";
 import { pageLabel, pageList } from "@/lib/placements";
-import type { Video, VideoStatus } from "@/lib/types";
+import type { CustomPage, Video, VideoStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { youTubeThumb, youTubeWatchUrl } from "@/lib/youtube";
 
@@ -34,12 +34,12 @@ function LinkFields({ v }: { v?: Video }) {
   );
 }
 
-function ManageFields({ v, filmsTitle }: { v?: Video; filmsTitle: string }) {
+function ManageFields({ v, filmsTitle, customPages }: { v?: Video; filmsTitle: string; customPages: CustomPage[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {v && <input type="hidden" name="id" value={v.id} />}
       <LinkFields v={v} />
-      <OtherPagesToggle value={v?.pages} filmsTitle={filmsTitle} />
+      <OtherPagesToggle value={v?.pages} filmsTitle={filmsTitle} customPages={customPages} />
       <Field label="Display order" hint="Lower numbers show first."><input name="sort" type="number" defaultValue={v?.sort ?? 10} className="field" /></Field>
       <label className="flex items-center gap-2 self-end pb-3 text-sm">
         <input type="checkbox" name="visible" defaultChecked={v ? v.visible : true} className="h-4 w-4 accent-teal" /> ON: show on the website
@@ -49,7 +49,8 @@ function ManageFields({ v, filmsTitle }: { v?: Video; filmsTitle: string }) {
 }
 
 /** Where an approved video shows: always the films page, plus any other chosen pages. */
-const placesFor = (v: Video, filmsTitle: string) => [filmsTitle, ...pageList(v.pages).map(pageLabel)].join(", ");
+const placesFor = (v: Video, filmsTitle: string, customPageLabels: Map<string, string>) =>
+  [filmsTitle, ...pageList(v.pages).map((key) => pageLabel(key, customPageLabels))].join(", ");
 
 function Thumb({ v }: { v: Video }) {
   return (
@@ -63,7 +64,8 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
   const user = await requireUser();
   // Arriving from "New content → Video (YouTube)" opens the add form straight away.
   const openNew = (await searchParams).new === "1";
-  const films = await getFilmsPage();
+  const [films, customPages] = await Promise.all([getFilmsPage(), db.all("pages")]);
+  const customPageLabels = new Map(customPages.filter((p) => p.format !== "html").map((p) => [p.id, p.title]));
   const manage = can(user.role, "videos.manage");
   // SYS Website Administrator: sees the President's view read-only.
   const viewOnly = !manage && canView(user.role, "videos.manage");
@@ -104,7 +106,7 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
                     <Badge tone={STATUS[v.status].tone}>{STATUS[v.status].label}</Badge>
                   </div>
                   <p className="text-xs text-muted">Submitted {formatDate(v.created_at)}{v.reviewed_by_name && v.status !== "pending" ? ` · reviewed by ${v.reviewed_by_name}` : ""}</p>
-                  {v.status === "approved" && <p className="mt-1 text-sm text-muted">{v.visible ? `On the website: ${placesFor(v, films.title)}` : "Approved, switched off for now."}</p>}
+                  {v.status === "approved" && <p className="mt-1 text-sm text-muted">{v.visible ? `On the website: ${placesFor(v, films.title, customPageLabels)}` : "Approved, switched off for now."}</p>}
                   {v.status === "pending" && (
                     <div className="mt-2"><ActionButton variant="danger" confirm="Withdraw this submission?" action={withdrawVideo.bind(null, v.id)}>Withdraw</ActionButton></div>
                   )}
@@ -130,7 +132,7 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
         <div className="mb-8 space-y-4">
           <Disclosure summary="Add a YouTube video" defaultOpen={openNew}>
             <AdminForm action={saveVideo} submitLabel="Add video" resetOnSuccess>
-              <ManageFields filmsTitle={films.title} />
+              <ManageFields filmsTitle={films.title} customPages={customPages} />
             </AdminForm>
           </Disclosure>
           <Card title="Films page">
@@ -172,7 +174,9 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
               {manage && (
                 <div className="mt-3">
                   <Disclosure summary="Edit details and pages before approving">
-                    <AdminForm action={saveVideo}><ManageFields v={v} filmsTitle={films.title} /></AdminForm>
+                    <AdminForm action={saveVideo}>
+                      <ManageFields v={v} filmsTitle={films.title} customPages={customPages} />
+                    </AdminForm>
                   </Disclosure>
                 </div>
               )}
@@ -200,7 +204,7 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
                       {v.status === "approved" && <Badge tone={v.visible ? "teal" : "grey"}>{v.visible ? "ON" : "OFF"}</Badge>}
                     </div>
                     <p className="mt-1 text-sm text-muted">
-                      {`Pages: ${placesFor(v, films.title)}`}
+                      {`Pages: ${placesFor(v, films.title, customPageLabels)}`}
                       {live ? "" : v.status === "approved" ? " · switched off, not showing on the website" : " · not showing on the website"}
                     </p>
                     <p className="text-xs text-muted">Added by {v.submitted_by_name || "—"} · {formatDate(v.created_at)}</p>
@@ -218,7 +222,7 @@ export default async function VideosPage({ searchParams }: PageProps<"/admin/vid
                 {manage && (
                   <div className="mt-3">
                     <Disclosure summary="Edit">
-                      <AdminForm action={saveVideo}><ManageFields v={v} filmsTitle={films.title} /></AdminForm>
+                      <AdminForm action={saveVideo}><ManageFields v={v} filmsTitle={films.title} customPages={customPages} /></AdminForm>
                     </Disclosure>
                   </div>
                 )}

@@ -115,7 +115,7 @@ export function MenuEditor({ initial, pages }: { initial: MenuGroup[]; pages: Pa
                   </label>
                   <label className="min-w-[9rem] flex-1">
                     <span className="sr-only">Link address</span>
-                    <input value={it.href} onChange={(e) => setItem(gi, ii, { href: e.target.value })} className="field py-2 font-mono text-xs" placeholder="/pages/features" />
+                    <input value={it.href} onChange={(e) => setItem(gi, ii, { href: e.target.value })} className="field py-2 font-mono text-xs" placeholder="/features" />
                   </label>
                   <div className="flex gap-1.5">
                     <IconButton label="Move link up" onClick={() => setItems(gi, (items) => move(items, ii, ii - 1))} disabled={ii === 0}><ArrowUp className="h-4 w-4" /></IconButton>

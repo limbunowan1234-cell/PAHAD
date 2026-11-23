@@ -5,9 +5,9 @@ import { db, newId } from "@/lib/db";
 import { getMenu } from "@/lib/data";
 import { fileFrom, guarded, log, notify, now, str, type ActionState } from "@/lib/admin-helpers";
 import { safeUrl, toImageUrl } from "@/lib/drive";
-import { customPagePath, DEFAULT_MENU, MENU_SETTING, sanitizeMenu } from "@/lib/menu";
+import { customPagePath, DEFAULT_MENU, isReservedPageSlug, MENU_SETTING, sanitizeMenu } from "@/lib/menu";
 import { canManageMenu } from "@/lib/permissions";
-import type { CustomPage, PublicUser } from "@/lib/types";
+import type { CustomPage, CustomPageFormat, PublicUser } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
 /** L1 always; anyone else only if the President switched it on. Checked on the server for every action. */
@@ -58,51 +58,58 @@ export async function saveCustomPage(_prev: ActionState, fd: FormData): Promise<
     if (id && !existing) throw new Error("This page no longer exists.");
     const title = str(fd, "title", 120);
     if (title.length < 2) throw new Error("Please give the page a title.");
+    const rawFormat = str(fd, "format", 20);
+    if (rawFormat && rawFormat !== "standard" && rawFormat !== "html") throw new Error("Choose a page format.");
+    const format: CustomPageFormat = rawFormat === "html" ? "html" : "standard";
 
     let slug = slugify(str(fd, "slug", 80) || title);
     if (!slug) throw new Error("Please give the page a web address.");
+    if (format === "standard" && isReservedPageSlug(slug)) throw new Error("That address is reserved for a built-in website page.");
     const clash = (await db.findBy("pages", "slug", slug)).find((p) => p.id !== id);
     if (clash) slug = `${slug}-${newId().slice(0, 4)}`;
 
     const coverLink = safeUrl(str(fd, "cover_link", 500));
     const cover = (await fileFrom(fd, "cover_file", "images")) ?? (coverLink ? toImageUrl(coverLink) : str(fd, "cover", 500));
     const status: CustomPage["status"] = str(fd, "status", 20) === "draft" ? "draft" : "published";
+    const body = format === "html" ? String(fd.get("body") ?? "") : str(fd, "body", 50_000);
+    if (format === "html" && body.length > 250_000) throw new Error("Custom HTML is limited to 250,000 characters.");
     const data = {
-      slug, title, cover, status,
+      slug, format, title, cover, status,
       eyebrow: str(fd, "eyebrow", 40),
       intro: str(fd, "intro", 400),
-      body: str(fd, "body", 50_000),
+      body,
       collect: str(fd, "collect", 60),
       updated_by: user.id,
       updated_at: now(),
     };
 
     if (existing) {
-      await db.update("pages", existing.id, data);
       // Keep menu links pointing at the page if its address changed.
-      if (existing.slug !== slug) {
+      const previousFormat: CustomPageFormat = existing.format === "html" ? "html" : "standard";
+      if (existing.slug !== slug || previousFormat !== format) {
         const menu = await getMenu();
-        const from = customPagePath(existing.slug), to = customPagePath(slug);
+        const from = customPagePath(existing.slug, previousFormat), to = customPagePath(slug, format);
         if (JSON.stringify(menu).includes(`"${from}"`)) {
           const moved = menu.map((g) => ({ ...g, href: g.href === from ? to : g.href, items: g.items?.map((i) => (i.href === from ? { ...i, href: to } : i)) }));
           await writeMenu(user, JSON.stringify(moved));
         }
       }
-      await log(user, "updated", "page", existing.id, `${title} (${status})`);
+      await db.update("pages", existing.id, data);
+      await log(user, "updated", "page", existing.id, `${title} (${format}, ${status})`);
     } else {
       const row: CustomPage = { ...data, id: newId(), created_at: now() };
       await db.insert("pages", row);
-      await log(user, "created", "page", row.id, `${title} (${status})`);
+      await log(user, "created", "page", row.id, `${title} (${format}, ${status})`);
       // Optionally add the new page to a menu section straight away.
       const group = str(fd, "add_to", 60);
       if (group) {
         const menu = await getMenu();
-        const next = menu.map((g) => (g.label === group ? { ...g, items: [...(g.items ?? []), { label: title, href: customPagePath(slug), description: data.intro.slice(0, 120) || undefined }] } : g));
+        const next = menu.map((g) => (g.label === group ? { ...g, items: [...(g.items ?? []), { label: title, href: customPagePath(slug, format), description: data.intro.slice(0, 120) || undefined }] } : g));
         await writeMenu(user, JSON.stringify(sanitizeMenu(next) ?? DEFAULT_MENU));
       }
     }
     updateTag("pages");
-    return existing ? "Page saved." : `Page created at ${customPagePath(slug)}.`;
+    return existing ? "Page saved." : `Page created at ${customPagePath(slug, format)}.`;
   });
 }
 
@@ -111,14 +118,20 @@ export async function deleteCustomPage(id: string): Promise<ActionState> {
     assertMenuAccess(user);
     const page = await db.get("pages", id);
     if (!page) throw new Error("This page no longer exists.");
-    await db.remove("pages", id);
     // Remove its links from the menu too.
-    const href = customPagePath(page.slug);
+    const href = customPagePath(page.slug, page.format === "html" ? "html" : "standard");
     const menu = await getMenu();
     if (JSON.stringify(menu).includes(`"${href}"`)) {
-      const next = menu.filter((g) => g.href !== href || g.items?.length).map((g) => ({ ...g, items: g.items?.filter((i) => i.href !== href) }));
+      const next = menu.flatMap((group) => {
+        const items = group.items?.filter((item) => item.href !== href);
+        if (group.href === href) {
+          return items?.length ? [{ ...group, href: items[0].href, items }] : [];
+        }
+        return [{ ...group, items }];
+      });
       await writeMenu(user, JSON.stringify(sanitizeMenu(next) ?? DEFAULT_MENU));
     }
+    await db.remove("pages", id);
     updateTag("pages");
     await log(user, "deleted", "page", id, page.title);
     return `“${page.title}” deleted.`;
@@ -135,7 +148,7 @@ export async function setMenuPermission(userId: string, allowed: boolean): Promi
       before: { can_manage_menu: target.can_manage_menu }, after: { can_manage_menu: allowed },
     });
     if (target.id !== user.id) {
-      await notify(target.id, allowed ? "The President allowed you to edit the website menu and pages. Open Menu & Pages in your dashboard." : "Your permission to edit the website menu and pages was switched off.", allowed ? "/admin/menu" : "");
+      await notify(target.id, allowed ? "The President allowed you to edit Pages and the website menu. Open Pages in your dashboard." : "Your permission to edit Pages and the website menu was switched off.", allowed ? "/admin/menu" : "");
     }
     return allowed ? `${target.name} can now edit the menu and pages.` : `${target.name} can no longer edit the menu and pages.`;
   });
